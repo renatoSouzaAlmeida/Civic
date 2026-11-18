@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import br.com.civic.launcher.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -38,8 +40,8 @@ private class Item(
     val rotulo: String,
     val icone: ImageVector,
     val tela: Tela?,
-    /** Se informado e o app estiver instalado, usa o ícone real dele no lugar de `icone`. */
-    val pacoteIcone: String? = null,
+    /** Ícone próprio (vetor monocromático em res/drawable), pintado com a mesma cor dos demais. */
+    val iconeRes: Int? = null,
     val acao: (Context) -> Unit = {},
 )
 
@@ -60,7 +62,7 @@ private val itens = listOf(
             c.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     },
-    Item("Spotify", Icons.Filled.MusicNote, null, "com.spotify.music") { it.abrirSpotify() },
+    Item("Spotify", Icons.Filled.MusicNote, null, R.drawable.ic_spotify) { it.abrirSpotify() },
     Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),
     Item("Config.", Icons.Filled.Settings, Tela.Config),
@@ -91,15 +93,11 @@ fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modif
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    val iconeApp = remember(item.pacoteIcone) {
-                        item.pacoteIcone?.let { pacote ->
-                            runCatching { ctx.packageManager.getApplicationIcon(pacote).toBitmap(96, 96).asImageBitmap() }.getOrNull()
-                        }
-                    }
-                    if (iconeApp != null) {
-                        Image(iconeApp, item.rotulo, Modifier.size(if (compacto) 28.dp else 34.dp))
+                    val tamanho = if (compacto) 26.dp else 32.dp
+                    if (item.iconeRes != null) {
+                        Icon(painterResource(item.iconeRes), item.rotulo, tint = corItem, modifier = Modifier.size(tamanho * 0.9f))
                     } else {
-                        Icon(item.icone, item.rotulo, tint = corItem, modifier = Modifier.size(if (compacto) 26.dp else 32.dp))
+                        Icon(item.icone, item.rotulo, tint = corItem, modifier = Modifier.size(tamanho))
                     }
                     if (!compacto) Text(item.rotulo, color = corItem, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
