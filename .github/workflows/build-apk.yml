@@ -54,4 +54,5 @@ jobs:
 
       - name: Aviso quando falta a chave
         if: github.ref == 'refs/heads/main' && env.TEM_CHAVE != 'true'
-        run: echo "::warning::Segredo CIVIC_KEYSTORE_BASE64 não configurado: Release NÃO publicada (sem ela a atualização automática não funciona)."
+        run: |
+          echo "::warning::Segredo CIVIC_KEYSTORE_BASE64 nao configurado. Release NAO publicada (sem ela a atualizacao automatica nao funciona)."
