@@ -5,6 +5,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- OBD por Bluetooth de baixa energia (BLE). Em Android <= 11 a busca usa a permissão de localização. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Launcher: lista todos os apps instalados (tela Apps). -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />

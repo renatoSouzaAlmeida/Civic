@@ -33,6 +33,8 @@ import br.com.civic.launcher.Sensores
 import br.com.civic.launcher.SituacaoVersao
 import br.com.civic.launcher.abrirWazeComPainel
 import br.com.civic.launcher.navegarWazeFavorito
+import br.com.civic.launcher.obd.EstadoObd
+import br.com.civic.launcher.obd.ObdMonitor
 import kotlinx.coroutines.delay
 import java.util.Date
 
@@ -42,6 +44,7 @@ fun HomeScreen(
     monitor: MediaMonitor,
     atualizador: Atualizador,
     sensores: Sensores,
+    obd: ObdMonitor,
     modoTema: ModoTema,
     aoAlternarTema: () -> Unit,
 ) {
@@ -52,11 +55,11 @@ fun HomeScreen(
         Modifier.fillMaxSize().background(Cores.Fundo).systemBarsPadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        BarraTopo(sensores, atualizador, modoTema, aoAlternarTema)
+        BarraTopo(sensores, atualizador, obd, modoTema, aoAlternarTema)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tela) {
-                Tela.Inicio -> TelaInicio(monitor, sensores)
-                Tela.Central -> TelaCentral(sensores)
+                Tela.Inicio -> TelaInicio(monitor, sensores, obd)
+                Tela.Central -> TelaCentral(sensores, obd)
                 Tela.Apps -> TelaApps()
             }
         }
@@ -65,7 +68,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, modoTema: ModoTema, aoAlternarTema: () -> Unit) {
+private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMonitor, modoTema: ModoTema, aoAlternarTema: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -107,10 +110,16 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, modoTema: Mo
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            // Fica cinza até o adaptador OBD ser conectado (fase seguinte).
+            // Verde = lendo o carro; azul = demonstração; amarelo = conectando; cinza = sem adaptador.
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.size(10.dp).clip(CircleShape).background(Cores.TextoSuave))
-                Text("OBD", color = Cores.TextoSuave, fontSize = 18.sp)
+                val corObd = when (obd.estado) {
+                    EstadoObd.Conectado -> Cores.Spotify
+                    EstadoObd.Demonstracao -> Cores.Waze
+                    EstadoObd.Conectando, EstadoObd.Procurando -> Cores.Amarelo
+                    EstadoObd.Desconectado -> Cores.TextoSuave
+                }
+                Box(Modifier.size(10.dp).clip(CircleShape).background(corObd))
+                Text(if (obd.estado == EstadoObd.Demonstracao) "OBD demo" else "OBD", color = Cores.TextoSuave, fontSize = 18.sp)
             }
             Icon(Icons.Filled.Bluetooth, null, tint = if (sensores.bluetoothLigado) Cores.Waze else Cores.TextoSuave, modifier = Modifier.size(30.dp))
             Icon(Icons.Filled.Wifi, null, tint = if (sensores.wifiLigado) Cores.Waze else Cores.TextoSuave, modifier = Modifier.size(30.dp))

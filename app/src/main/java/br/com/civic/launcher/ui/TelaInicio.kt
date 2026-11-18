@@ -21,10 +21,11 @@ import br.com.civic.launcher.CondicaoClima
 import br.com.civic.launcher.ConectividadeUi
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.Sensores
+import br.com.civic.launcher.obd.ObdMonitor
 
 /** Paisagem: Waze, Spotify e widgets lado a lado. Retrato (futura virada de tela): empilha. */
 @Composable
-fun TelaInicio(monitor: MediaMonitor, sensores: Sensores) {
+fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= maxHeight) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -36,7 +37,7 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores) {
                         CartaoConectividade(sensores.conectividade, Modifier.weight(1f).fillMaxWidth())
                     }
                 }
-                LinhaOBD(sensores, Modifier.fillMaxWidth().height(130.dp))
+                LinhaOBD(sensores, obd, Modifier.fillMaxWidth().height(130.dp))
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -46,7 +47,7 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores) {
                     CartaoClima(sensores.clima, Modifier.weight(1f).fillMaxHeight())
                     CartaoConectividade(sensores.conectividade, Modifier.weight(1f).fillMaxHeight())
                 }
-                LinhaOBD(sensores, Modifier.fillMaxWidth().height(110.dp))
+                LinhaOBD(sensores, obd, Modifier.fillMaxWidth().height(110.dp))
             }
         }
     }
@@ -117,31 +118,32 @@ private fun CartaoConectividade(c: ConectividadeUi, modifier: Modifier) {
 
 /** Velocidade vem do GPS. RPM, temperatura, tensão e falhas só aparecem com o adaptador OBD. */
 @Composable
-private fun LinhaOBD(sensores: Sensores, modifier: Modifier) {
+private fun LinhaOBD(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     Row(
         modifier.clip(RoundedCornerShape(24.dp)).background(Cores.Cartao).padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val vel = sensores.velocidadeKmh ?: 0f
+        val d = obd.dados
+        val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
         Medidor(vel / 220f, Cores.Destaque, Modifier.fillMaxHeight().aspectRatio(1f), espessura = 10.dp) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("${vel.toInt()}", color = Cores.Texto, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                 Text("km/h", color = Cores.TextoSuave, fontSize = 16.sp)
             }
         }
-        Indicador(Icons.Filled.Speed, "RPM", Modifier.weight(1f))
-        Indicador(Icons.Filled.Thermostat, "Temp. motor", Modifier.weight(1f))
-        Indicador(Icons.Filled.BatteryChargingFull, "Bateria", Modifier.weight(1f))
-        Indicador(Icons.Filled.Warning, "Falhas", Modifier.weight(1f))
+        Indicador(Icons.Filled.Speed, d.rpm?.toString() ?: "—", "RPM", Modifier.weight(1f))
+        Indicador(Icons.Filled.Thermostat, d.tempMotor?.let { "$it°C" } ?: "—", "Temp. motor", Modifier.weight(1f))
+        Indicador(Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f V".format(it) } ?: "—", "Bateria", Modifier.weight(1f))
+        Indicador(Icons.Filled.Warning, d.falhas?.let { if (it == 0) "Nenhuma" else "$it" } ?: "—", "Falhas", Modifier.weight(1f))
     }
 }
 
 @Composable
-private fun Indicador(icone: ImageVector, rotulo: String, modifier: Modifier) {
+internal fun Indicador(icone: ImageVector, valor: String, rotulo: String, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(34.dp))
-        Text("—", color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+        Text(valor, color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         Text(rotulo, color = Cores.TextoSuave, fontSize = 16.sp, maxLines = 1)
     }
 }
