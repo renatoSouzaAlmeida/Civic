@@ -41,14 +41,14 @@ import br.com.civic.launcher.obd.ObdMonitor
 fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
     val config = remember { Configuracoes.obter(ctx) }
-    val vel = (obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f).toInt()
     BoxWithConstraints(
         modifier.toqueSuave { ctx.abrirNavegacaoComPainel() }.clip(FormaCartao).border(1.dp, Cores.Borda, FormaCartao)
     ) {
         MapaDecorativo(Modifier.fillMaxSize())
         val compacto = maxHeight < 300.dp
+        val estreito = maxWidth < 440.dp // cartão do tamanho do Spotify: Casa/Trabalho descem para junto do botão
         Column(
-            Modifier.fillMaxSize().padding(if (compacto) 14.dp else 22.dp).padding(bottom = LocalEspacoDock.current),
+            Modifier.fillMaxSize().padding(if (compacto) 14.dp else 22.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
@@ -58,42 +58,24 @@ fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.Navigation, null, tint = Color.White, modifier = Modifier.size(if (compacto) 26.dp else 32.dp)) }
                     Column {
-                        Text(config.mapa.rotulo, color = Cores.Texto, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                        Text(config.mapa.rotulo, color = Cores.Texto, fontSize = if (compacto) 22.sp else 26.sp, fontWeight = FontWeight.Bold)
                         Text("Navegação", color = Cores.TextoSuave, fontSize = 14.sp)
                     }
                 }
-                PilulaFavoritos { destino -> ctx.navegarFavorito(destino) }
+                if (!estreito) PilulaFavoritos { destino -> ctx.navegarFavorito(destino) }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Selos: velocidade, temperatura do motor e do ar de admissão (estes dois vêm do OBD).
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
-                    Selo("$vel", "km/h", compacto)
-                    Selo(obd.dados.tempMotor?.toString() ?: "—", "°C motor", compacto)
-                    Selo(obd.dados.tempAdmissao?.toString() ?: "—", "°C ar", compacto)
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (estreito) PilulaFavoritos { destino -> ctx.navegarFavorito(destino) }
                 Row(
-                    Modifier.clip(RoundedCornerShape(50)).background(Cores.Destaque).padding(horizontal = 22.dp, vertical = 14.dp),
+                    Modifier.clip(RoundedCornerShape(50)).background(Cores.Destaque).padding(horizontal = 20.dp, vertical = if (compacto) 11.dp else 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(Icons.Filled.Navigation, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                    Text("Iniciar direção", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Iniciar direção", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
-    }
-}
-
-/** Selo com valor grande e unidade embaixo (mesmo estilo do km/h). */
-@Composable
-private fun Selo(valor: String, unidade: String, compacto: Boolean) {
-    Column(
-        Modifier.clip(RoundedCornerShape(24.dp)).background(Cores.CartaoSolido).border(1.dp, Cores.ChipBorda, RoundedCornerShape(24.dp))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(valor, color = Cores.Texto, fontSize = if (compacto) 30.sp else 42.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-        Text(unidade, color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 

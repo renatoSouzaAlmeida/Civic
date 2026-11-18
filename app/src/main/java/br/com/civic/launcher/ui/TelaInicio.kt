@@ -14,7 +14,7 @@ import br.com.civic.launcher.Sensores
 import br.com.civic.launcher.obd.ObdMonitor
 
 /**
- * Paisagem: carro | Waze (maior) | Spotify + tempo e rede.
+ * Paisagem: carro | mapa + dados rápidos | Spotify + tempo e rede.
  * Retrato (futura virada de tela): tudo empilhado, com rolagem se faltar espaço.
  */
 @Composable
@@ -22,8 +22,12 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= maxHeight) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                CartaoCarro(obd, Modifier.weight(0.9f).fillMaxHeight())
-                CartaoWaze(sensores, obd, Modifier.weight(1.7f).fillMaxHeight())
+                CartaoCarro(obd, Modifier.weight(1f).fillMaxHeight())
+                // Mapa do mesmo tamanho do Spotify; embaixo dele, os dados rápidos (km/h, km/l, combustível…).
+                Column(Modifier.weight(1.1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    CartaoWaze(sensores, obd, Modifier.weight(1.15f).fillMaxWidth())
+                    CartaoSinais(sensores, obd, Modifier.weight(1f).fillMaxWidth())
+                }
                 Column(Modifier.weight(1.1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     CartaoSpotify(monitor, Modifier.weight(1.15f).fillMaxWidth())
                     DuasCaixas(sensores, obd, Modifier.weight(1f).fillMaxWidth())
@@ -32,7 +36,8 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
         } else {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 CartaoCarro(obd, Modifier.fillMaxWidth().height(330.dp))
-                CartaoWaze(sensores, obd, Modifier.fillMaxWidth().height(300.dp))
+                CartaoWaze(sensores, obd, Modifier.fillMaxWidth().height(260.dp))
+                CartaoSinais(sensores, obd, Modifier.fillMaxWidth().height(220.dp))
                 CartaoSpotify(monitor, Modifier.fillMaxWidth().height(320.dp))
                 DuasCaixas(sensores, obd, Modifier.fillMaxWidth().height(300.dp))
             }

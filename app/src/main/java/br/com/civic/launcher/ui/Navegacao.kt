@@ -69,8 +69,7 @@ private val itens = listOf(
     Item("Config.", Icons.Filled.Settings, Tela.Config),
 )
 
-/** Altura reservada para o dock flutuante (estilo D): os cartões que ficam sob ele recuam esse tanto. */
-val LocalEspacoDock = androidx.compose.runtime.compositionLocalOf { 0.dp }
+/** Altura do dock flutuante (estilo D); o conteúdo das telas para acima dele. */
 val ALTURA_DOCK = 64.dp
 
 @Composable

@@ -72,17 +72,13 @@ fun HomeScreen(
         BarraTopo(sensores, atualizador, obd, modoTema, aoAlternarTema)
         val dock = config.estiloMenu == EstiloMenu.Dock
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            // Com o dock, o Início vai até embaixo (o cartão do mapa recua por dentro);
-            // nas demais telas o conteúdo para acima do dock, para nada ficar escondido.
-            val recuo = if (dock && tela != Tela.Inicio) ALTURA_DOCK + 10.dp else 0.dp
-            CompositionLocalProvider(LocalEspacoDock provides if (dock) ALTURA_DOCK + 10.dp else 0.dp) {
-                Box(Modifier.fillMaxSize().padding(bottom = recuo)) {
-                    when (tela) {
-                        Tela.Inicio -> TelaInicio(monitor, sensores, obd)
-                        Tela.Central -> TelaCentral(sensores, obd, monitor)
-                        Tela.Apps -> TelaApps()
-                        Tela.Config -> TelaConfig()
-                    }
+            // Com o dock, o conteúdo para acima dele (nada fica escondido embaixo do dock).
+            Box(Modifier.fillMaxSize().padding(bottom = if (dock) ALTURA_DOCK + 10.dp else 0.dp)) {
+                when (tela) {
+                    Tela.Inicio -> TelaInicio(monitor, sensores, obd)
+                    Tela.Central -> TelaCentral(sensores, obd, monitor)
+                    Tela.Apps -> TelaApps()
+                    Tela.Config -> TelaConfig()
                 }
             }
             if (dock) DockNavegacao(tela, { tela = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
