@@ -71,31 +71,27 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor) {
 @Composable
 private fun CartaoHud(d: DadosObd, vel: Float, modifier: Modifier) {
     Cartao(modifier) {
-        BoxWithConstraints(Modifier.fillMaxSize().padding(24.dp)) {
-            // O número da velocidade acompanha o tamanho do cartão.
-            val grande = minOf(maxHeight.value * 0.38f, maxWidth.value * 0.30f).sp
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                        Text("RPM", color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(d.rpm?.toString() ?: "—", color = Cores.Texto, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(" / 8.000", color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 4.dp))
-                        }
+        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                    Text("RPM", color = Cores.TextoSuave, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(d.rpm?.toString() ?: "—", color = Cores.Texto, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(" / 8.000", color = Cores.TextoSuave, fontSize = 14.sp, modifier = Modifier.padding(bottom = 3.dp))
                     }
-                    BarraSegmentos((d.rpm ?: 0) / 8000f, Modifier.fillMaxWidth(), 34, 38.dp)
                 }
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = grande, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                    Text("km/h", color = Cores.TextoSuave, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp))
+                BarraSegmentos((d.rpm ?: 0) / 8000f, Modifier.fillMaxWidth(), 34, 24.dp)
+            }
+            // Gráfico esportivo: ocupa todo o espaço que sobra no cartão.
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                TacometroEsportivo(d.rpm, vel, Modifier.fillMaxSize())
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
+                    Text("Carga do motor", color = Cores.TextoSuave, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(d.carga?.let { "$it%" } ?: "—", color = Cores.Texto, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                        Text("Carga do motor", color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        Text(d.carga?.let { "$it%" } ?: "—", color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-                    }
-                    BarraFina((d.carga ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 10.dp)
-                }
+                BarraFina((d.carga ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 8.dp)
             }
         }
     }
@@ -168,7 +164,7 @@ private fun CartaoIndicador(titulo: String, icone: ImageVector, cor: Color, valo
 @Composable
 private fun CartaoCarroCentral(obd: ObdMonitor, d: DadosObd, modifier: Modifier, aoEscolherAdaptador: () -> Unit) {
     Cartao(modifier) {
-        ImagemCarro(Modifier.fillMaxSize(), 0.5f)
+        FotoCarro(Modifier.fillMaxSize(), 0.5f)
         Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
             TituloCarro()
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -15,22 +15,26 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.civic.launcher.Configuracoes
+import br.com.civic.launcher.ImagemCarro
 import br.com.civic.launcher.R
 import br.com.civic.launcher.obd.DadosObd
 import br.com.civic.launcher.obd.ObdMonitor
 
 /** Foto do carro (cinza) na parte de cima do cartão, esmaecendo para o fundo do cartão. */
 @Composable
-internal fun ImagemCarro(modifier: Modifier, fracaoAltura: Float) {
+internal fun FotoCarro(modifier: Modifier, fracaoAltura: Float) {
+    val config = Configuracoes.obter(LocalContext.current)
     Box(modifier) {
         Box(Modifier.fillMaxWidth().fillMaxHeight(fracaoAltura)) {
             Image(
-                painterResource(R.drawable.carro_cinza), null,
+                painterResource(if (config.imagemCarro == ImagemCarro.Fit) R.drawable.carro_fit_cinza else R.drawable.carro_cinza), null,
                 Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
                 alignment = BiasAlignment(-0.3f, 0f),
@@ -42,10 +46,11 @@ internal fun ImagemCarro(modifier: Modifier, fracaoAltura: Float) {
 
 @Composable
 internal fun TituloCarro() {
+    val config = Configuracoes.obter(LocalContext.current)
     val sombra = TextStyle(shadow = Shadow(Color(0xB3000000), Offset(0f, 2f), 12f))
     Column {
-        Text("Seu Civic", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, style = sombra)
-        Text("G9 · 2012", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, style = sombra)
+        Text(config.nomeCarro, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, style = sombra, maxLines = 1)
+        Text(config.modeloEAno, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, style = sombra, maxLines = 1)
     }
 }
 
@@ -69,7 +74,7 @@ internal fun ChipsCarro(d: DadosObd) {
 fun CartaoCarro(obd: ObdMonitor, modifier: Modifier) {
     val d = obd.dados
     Cartao(modifier) {
-        ImagemCarro(Modifier.fillMaxSize(), 0.55f)
+        FotoCarro(Modifier.fillMaxSize(), 0.55f)
         Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
             TituloCarro()
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

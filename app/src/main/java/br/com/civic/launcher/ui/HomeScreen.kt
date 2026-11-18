@@ -25,10 +25,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.civic.launcher.Atualizador
+import br.com.civic.launcher.Configuracoes
 import br.com.civic.launcher.EstadoAtualizacao
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.R
@@ -38,6 +41,9 @@ import br.com.civic.launcher.obd.EstadoObd
 import br.com.civic.launcher.obd.ObdMonitor
 import kotlinx.coroutines.delay
 import java.util.Date
+
+/** Fonte desenhada (Audiowide, licença livre) usada no nome do app. */
+val FonteTitulo = FontFamily(Font(R.font.audiowide))
 
 /** Estrutura fixa: barra do topo, conteúdo da tela escolhida e barra de navegação. */
 @Composable
@@ -66,6 +72,7 @@ fun HomeScreen(
                 Tela.Inicio -> TelaInicio(monitor, sensores, obd)
                 Tela.Central -> TelaCentral(sensores, obd)
                 Tela.Apps -> TelaApps()
+                Tela.Config -> TelaConfig()
             }
         }
         BarraNavegacao(tela, { tela = it }, Modifier.fillMaxWidth())
@@ -78,6 +85,7 @@ fun HomeScreen(
 @Composable
 private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMonitor, modoTema: ModoTema, aoAlternarTema: () -> Unit) {
     val ctx = LocalContext.current
+    val config = remember { Configuracoes.obter(ctx) }
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
     val hora = DateFormat.getTimeFormat(ctx).format(agora)
@@ -87,15 +95,19 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
         // Em tela estreita (celular em retrato) esconde o que não cabe, mas mantém o botão de tema.
         val compacto = maxWidth < 760.dp
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(hora, color = Cores.Texto, fontSize = if (compacto) 30.sp else 42.sp, fontWeight = FontWeight.ExtraBold)
-                if (!compacto) Text(data, color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 7.dp), maxLines = 1)
+            // Esquerda: logo, hora e data. Centro: nome do app (editável em Config.).
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(if (compacto) 40.dp else 52.dp))
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 28.sp else 40.sp, fontWeight = FontWeight.ExtraBold)
+                    if (!compacto) Text(data, color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp), maxLines = 1)
+                }
             }
             if (!compacto) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(46.dp))
-                    Text("CIVIC RENATIN", color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
-                }
+                Text(
+                    config.nomeApp, color = Cores.Texto, fontSize = 24.sp, fontFamily = FonteTitulo,
+                    letterSpacing = 3.sp, maxLines = 1,
+                )
             }
             Row(
                 Modifier.weight(1f),

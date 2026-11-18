@@ -30,9 +30,9 @@ import androidx.compose.ui.unit.sp
 import br.com.civic.launcher.Atalhos
 import br.com.civic.launcher.abrir
 import br.com.civic.launcher.abrirSpotify
-import br.com.civic.launcher.abrirWazeComPainel
+import br.com.civic.launcher.abrirNavegacaoComPainel
 
-enum class Tela { Inicio, Central, Apps }
+enum class Tela { Inicio, Central, Apps, Config }
 
 private class Item(
     val rotulo: String,
@@ -54,7 +54,7 @@ private fun abrirFixado(ctx: Context, chave: String, nome: String, reserva: (() 
 
 private val itens = listOf(
     Item("Início", Icons.Filled.Home, Tela.Inicio),
-    Item("Direção", Icons.Filled.Navigation, null) { it.abrirWazeComPainel() },
+    Item("Direção", Icons.Filled.Navigation, null) { it.abrirNavegacaoComPainel() },
     Item("Telefone", Icons.Filled.Phone, null) { c ->
         abrirFixado(c, Atalhos.TELEFONE, "Telefone") {
             c.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -64,9 +64,7 @@ private val itens = listOf(
     Item("Câmera", Icons.Filled.Videocam, null) { abrirFixado(it, Atalhos.CAMERA, "Câmera") },
     Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),
-    Item("Config.", Icons.Filled.Settings, null) {
-        it.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    },
+    Item("Config.", Icons.Filled.Settings, Tela.Config),
 )
 
 @Composable

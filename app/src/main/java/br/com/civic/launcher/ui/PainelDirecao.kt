@@ -80,7 +80,9 @@ fun PainelDirecao(
             } else {
                 // Coluna estreita (tela em paisagem): velocidade numa linha e a música com todo o resto.
                 Column(Modifier.weight(1f).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Velocidade(sensores, obd, Modifier.fillMaxWidth())
+                    // Com espaço de sobra (tablet), o velocímetro cresce e a música desce.
+                    if (maxHeight > 460.dp) VelocimetroGrande(sensores, obd, Modifier.weight(0.85f).fillMaxWidth())
+                    else Velocidade(sensores, obd, Modifier.fillMaxWidth())
                     Musica(monitor, Modifier.weight(1f).fillMaxWidth())
                 }
             }
@@ -124,6 +126,19 @@ private fun Velocidade(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) 
     Row(modifier, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
         Text("${vel.toInt()}", color = Cores.Texto, fontSize = 38.sp, lineHeight = 40.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
         Text(" km/h", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 5.dp))
+    }
+}
+
+@Composable
+private fun VelocimetroGrande(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
+    val vel = obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Medidor(vel / 220f, Cores.Destaque, Modifier.aspectRatio(1f), espessura = 14.dp) { dm ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (dm.value * 0.30f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text("km/h", color = Cores.TextoSuave, fontSize = (dm.value * 0.09f).sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
     }
 }
 

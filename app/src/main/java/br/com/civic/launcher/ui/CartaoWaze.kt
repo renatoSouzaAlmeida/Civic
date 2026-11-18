@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,8 +28,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.civic.launcher.Sensores
-import br.com.civic.launcher.abrirWazeComPainel
-import br.com.civic.launcher.navegarWazeFavorito
+import br.com.civic.launcher.Configuracoes
+import br.com.civic.launcher.abrirNavegacaoComPainel
+import br.com.civic.launcher.navegarFavorito
 import br.com.civic.launcher.obd.ObdMonitor
 
 /**
@@ -38,9 +40,10 @@ import br.com.civic.launcher.obd.ObdMonitor
 @Composable
 fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
+    val config = remember { Configuracoes.obter(ctx) }
     val vel = (obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f).toInt()
     BoxWithConstraints(
-        modifier.toqueSuave { ctx.abrirWazeComPainel() }.clip(FormaCartao).border(1.dp, Cores.Borda, FormaCartao)
+        modifier.toqueSuave { ctx.abrirNavegacaoComPainel() }.clip(FormaCartao).border(1.dp, Cores.Borda, FormaCartao)
     ) {
         MapaDecorativo(Modifier.fillMaxSize())
         val compacto = maxHeight < 300.dp
@@ -55,11 +58,11 @@ fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Filled.Navigation, null, tint = Color.White, modifier = Modifier.size(if (compacto) 26.dp else 32.dp)) }
                     Column {
-                        Text("Waze", color = Cores.Texto, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                        Text(config.mapa.rotulo, color = Cores.Texto, fontSize = 26.sp, fontWeight = FontWeight.Bold)
                         Text("Navegação", color = Cores.TextoSuave, fontSize = 14.sp)
                     }
                 }
-                PilulaFavoritos { destino -> ctx.navegarWazeFavorito(destino) }
+                PilulaFavoritos { destino -> ctx.navegarFavorito(destino) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
                 Column(
@@ -103,7 +106,7 @@ private fun Favorito(texto: String, icone: androidx.compose.ui.graphics.vector.I
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(icone, null, tint = Cores.Vermelho, modifier = Modifier.size(22.dp))
+        Icon(icone, null, tint = Cores.Destaque, modifier = Modifier.size(22.dp))
         Text(texto, color = Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
