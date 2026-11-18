@@ -14,12 +14,12 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.ViewTreeSavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import br.com.civic.launcher.ui.CivicTheme
 import br.com.civic.launcher.ui.ModoTema
 import br.com.civic.launcher.ui.PainelDirecao
@@ -69,9 +69,9 @@ class PainelService : Service() {
         ).apply { gravity = if (paisagem) Gravity.END else Gravity.BOTTOM }
 
         val vista = ComposeView(this).apply {
-            ViewTreeLifecycleOwner.set(this, dono)
-            ViewTreeSavedStateRegistryOwner.set(this, dono)
-            ViewTreeViewModelStoreOwner.set(this, dono)
+            setViewTreeLifecycleOwner(dono)
+            setViewTreeSavedStateRegistryOwner(dono)
+            setViewTreeViewModelStoreOwner(dono)
             setContent {
                 val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                 CivicTheme(ModoTema.ler(this@PainelService).escuro(hora)) {
