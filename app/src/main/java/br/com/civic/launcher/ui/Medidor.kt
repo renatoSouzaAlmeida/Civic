@@ -24,13 +24,14 @@ fun Medidor(
     espessura: Dp = 12.dp,
     conteudo: @Composable BoxScope.() -> Unit = {},
 ) {
+    val trilho = Cores.CartaoAlto
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val esp = espessura.toPx()
             val tamanho = Size(size.width - esp, size.height - esp)
             val origem = Offset(esp / 2, esp / 2)
             val traco = Stroke(esp, cap = StrokeCap.Round)
-            drawArc(Cores.CartaoAlto, 135f, 270f, false, origem, tamanho, style = traco)
+            drawArc(trilho, 135f, 270f, false, origem, tamanho, style = traco)
             val f = fracao.coerceIn(0f, 1f)
             if (f > 0f) drawArc(cor, 135f, 270f * f, false, origem, tamanho, style = traco)
         }

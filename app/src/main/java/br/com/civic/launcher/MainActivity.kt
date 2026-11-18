@@ -8,6 +8,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import br.com.civic.launcher.ui.CivicTheme
 import br.com.civic.launcher.ui.HomeScreen
@@ -16,6 +19,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var monitor: MediaMonitor
     private lateinit var atualizador: Atualizador
     private lateinit var sensores: Sensores
+    private var escuro by mutableStateOf(true)
 
     // Localização (velocidade/clima), telefone (sinal da rede) e Bluetooth (ícone de status).
     private val pedirPermissoes =
@@ -27,7 +31,12 @@ class MainActivity : ComponentActivity() {
         monitor = MediaMonitor(this)
         atualizador = Atualizador(this)
         sensores = Sensores(this)
-        setContent { CivicTheme { HomeScreen(monitor, atualizador, sensores) } }
+        escuro = getSharedPreferences("preferencias", MODE_PRIVATE).getBoolean("tema_escuro", true)
+        setContent {
+            CivicTheme(escuro) {
+                HomeScreen(monitor, atualizador, sensores, escuro) { alternarTema() }
+            }
+        }
 
         val faltando = buildList {
             add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -35,6 +44,11 @@ class MainActivity : ComponentActivity() {
             if (Build.VERSION.SDK_INT >= 31) add(Manifest.permission.BLUETOOTH_CONNECT)
         }.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (faltando.isNotEmpty()) pedirPermissoes.launch(faltando.toTypedArray())
+    }
+
+    private fun alternarTema() {
+        escuro = !escuro
+        getSharedPreferences("preferencias", MODE_PRIVATE).edit().putBoolean("tema_escuro", escuro).apply()
     }
 
     // Reinicia ao voltar das Configurações (onde o acesso às notificações é concedido).

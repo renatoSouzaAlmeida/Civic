@@ -37,7 +37,13 @@ import java.util.Date
 
 /** Estrutura fixa: barra do topo, conteúdo da tela escolhida e barra de navegação. */
 @Composable
-fun HomeScreen(monitor: MediaMonitor, atualizador: Atualizador, sensores: Sensores) {
+fun HomeScreen(
+    monitor: MediaMonitor,
+    atualizador: Atualizador,
+    sensores: Sensores,
+    escuro: Boolean,
+    aoAlternarTema: () -> Unit,
+) {
     var tela by remember { mutableStateOf(Tela.Inicio) }
     BackHandler(tela != Tela.Inicio) { tela = Tela.Inicio }
 
@@ -45,7 +51,7 @@ fun HomeScreen(monitor: MediaMonitor, atualizador: Atualizador, sensores: Sensor
         Modifier.fillMaxSize().background(Cores.Fundo).systemBarsPadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        BarraTopo(sensores, atualizador)
+        BarraTopo(sensores, atualizador, escuro, aoAlternarTema)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tela) {
                 Tela.Inicio -> TelaInicio(monitor, sensores)
@@ -58,7 +64,7 @@ fun HomeScreen(monitor: MediaMonitor, atualizador: Atualizador, sensores: Sensor
 }
 
 @Composable
-private fun BarraTopo(sensores: Sensores, atualizador: Atualizador) {
+private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, escuro: Boolean, aoAlternarTema: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -100,6 +106,12 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador) {
                 Icon(Icons.Filled.SignalCellularAlt, null, tint = Cores.Texto, modifier = Modifier.size(30.dp))
                 if (rede.rede.isNotEmpty()) Text(rede.rede, color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
+            Icon(
+                if (escuro) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                if (escuro) "Usar tema claro" else "Usar tema escuro",
+                tint = Cores.Texto,
+                modifier = Modifier.toqueSuave(aoAlternarTema).size(52.dp).padding(8.dp),
+            )
             Column(horizontalAlignment = Alignment.End) {
                 Text(hora, color = Cores.Texto, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 Text(data, color = Cores.TextoSuave, fontSize = 16.sp)
@@ -115,7 +127,7 @@ internal fun CartaoWaze(modifier: Modifier) {
         modifier
             .toqueSuave { ctx.abrirWaze() }
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF0E2A3A), Color(0xFF111827), Cores.Cartao)))
+            .background(Brush.linearGradient(listOf(Cores.DegradeWaze, Cores.Cartao)))
             .padding(20.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {

@@ -45,7 +45,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
         modifier
             .clip(RoundedCornerShape(24.dp))
             .background(
-                if (m.temSessao) Brush.verticalGradient(listOf(Color(0xFF123524), Cores.Cartao))
+                if (m.temSessao) Brush.verticalGradient(listOf(Cores.DegradeSpotify, Cores.Cartao))
                 else Brush.verticalGradient(listOf(Cores.Cartao, Cores.Cartao))
             )
             .clickable { ctx.abrirSpotify() }
