@@ -52,8 +52,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/release/*.apk saida/Civic-Renatin-release.apk
-          gh release create "build-${{ github.run_number }}" saida/Civic-Renatin-release.apk#Civic-Renatin.apk \
+          mkdir -p release
+          cp app/build/outputs/apk/release/*.apk release/Civic-Renatin.apk
+          gh release create "build-${{ github.run_number }}" release/Civic-Renatin.apk \
             --title "0.3.${{ github.run_number }}" \
             --notes "Versão automática gerada a partir da main." --latest
 
