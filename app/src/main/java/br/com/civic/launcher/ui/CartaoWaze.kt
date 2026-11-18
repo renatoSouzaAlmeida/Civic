@@ -64,14 +64,12 @@ fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
                 }
                 PilulaFavoritos { destino -> ctx.navegarFavorito(destino) }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                Column(
-                    Modifier.clip(RoundedCornerShape(24.dp)).background(Cores.CartaoSolido).border(1.dp, Cores.ChipBorda, RoundedCornerShape(24.dp))
-                        .padding(horizontal = 22.dp, vertical = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("$vel", color = Cores.Texto, fontSize = if (compacto) 38.sp else 54.sp, fontWeight = FontWeight.ExtraBold)
-                    Text("km/h", color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Selos: velocidade, temperatura do motor e do ar de admissão (estes dois vêm do OBD).
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
+                    Selo("$vel", "km/h", compacto)
+                    Selo(obd.dados.tempMotor?.toString() ?: "—", "°C motor", compacto)
+                    Selo(obd.dados.tempAdmissao?.toString() ?: "—", "°C ar", compacto)
                 }
                 Row(
                     Modifier.clip(RoundedCornerShape(50)).background(Cores.Destaque).padding(horizontal = 22.dp, vertical = 14.dp),
@@ -83,6 +81,19 @@ fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
                 }
             }
         }
+    }
+}
+
+/** Selo com valor grande e unidade embaixo (mesmo estilo do km/h). */
+@Composable
+private fun Selo(valor: String, unidade: String, compacto: Boolean) {
+    Column(
+        Modifier.clip(RoundedCornerShape(24.dp)).background(Cores.CartaoSolido).border(1.dp, Cores.ChipBorda, RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(valor, color = Cores.Texto, fontSize = if (compacto) 30.sp else 42.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text(unidade, color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 

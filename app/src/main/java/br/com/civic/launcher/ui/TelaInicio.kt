@@ -14,7 +14,7 @@ import br.com.civic.launcher.Sensores
 import br.com.civic.launcher.obd.ObdMonitor
 
 /**
- * Paisagem: carro | Waze (maior) | Spotify + 4 caixas (clima, rede, motor, bateria).
+ * Paisagem: carro | Waze (maior) | Spotify + tempo e rede.
  * Retrato (futura virada de tela): tudo empilhado, com rolagem se faltar espaço.
  */
 @Composable
@@ -26,7 +26,7 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                 CartaoWaze(sensores, obd, Modifier.weight(1.7f).fillMaxHeight())
                 Column(Modifier.weight(1.1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     CartaoSpotify(monitor, Modifier.weight(1.15f).fillMaxWidth())
-                    QuatroCaixas(sensores, obd, Modifier.weight(1f).fillMaxWidth())
+                    DuasCaixas(sensores, obd, Modifier.weight(1f).fillMaxWidth())
                 }
             }
         } else {
@@ -34,20 +34,19 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                 CartaoCarro(obd, Modifier.fillMaxWidth().height(330.dp))
                 CartaoWaze(sensores, obd, Modifier.fillMaxWidth().height(300.dp))
                 CartaoSpotify(monitor, Modifier.fillMaxWidth().height(320.dp))
-                QuatroCaixas(sensores, obd, Modifier.fillMaxWidth().height(300.dp))
+                DuasCaixas(sensores, obd, Modifier.fillMaxWidth().height(300.dp))
             }
         }
     }
 }
 
-/** Clima, rede, motor e bateria. Motor e bateria só têm valor com o adaptador OBD conectado. */
+/** Tempo (clima) e rede, cada um ocupando a largura toda. */
 @Composable
-private fun QuatroCaixas(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
+private fun DuasCaixas(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     val d = obd.dados
     val c = sensores.conectividade
     val clima = sensores.clima
     Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (clima != null) {
                 val (icone, cor) = when (clima.condicao) {
                     CondicaoClima.Limpo -> Icons.Filled.WbSunny to Cores.Amarelo
@@ -55,39 +54,16 @@ private fun QuatroCaixas(sensores: Sensores, obd: ObdMonitor, modifier: Modifier
                     CondicaoClima.Chuva -> Icons.Filled.WaterDrop to Cores.Waze
                     CondicaoClima.Tempestade -> Icons.Filled.Bolt to Cores.Amarelo
                 }
-                MiniCartao(clima.local, icone, cor, "${clima.temperatura}", "°C", "${clima.condicao.texto} · ${clima.maxima}° / ${clima.minima}°", Modifier.weight(1f).fillMaxHeight())
+                MiniCartao(clima.local, icone, cor, "${clima.temperatura}", "°C", "${clima.condicao.texto} · ${clima.maxima}° / ${clima.minima}°", Modifier.weight(1f).fillMaxWidth())
             } else {
-                MiniCartao("Clima", Icons.Filled.WbSunny, Cores.TextoSuave, "—", "", "Precisa de internet", Modifier.weight(1f).fillMaxHeight())
+                MiniCartao("Clima", Icons.Filled.WbSunny, Cores.TextoSuave, "—", "", "Precisa de internet", Modifier.weight(1f).fillMaxWidth())
             }
             MiniCartao(
                 if (c.rede.isNotEmpty()) "Rede ${c.rede}" else "Rede", Icons.Filled.SignalCellularAlt, Cores.Destaque,
                 c.percentual?.toString() ?: "—", if (c.percentual != null) "%" else "",
                 listOf(c.operadora, c.dbm?.let { "$it dBm" }).filterNotNull().filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "Sem rede" },
-                Modifier.weight(1f).fillMaxHeight(),
+                Modifier.weight(1f).fillMaxWidth(),
             )
-        }
-        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            MiniCartao(
-                "Motor", Icons.Filled.Thermostat, Cores.Ok,
-                d.tempMotor?.toString() ?: "—", if (d.tempMotor != null) "°C" else "",
-                when {
-                    d.tempMotor == null -> "OBD desconectado"
-                    d.tempMotor > 105 -> "Temperatura alta"
-                    else -> "Temperatura normal"
-                },
-                Modifier.weight(1f).fillMaxHeight(),
-            )
-            MiniCartao(
-                "Bateria", Icons.Filled.BatteryChargingFull, Cores.Ok,
-                d.tensao?.let { "%.1f".format(it) } ?: "—", if (d.tensao != null) "V" else "",
-                when {
-                    d.tensao == null -> "OBD desconectado"
-                    d.tensao >= 13.2f -> "Alternador carregando"
-                    d.tensao < 12.0f -> "Bateria baixa"
-                    else -> "Motor desligado"
-                },
-                Modifier.weight(1f).fillMaxHeight(),
-            )
-        }
+
     }
 }

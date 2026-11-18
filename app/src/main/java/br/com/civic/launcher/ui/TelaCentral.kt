@@ -55,11 +55,12 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
     var escolhendo by remember { mutableStateOf(false) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
+        val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
         if (maxWidth >= maxHeight) {
             PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true) { escolhendo = true }
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxWidth().height(maxWidth * 0.46f), comInfos = false) { escolhendo = true }
+                PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxWidth().height(largura * 0.46f), comInfos = false) { escolhendo = true }
                 InfoPainel("Temp. Motor", Icons.Filled.Thermostat, d.tempMotor?.toString(), "°C")
                 InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V")
                 InfoPainel("Temp. Admissão", Icons.Filled.AcUnit, d.tempAdmissao?.toString(), "°C")
