@@ -89,14 +89,38 @@ fun MostradorCentral(fracao: Float, valor: String, rotulo: String, marcas: List<
                     Painel.Vermelho, 135f + 270f * inicioVermelho, 270f * (1f - inicioVermelho), false,
                     Offset(c.x - rFaixa, c.y - rFaixa), Size(rFaixa * 2, rFaixa * 2), style = Stroke(raio * 0.05f),
                 )
-                // Progresso (ciano, vermelho na faixa final).
+                // Progresso em degradê: azul → ciano → âmbar → vermelho ao longo da escala.
+                // O sweepGradient começa em 0° (3 h); as paradas convertem a fração da escala (arco de 135° a 405°)
+                // para a posição angular: pos = ((135 + 270·f) mod 360) / 360.
                 val rProg = raio * 0.84f
                 val canto = Offset(c.x - rProg, c.y - rProg)
                 val tam = Size(rProg * 2, rProg * 2)
-                drawArc(Painel.trilho, 135f, 270f, false, canto, tam, style = Stroke(raio * 0.035f))
-                val azulFim = minOf(f, inicioVermelho) * 270f
-                if (azulFim > 0f) drawArc(Painel.Ciano, 135f, azulFim, false, canto, tam, style = Stroke(raio * 0.035f, cap = StrokeCap.Round))
-                if (f > inicioVermelho) drawArc(Painel.Vermelho, 135f + 270f * inicioVermelho, (f - inicioVermelho) * 270f, false, canto, tam, style = Stroke(raio * 0.035f, cap = StrokeCap.Round))
+                val esp = raio * 0.05f
+                drawArc(Painel.trilho, 135f, 270f, false, canto, tam, style = Stroke(esp))
+                if (f > 0f) {
+                    val azulEscuro = Color(0xFF1E5BFF)
+                    val ambar = Color(0xFFFFB020)
+                    val laranja = Color(0xFFFF6A2B)
+                    val degrade = Brush.sweepGradient(
+                        0.000f to laranja,
+                        0.125f to Painel.Vermelho,
+                        0.200f to Painel.Vermelho,
+                        0.374f to azulEscuro,
+                        0.375f to azulEscuro,
+                        0.750f to Painel.Ciano,
+                        0.938f to ambar,
+                        1.000f to laranja,
+                        center = c,
+                    )
+                    // Brilho largo e suave por baixo + faixa principal.
+                    drawArc(degrade, 135f, 270f * f, false, canto, tam, alpha = 0.25f, style = Stroke(esp * 2.6f, cap = StrokeCap.Round))
+                    drawArc(degrade, 135f, 270f * f, false, canto, tam, style = Stroke(esp, cap = StrokeCap.Round))
+                    // Ponto luminoso na ponta.
+                    val aP = Math.toRadians(135.0 + 270.0 * f)
+                    val ponta = Offset(c.x + rProg * cos(aP).toFloat(), c.y + rProg * sin(aP).toFloat())
+                    drawCircle(Color.White.copy(alpha = 0.35f), esp * 1.4f, ponta)
+                    drawCircle(Color.White, esp * 0.55f, ponta)
+                }
                 // Marcas.
                 val rExt = raio * 0.78f
                 for (i in 0..divisoes) {
