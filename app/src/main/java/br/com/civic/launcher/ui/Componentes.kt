@@ -99,11 +99,11 @@ fun MiniCartao(
 fun BotaoPilula(texto: String, icone: ImageVector, modifier: Modifier = Modifier, aoTocar: () -> Unit) {
     Row(
         modifier.toqueSuave(aoTocar).clip(RoundedCornerShape(50)).background(Cores.Chip).border(1.dp, Cores.ChipBorda, RoundedCornerShape(50))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
     ) {
         Icon(icone, null, tint = Cores.Destaque, modifier = Modifier.size(20.dp))
-        Text(texto, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(texto, color = Cores.Texto, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }

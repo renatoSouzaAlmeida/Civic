@@ -135,19 +135,30 @@ private fun Indicadores(d: DadosObd, modifier: Modifier, vertical: Boolean) {
     }
 }
 
+/** Indicador do OBD: título no canto, valor grande alinhado à direita (acompanha o tamanho da caixa) e barra embaixo. */
 @Composable
 private fun CartaoIndicador(titulo: String, icone: ImageVector, cor: Color, valor: String, unidade: String, fracao: Float, modifier: Modifier) {
     Cartao(modifier) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 14.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                androidx.compose.material3.Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(22.dp))
-                Text(titulo, color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
+            // O número usa a altura que sobra na caixa, então nunca é cortado.
+            val tamanho = minOf(maxHeight.value * 0.46f, maxWidth.value * 0.24f).sp
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    androidx.compose.material3.Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(22.dp))
+                    Text(titulo, color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+                Row(
+                    Modifier.fillMaxWidth().weight(1f),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(valor, color = Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    if (valor != "—") {
+                        Text(unidade, color = Cores.TextoSuave, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp, top = 6.dp))
+                    }
+                }
+                BarraFina(fracao, cor, Modifier.fillMaxWidth(), 7.dp)
             }
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(valor, color = Cores.Texto, fontSize = 42.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                if (valor != "—") Text(unidade, color = Cores.TextoSuave, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 7.dp))
-            }
-            BarraFina(fracao, cor, Modifier.fillMaxWidth(), 7.dp)
         }
     }
 }
@@ -166,16 +177,16 @@ private fun CartaoCarroCentral(obd: ObdMonitor, d: DadosObd, modifier: Modifier,
                         EstadoObd.Procurando -> "Procurando o adaptador…"
                         EstadoObd.Conectando -> "Conectando…"
                         EstadoObd.Conectado -> if (d.rpm == null) "Conectado — ligue o motor" else "Conectado"
-                        EstadoObd.Demonstracao -> "Modo demonstração (dados simulados)"
+                        EstadoObd.Demonstracao -> "Demonstração (dados simulados)"
                     },
-                    color = Cores.TextoSuave, fontSize = 14.sp,
+                    color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     BotaoPilula(
-                        if (obd.estado == EstadoObd.Demonstracao) "Sair da demo" else "Demonstração",
-                        Icons.Filled.PlayArrow, Modifier.weight(1f),
+                        if (obd.estado == EstadoObd.Demonstracao) "Sair da demonstração" else "Demonstração",
+                        Icons.Filled.PlayArrow, Modifier.fillMaxWidth(),
                     ) { obd.alternarDemonstracao() }
-                    BotaoPilula("Adaptador", Icons.Filled.Bluetooth, Modifier.weight(1f)) { aoEscolherAdaptador() }
+                    BotaoPilula("Escolher adaptador", Icons.Filled.Bluetooth, Modifier.fillMaxWidth()) { aoEscolherAdaptador() }
                 }
             }
         }
