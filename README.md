@@ -11,14 +11,15 @@ Uso próprio, sem fins comerciais.
 2. Instale no tablet/multimídia (permita "fontes desconhecidas").
 3. Aperte o botão Home e escolha **Civic Launcher** → "Sempre".
 
-## Estado atual (v0.1)
+## Estado atual (v0.2)
 - Layout adaptativo: paisagem (mapa à esquerda, painel à direita) e retrato (painel embaixo).
 - Cartão Waze com atalhos **Casa** e **Trabalho** (`waze://?favorite=...` — a validar no aparelho).
-- Cartão Spotify, relógio e botões grandes (alvos de toque de 80dp).
+- Cartão Spotify **com capa, música, artista e controles reais** (anterior, play/pausa, próxima). Na primeira vez, toque em "Ativar controle" e libere o Civic Launcher em *Acesso às notificações*.
+- Relógio e botões grandes (alvos de toque de 80dp).
 - Registrado como app de tela inicial (HOME).
 
 ## Próximas etapas
-1. Controles reais do Spotify (capa, faixa, play/pause/próxima) via `MediaSession`.
+1. ~~Controles reais do Spotify~~ — feito na v0.2 (precisa conceder "Acesso às notificações" ao app).
 2. Waze + Spotify simultâneos: tela dividida nativa, com painel flutuante como alternativa.
 3. Início automático ao ligar o carro e retomada da música.
 4. Atualização automática do APK pelo próprio app (via GitHub Releases).

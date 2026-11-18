@@ -8,9 +8,16 @@ import br.com.civic.launcher.ui.CivicTheme
 import br.com.civic.launcher.ui.HomeScreen
 
 class MainActivity : ComponentActivity() {
+    private lateinit var monitor: MediaMonitor
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { CivicTheme { HomeScreen() } }
+        monitor = MediaMonitor(this)
+        setContent { CivicTheme { HomeScreen(monitor) } }
     }
+
+    // Reinicia ao voltar das Configurações (onde o acesso é concedido).
+    override fun onStart() { super.onStart(); monitor.iniciar() }
+    override fun onStop() { monitor.parar(); super.onStop() }
 }

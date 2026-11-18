@@ -28,5 +28,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Acesso às sessões de mídia (capa, faixa e controles do Spotify). -->
+        <service
+            android:name=".MediaListenerService"
+            android:exported="true"
+            android:label="Civic Launcher"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

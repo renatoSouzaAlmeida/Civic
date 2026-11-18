@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import br.com.civic.launcher.abrirSpotify
+import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.abrirWaze
 import br.com.civic.launcher.navegarWazeFavorito
 import kotlinx.coroutines.delay
@@ -32,7 +32,7 @@ import java.util.Date
  * vai para baixo. Nenhum tamanho é fixo, só proporções.
  */
 @Composable
-fun HomeScreen() {
+fun HomeScreen(monitor: MediaMonitor) {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -43,12 +43,12 @@ fun HomeScreen() {
         if (maxWidth >= maxHeight) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 CartaoWaze(Modifier.weight(0.62f).fillMaxHeight())
-                PainelLateral(Modifier.weight(0.38f).fillMaxHeight())
+                PainelLateral(monitor, Modifier.weight(0.38f).fillMaxHeight())
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 CartaoWaze(Modifier.weight(0.58f).fillMaxWidth())
-                PainelLateral(Modifier.weight(0.42f).fillMaxWidth())
+                PainelLateral(monitor, Modifier.weight(0.42f).fillMaxWidth())
             }
         }
     }
@@ -79,37 +79,10 @@ private fun CartaoWaze(modifier: Modifier) {
 }
 
 @Composable
-private fun PainelLateral(modifier: Modifier) {
-    val ctx = LocalContext.current
+private fun PainelLateral(monitor: MediaMonitor, modifier: Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Relogio(Modifier.fillMaxWidth())
-        Column(
-            Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(Cores.Cartao)
-                .clickable { ctx.abrirSpotify() }
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Column {
-                Icon(Icons.Filled.MusicNote, null, tint = Cores.Spotify, modifier = Modifier.size(56.dp))
-                Spacer(Modifier.height(8.dp))
-                Text("Spotify", color = Cores.Texto, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                Text("Toque para abrir", color = Cores.TextoSuave, fontSize = 18.sp)
-            }
-            // Controles reais (play/pause/próxima, capa) entram na próxima etapa.
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Filled.SkipPrevious, null, tint = Cores.TextoSuave, modifier = Modifier.size(56.dp))
-                Icon(Icons.Filled.PlayCircleFilled, null, tint = Cores.Spotify, modifier = Modifier.size(80.dp))
-                Icon(Icons.Filled.SkipNext, null, tint = Cores.TextoSuave, modifier = Modifier.size(56.dp))
-            }
-        }
+        CartaoSpotify(monitor, Modifier.weight(1f).fillMaxWidth())
     }
 }
 
@@ -132,7 +105,7 @@ private fun Relogio(modifier: Modifier) {
 }
 
 @Composable
-private fun Atalho(rotulo: String, icone: ImageVector, modifier: Modifier, aoTocar: () -> Unit) {
+internal fun Atalho(rotulo: String, icone: ImageVector, modifier: Modifier, aoTocar: () -> Unit) {
     // Alvo de toque grande (80dp de altura) para uso em direção.
     Row(
         modifier
