@@ -99,7 +99,7 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(if (compacto) 40.dp else 52.dp))
                 Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 28.sp else 40.sp, fontWeight = FontWeight.ExtraBold)
+                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 26.sp else 36.sp, fontFamily = FonteTitulo, maxLines = 1)
                     if (!compacto) Text(data, color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp), maxLines = 1)
                 }
             }

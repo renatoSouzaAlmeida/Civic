@@ -113,7 +113,7 @@ private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlte
                     Icon(icone, null, tint = cor, modifier = Modifier.size(18.dp))
                     Text("${clima.temperatura}°", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
-                Text(hora, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(hora, color = Cores.Texto, fontSize = 15.sp, fontFamily = FonteTitulo, maxLines = 1)
             }
             BotaoPequeno(Icons.Filled.OpenInFull, "Tamanho do painel", aoAlternarTamanho)
             BotaoPequeno(Icons.Filled.Close, "Fechar", aoFechar)
