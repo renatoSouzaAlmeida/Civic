@@ -59,7 +59,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             val abriu = runCatching {
                 ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }.isSuccess
-            if (!abriu) Toast.makeText(ctx, "Ative o acesso às notificações do Civic Launcher nas Configurações", Toast.LENGTH_LONG).show()
+            if (!abriu) Toast.makeText(ctx, "Ative o acesso às notificações do Civic Renatin nas Configurações", Toast.LENGTH_LONG).show()
         }
         // Capa, título e progresso (cedem espaço); os controles abaixo nunca são espremidos.
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {

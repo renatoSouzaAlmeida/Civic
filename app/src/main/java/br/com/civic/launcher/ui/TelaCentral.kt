@@ -34,26 +34,26 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor) {
     ) {
         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                Medidor(vel / 220f, Cores.Waze, Modifier.aspectRatio(1f), espessura = 18.dp) {
+                Medidor(vel / 220f, Cores.Waze, Modifier.aspectRatio(1f), espessura = 18.dp) { dm ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${vel.toInt()}", color = Cores.Texto, fontSize = 64.sp, fontWeight = FontWeight.Bold)
-                        Text("km/h", color = Cores.TextoSuave, fontSize = 22.sp)
+                        Text("${vel.toInt()}", color = Cores.Texto, fontSize = (dm.value * 0.26f).sp, fontWeight = FontWeight.Bold)
+                        Text("km/h", color = Cores.TextoSuave, fontSize = (dm.value * 0.08f).sp)
                     }
                 }
             }
             Box(Modifier.weight(1.4f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                Medidor(rpm / 7000f, if (rpm >= 6000) Cores.Amarelo else Cores.Destaque, Modifier.aspectRatio(1f), espessura = 22.dp) {
+                Medidor(rpm / 7000f, if (rpm >= 6000) Cores.Amarelo else Cores.Destaque, Modifier.aspectRatio(1f), espessura = 22.dp) { dm ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(if (d.rpm != null) "$rpm" else "—", color = Cores.Texto, fontSize = 80.sp, fontWeight = FontWeight.Bold)
-                        Text("rpm", color = Cores.TextoSuave, fontSize = 24.sp)
+                        Text(if (d.rpm != null) "$rpm" else "—", color = Cores.Texto, fontSize = (dm.value * 0.22f).sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("rpm", color = Cores.TextoSuave, fontSize = (dm.value * 0.07f).sp)
                     }
                 }
             }
             Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                Medidor((d.carga ?: 0) / 100f, Cores.Spotify, Modifier.aspectRatio(1f), espessura = 18.dp) {
+                Medidor((d.carga ?: 0) / 100f, Cores.Spotify, Modifier.aspectRatio(1f), espessura = 18.dp) { dm ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(d.carga?.let { "$it%" } ?: "—", color = Cores.Texto, fontSize = 52.sp, fontWeight = FontWeight.Bold)
-                        Text("carga do motor", color = Cores.TextoSuave, fontSize = 18.sp)
+                        Text(d.carga?.let { "$it%" } ?: "—", color = Cores.Texto, fontSize = (dm.value * 0.2f).sp, fontWeight = FontWeight.Bold)
+                        Text("carga", color = Cores.TextoSuave, fontSize = (dm.value * 0.07f).sp)
                     }
                 }
             }

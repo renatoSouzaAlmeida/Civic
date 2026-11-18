@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,7 +29,14 @@ import br.com.civic.launcher.abrirSpotify
 
 enum class Tela { Inicio, Central, Apps }
 
-private class Item(val rotulo: String, val icone: ImageVector, val tela: Tela?, val acao: (Context) -> Unit = {})
+private class Item(
+    val rotulo: String,
+    val icone: ImageVector,
+    val tela: Tela?,
+    /** Se informado e o app estiver instalado, usa o ícone real dele no lugar de `icone`. */
+    val pacoteIcone: String? = null,
+    val acao: (Context) -> Unit = {},
+)
 
 private fun abrirFixado(ctx: Context, chave: String, nome: String, reserva: (() -> Unit)? = null) {
     val pacote = Atalhos.obter(ctx, chave)
@@ -43,7 +54,7 @@ private val itens = listOf(
             c.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     },
-    Item("Música", Icons.Filled.MusicNote, null) { it.abrirSpotify() },
+    Item("Spotify", Icons.Filled.MusicNote, null, "com.spotify.music") { it.abrirSpotify() },
     Item("Rádio", Icons.Filled.Radio, null) { abrirFixado(it, Atalhos.RADIO, "Rádio") },
     Item("YouTube", Icons.Filled.OndemandVideo, null) { it.abrir("com.google.android.youtube") },
     Item("Câmera", Icons.Filled.Videocam, null) { abrirFixado(it, Atalhos.CAMERA, "Câmera") },
@@ -74,7 +85,16 @@ fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modif
                     .padding(vertical = if (compacto) 12.dp else 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon(item.icone, item.rotulo, tint = if (ativo) Cores.Destaque else Cores.Texto, modifier = Modifier.size(if (compacto) 26.dp else 34.dp))
+                val iconeApp = remember(item.pacoteIcone) {
+                    item.pacoteIcone?.let { pacote ->
+                        runCatching { ctx.packageManager.getApplicationIcon(pacote).toBitmap(96, 96).asImageBitmap() }.getOrNull()
+                    }
+                }
+                if (iconeApp != null) {
+                    Image(iconeApp, item.rotulo, Modifier.size(if (compacto) 28.dp else 36.dp))
+                } else {
+                    Icon(item.icone, item.rotulo, tint = if (ativo) Cores.Destaque else Cores.Texto, modifier = Modifier.size(if (compacto) 26.dp else 34.dp))
+                }
                 if (!compacto) Text(item.rotulo, color = if (ativo) Cores.Destaque else Cores.TextoSuave, fontSize = 16.sp, maxLines = 1)
             }
         }
