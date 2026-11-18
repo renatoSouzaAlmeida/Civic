@@ -12,6 +12,7 @@ object Cores {
     val Destaque = Color(0xFFE5383B) // vermelho do tema atual da multimídia
     val Spotify = Color(0xFF1DB954)
     val Waze = Color(0xFF33CCFF)
+    val Amarelo = Color(0xFFFFC043)
     val Texto = Color(0xFFF2F4F8)
     val TextoSuave = Color(0xFF9AA3B5)
 }

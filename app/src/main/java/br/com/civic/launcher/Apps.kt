@@ -8,7 +8,7 @@ import android.widget.Toast
 private const val WAZE = "com.waze"
 private const val SPOTIFY = "com.spotify.music"
 
-private fun Context.abrir(pacote: String) {
+fun Context.abrir(pacote: String) {
     val intent = packageManager.getLaunchIntentForPackage(pacote)
     if (intent != null) startActivity(intent)
     else Toast.makeText(this, "App não instalado: $pacote", Toast.LENGTH_SHORT).show()

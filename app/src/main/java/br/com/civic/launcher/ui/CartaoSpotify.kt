@@ -41,7 +41,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
     val m = monitor.estado
 
-    Column(
+    BoxWithConstraints(
         modifier
             .clip(RoundedCornerShape(24.dp))
             .background(
@@ -49,7 +49,10 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
                 else Brush.verticalGradient(listOf(Cores.Cartao, Cores.Cartao))
             )
             .clickable { ctx.abrirSpotify() }
-            .padding(24.dp),
+    ) {
+    val compacto = maxHeight < 360.dp
+    Column(
+        Modifier.fillMaxSize().padding(if (compacto) 16.dp else 24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         val abrirAcesso = {
@@ -66,7 +69,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             if (m.capa != null) {
                 Image(
                     m.capa.asImageBitmap(), null,
-                    Modifier.size(112.dp).clip(RoundedCornerShape(20.dp)),
+                    Modifier.size(if (compacto) 80.dp else 112.dp).clip(RoundedCornerShape(20.dp)),
                     contentScale = ContentScale.Crop,
                 )
             } else {
@@ -75,7 +78,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             Column {
                 Text(
                     if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify",
-                    color = Cores.Texto, fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                    color = Cores.Texto, fontSize = if (compacto) 24.sp else 28.sp, fontWeight = FontWeight.Bold,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 Text(
@@ -96,13 +99,14 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Controle(Icons.Filled.SkipPrevious, 56.dp, Cores.TextoSuave) { monitor.anterior() }
+            Controle(Icons.Filled.SkipPrevious, if (compacto) 48.dp else 56.dp, Cores.TextoSuave) { monitor.anterior() }
             Controle(
                 if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                80.dp, Cores.Spotify,
+                if (compacto) 64.dp else 80.dp, Cores.Spotify,
             ) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
-            Controle(Icons.Filled.SkipNext, 56.dp, Cores.TextoSuave) { monitor.proxima() }
+            Controle(Icons.Filled.SkipNext, if (compacto) 48.dp else 56.dp, Cores.TextoSuave) { monitor.proxima() }
         }
+    }
     }
 }
 
