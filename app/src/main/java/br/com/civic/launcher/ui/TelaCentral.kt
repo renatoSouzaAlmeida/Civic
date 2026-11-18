@@ -19,6 +19,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
@@ -64,7 +67,7 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
                 InfoPainel("Temp. Motor", Icons.Filled.Thermostat, d.tempMotor?.toString(), "°C")
                 InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V")
                 InfoPainel("Temp. Admissão", Icons.Filled.AcUnit, d.tempAdmissao?.toString(), "°C")
-                MiniSpotify(monitor)
+                SpotifyPainel(monitor, Modifier.fillMaxWidth().height(110.dp))
             }
         }
     }
@@ -143,14 +146,18 @@ private fun PainelEsportivo(
 ) {
     val p = coresPainel()
     val forma = RoundedCornerShape(28.dp)
-    // Fase da animação da estrada: anda conforme a velocidade real (parado = estrada parada).
+    // Distância percorrida "no mundo" da estrada: anda na velocidade real (parado = estrada parada).
+    // É lida só dentro do desenho / graphicsLayer, então nada é recomposto a cada quadro.
     val velAtual by rememberUpdatedState(vel)
-    var fase by remember { mutableFloatStateOf(0f) }
+    val distancia = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         var ultimo = 0L
         while (true) {
             withFrameNanos { t ->
-                if (ultimo != 0L) fase = (fase + (t - ultimo) / 1e9f * (velAtual / 100f) * 2.5f) % 7f
+                if (ultimo != 0L) {
+                    val dt = ((t - ultimo) / 1e9f).coerceAtMost(0.1f)
+                    distancia.floatValue = (distancia.floatValue + dt * velAtual / 3.6f * ESCALA_MUNDO) % 1000f
+                }
                 ultimo = t
             }
         }
@@ -161,22 +168,33 @@ private fun PainelEsportivo(
         val g = GeoPainel(maxWidth.value, maxHeight.value, 1f)
         fun dp(v: Float): Dp = v.dp
 
-        Canvas(Modifier.fillMaxSize()) {
-            val k = GeoPainel(size.width, size.height, density)
-            desenharFundo(k, p, fase, caminho)
+        // Camada 1 (estática): brilho, asfalto e bordas da pista.
+        Canvas(Modifier.fillMaxSize()) { desenharBase(GeoPainel(size.width, size.height, density), p, caminho) }
+        // Camada 2 (animada, em camada própria): faixas, marcas do asfalto e riscos de velocidade.
+        Canvas(Modifier.fillMaxSize().graphicsLayer()) {
+            desenharMovimento(GeoPainel(size.width, size.height, density), p, distancia.floatValue, velAtual, caminho)
         }
+        // Camada 3 (estática): reflexo das lanternas, berço que liga os mostradores e halos.
+        Canvas(Modifier.fillMaxSize()) { desenharMoldura(GeoPainel(size.width, size.height, density), p, caminho) }
 
-        // Mostradores.
-        GaugeLateral(vel / 180f, "${vel.toInt()}", "km/h", null,
+        // Mostradores: rpm à esquerda, velocidade grande no centro, carga à direita.
+        GaugeLateral((d.rpm ?: 0) / 8000f, d.rpm?.let { "%,d".format(java.util.Locale("pt", "BR"), it) } ?: "—", "rpm", null,
             Modifier.offset(dp(g.xEsq - g.rS), dp(g.cy - g.rS)).size(dp(g.rS * 2)))
         GaugeLateral((d.carga ?: 0) / 100f, d.carga?.toString() ?: "—", "% carga", null,
             Modifier.offset(dp(g.xDir - g.rS), dp(g.cy - g.rS)).size(dp(g.rS * 2)))
-        TacometroPainel(d.rpm, Modifier.offset(dp(g.cx - g.rT), dp(g.cy - g.rT)).size(dp(g.rT * 2)))
+        MostradorCentral(
+            vel / 200f, "${vel.toInt()}", "km/h", (0..10).map { "${it * 20}" }, 0.8f,
+            Modifier.offset(dp(g.cx - g.rT), dp(g.cy - g.rT)).size(dp(g.rT * 2)),
+        )
 
-        // Carro (traseira) sobre a estrada.
+        // Carro (traseira) sobre a estrada, com uma vibração bem leve quando está andando.
         Image(
             painterResource(R.drawable.carro_traseira), null,
-            Modifier.offset(dp(g.cx - g.larguraCarro / 2), dp(g.h - g.alturaCarro - 2f)).size(dp(g.larguraCarro), dp(g.alturaCarro)),
+            Modifier.offset(dp(g.cx - g.larguraCarro / 2), dp(g.h - g.alturaCarro - 2f)).size(dp(g.larguraCarro), dp(g.alturaCarro))
+                .graphicsLayer {
+                    val v = velAtual
+                    translationY = if (v > 1f) kotlin.math.sin(distancia.floatValue * 9f) * 0.6f * density * minOf(1f, v / 60f) else 0f
+                },
             contentScale = ContentScale.Fit,
         )
 
@@ -197,87 +215,124 @@ private fun PainelEsportivo(
         }
 
         if (comInfos) {
-            val topo = dp(g.yBerco + 10f)
+            val topo = dp(g.yBerco + 8f)
+            val altura = dp(g.h - g.yBerco - 14f)
             Column(
-                Modifier.offset(16.dp, topo).width(dp(g.w * 0.26f)).height(dp(g.h - g.yBerco - 14f)),
+                Modifier.offset(16.dp, topo).width(dp(g.w * 0.27f)).height(altura),
                 verticalArrangement = Arrangement.SpaceEvenly,
             ) {
-                InfoPainel("Temp. Motor", Icons.Filled.Thermostat, d.tempMotor?.toString(), "°C")
-                InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V")
+                InfoPainel("Temp. Motor", Icons.Filled.Thermostat, d.tempMotor?.toString(), "°C", compacto = true)
+                InfoPainel("Temp. Admissão", Icons.Filled.AcUnit, d.tempAdmissao?.toString(), "°C", compacto = true)
+                InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V", compacto = true)
             }
-            Column(
-                Modifier.offset(dp(g.w * 0.735f), topo).width(dp(g.w * 0.25f)).height(dp(g.h - g.yBerco - 14f)),
-                verticalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                InfoPainel("Temp. Admissão", Icons.Filled.AcUnit, d.tempAdmissao?.toString(), "°C")
-                MiniSpotify(monitor)
+            SpotifyPainel(monitor, Modifier.offset(dp(g.w * 0.71f), topo).width(dp(g.w * 0.29f - 16f)).height(altura))
+        }
+    }
+}
+
+/** Metros do "mundo" da estrada por metro real: ajusta a sensação de velocidade das faixas. */
+private const val ESCALA_MUNDO = 0.18f
+/** Distância (no mundo) que corresponde à base da tela; as faixas vão de lá até o ponto de fuga. */
+private const val Z_PERTO = 1f
+private const val ESPACO_FAIXA = 0.9f
+private const val COMPRIMENTO_FAIXA = 0.42f
+
+/** Camada estática de baixo: brilho atrás do mostrador central, asfalto e bordas da pista. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharBase(g: GeoPainel, p: CoresPainel, caminho: Path) {
+    val u = density
+    val cx = g.cx
+    val h = g.h
+    drawCircle(
+        Brush.radialGradient(listOf(p.Azul.copy(alpha = p.brilho), Color.Transparent), Offset(cx, g.cy), g.rBerco * 1.9f),
+        g.rBerco * 1.9f, Offset(cx, g.cy),
+    )
+    caminho.reset()
+    caminho.moveTo(cx, g.yFuga); caminho.lineTo(g.baseDir, h); caminho.lineTo(g.baseEsq, h); caminho.close()
+    drawPath(caminho, p.estrada)
+    for ((largura, alfa) in listOf(14f to 0.12f, 6f to 0.25f, 2.2f to 1f)) {
+        drawLine(p.Ciano.copy(alpha = alfa), Offset(cx, g.yFuga), Offset(g.baseEsq, h), largura * u, StrokeCap.Round)
+        drawLine(p.Ciano.copy(alpha = alfa), Offset(cx, g.yFuga), Offset(g.baseDir, h), largura * u, StrokeCap.Round)
+    }
+}
+
+/**
+ * Camada animada, em perspectiva de verdade: cada faixa tem posição z no mundo e é projetada
+ * com y = fuga + (base − fuga) · zPerto / z. Assim as faixas ficam mais curtas, finas e apagadas ao longe
+ * e aceleram suavemente ao se aproximar — como numa estrada real. Em alta velocidade ganham um rastro.
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharMovimento(g: GeoPainel, p: CoresPainel, distancia: Float, vel: Float, caminho: Path) {
+    val u = density
+    val cx = g.cx
+    val h = g.h
+    val alturaUtil = h - g.yFuga
+    val meia = (g.baseDir - g.baseEsq) / 2
+    val yVisivel = g.cy + g.rBerco
+    val zLonge = Z_PERTO * alturaUtil / (yVisivel - g.yFuga).coerceAtLeast(1f)
+    fun y(z: Float) = g.yFuga + alturaUtil * Z_PERTO / z
+    fun escala(z: Float) = Z_PERTO / z
+    val rastro = (vel / 200f).coerceIn(0f, 1f) * 0.35f
+
+    clipRect(top = yVisivel) {
+        // Marcas sutis no asfalto (juntas), atravessando a pista.
+        val passoJunta = 0.45f
+        var z = Z_PERTO * 0.5f + (passoJunta - distancia % passoJunta)
+        while (z < zLonge) {
+            val e = escala(z)
+            drawLine(p.faixa.copy(alpha = 0.07f * minOf(1f, e * 1.4f)), Offset(cx - meia * e, y(z)), Offset(cx + meia * e, y(z)), 1f * u)
+            z += passoJunta
+        }
+        // Faixas tracejadas que dividem as pistas.
+        z = Z_PERTO * 0.5f + (ESPACO_FAIXA - distancia % ESPACO_FAIXA)
+        while (z < zLonge) {
+            val z0 = z
+            val z1 = z + COMPRIMENTO_FAIXA + rastro
+            val e0 = escala(z0)
+            val e1 = escala(z1)
+            val alfa = (0.15f + 0.75f * e0).coerceAtMost(0.9f)
+            for (pista in floatArrayOf(-1f / 3f, 1f / 3f)) {
+                val x0 = cx + pista * 2f * meia * e0
+                val x1 = cx + pista * 2f * meia * e1
+                val l0 = 4.5f * u * e0
+                val l1 = 4.5f * u * e1
+                caminho.reset()
+                caminho.moveTo(x0 - l0, y(z0)); caminho.lineTo(x0 + l0, y(z0)); caminho.lineTo(x1 + l1, y(z1)); caminho.lineTo(x1 - l1, y(z1)); caminho.close()
+                drawPath(caminho, p.faixa.copy(alpha = alfa))
+            }
+            z += ESPACO_FAIXA
+        }
+        // Riscos de luz fora da pista, mais longos quanto maior a velocidade.
+        if (vel > 1f) {
+            val passoRisco = 1.6f
+            z = Z_PERTO * 0.5f + (passoRisco - (distancia * 1.3f) % passoRisco)
+            var i = 0
+            while (z < zLonge) {
+                val lado = if (i % 2 == 0) -1f else 1f
+                val afastamento = 1.15f + 0.25f * ((i * 7) % 3)
+                val z1 = z + 0.35f + rastro * 2f
+                val a0 = Offset(cx + lado * meia * afastamento * escala(z), y(z))
+                val a1 = Offset(cx + lado * meia * afastamento * escala(z1), y(z1))
+                drawLine(
+                    Brush.linearGradient(listOf(p.Ciano.copy(alpha = 0.55f * escala(z)), Color.Transparent), a0, a1),
+                    a0, a1, (1f + 2.5f * escala(z)) * u, StrokeCap.Round,
+                )
+                z += passoRisco / 2
+                i++
             }
         }
     }
 }
 
-/** Fundo do painel: brilhos, estrada com faixas em movimento, riscos de velocidade, berço e ligações. */
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharFundo(g: GeoPainel, p: CoresPainel, fase: Float, caminho: Path) {
+/** Camada estática de cima: reflexo das lanternas, berço que liga os três mostradores, ligações e halos. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharMoldura(g: GeoPainel, p: CoresPainel, caminho: Path) {
     val u = density
     val azul = p.Azul
     val ciano = p.Ciano
     val cx = g.cx
     val h = g.h
-
-    // Brilho atrás do conta-giros.
-    drawCircle(
-        Brush.radialGradient(listOf(azul.copy(alpha = p.brilho), Color.Transparent), Offset(cx, g.cy), g.rBerco * 1.9f),
-        g.rBerco * 1.9f, Offset(cx, g.cy),
-    )
-
-    // Estrada (triângulo do ponto de fuga até a base).
-    caminho.reset()
-    caminho.moveTo(cx, g.yFuga); caminho.lineTo(g.baseDir, h); caminho.lineTo(g.baseEsq, h); caminho.close()
-    drawPath(caminho, p.estrada)
-
-    val yVisivel = g.cy + g.rBerco
-    val meia = (g.baseDir - g.baseEsq) / 2
-    fun yEm(t: Float) = g.yFuga + (h - g.yFuga) * t * t
-    // Faixas tracejadas (quadriláteros em perspectiva) que vêm em direção ao carro.
-    for (k in 0 until 7) {
-        val t0 = ((k + fase) % 7f) / 7f
-        val t1 = minOf(1f, t0 + 0.06f)
-        if (yEm(t1) < yVisivel) continue
-        for (l in floatArrayOf(-1f / 3f, 0f, 1f / 3f)) {
-            val x0 = cx + l * 2 * meia * t0 * t0 * 0.75f
-            val x1 = cx + l * 2 * meia * t1 * t1 * 0.75f
-            val w0 = (1f + 5f * t0 * t0) * u
-            val w1 = (1f + 5f * t1 * t1) * u
-            caminho.reset()
-            caminho.moveTo(x0 - w0, yEm(t0)); caminho.lineTo(x0 + w0, yEm(t0)); caminho.lineTo(x1 + w1, yEm(t1)); caminho.lineTo(x1 - w1, yEm(t1)); caminho.close()
-            drawPath(caminho, p.faixa.copy(alpha = 0.25f + 0.6f * t0))
-        }
-    }
-    // Bordas da pista com brilho.
-    for ((largura, alfa) in listOf(14f to 0.12f, 6f to 0.25f, 2.2f to 1f)) {
-        drawLine(ciano.copy(alpha = alfa), Offset(cx, g.yFuga), Offset(g.baseEsq, h), largura * u, StrokeCap.Round)
-        drawLine(ciano.copy(alpha = alfa), Offset(cx, g.yFuga), Offset(g.baseDir, h), largura * u, StrokeCap.Round)
-    }
-    // Riscos de velocidade fora da pista.
-    for (k in 0 until 5) {
-        val t0 = ((k * 1.37f + fase * 1.6f) % 5f) / 5f
-        val t1 = minOf(1f, t0 + 0.18f)
-        if (yEm(t1) < yVisivel) continue
-        for (s in floatArrayOf(-1f, 1f)) {
-            fun x(t: Float) = cx + s * (meia * t * t + g.w * 0.06f * t * t)
-            drawLine(
-                Brush.linearGradient(listOf(Color.Transparent, ciano.copy(alpha = 0.5f * t1)), Offset(x(t0), yEm(t0)), Offset(x(t1), yEm(t1))),
-                Offset(x(t0), yEm(t0)), Offset(x(t1), yEm(t1)), (1f + 2f * t1) * u,
-            )
-        }
-    }
-    // Reflexo vermelho das lanternas no chão.
     drawCircle(
         Brush.radialGradient(listOf(Color(0x59FF2828), Color.Transparent), Offset(cx, h - 6 * u), g.larguraCarro * 0.7f),
         g.larguraCarro * 0.7f, Offset(cx, h - 6 * u),
     )
-
-    // Berço: linha que passa sob os laterais e abraça a base do conta-giros (liga os três mostradores).
     val yB = g.yBerco
     val dy = yB + 2 * u - g.cy
     val dx = kotlin.math.sqrt(maxOf(0f, g.rBerco * g.rBerco - dy * dy))
@@ -294,8 +349,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharFundo(g: Ge
         drawPath(caminho, azul.copy(alpha = alfa), style = androidx.compose.ui.graphics.drawscope.Stroke(largura * u, cap = StrokeCap.Round))
     }
     drawPath(caminho, ciano, style = androidx.compose.ui.graphics.drawscope.Stroke(2f * u, cap = StrokeCap.Round))
-
-    // Ligações horizontais entre os mostradores.
     val yLig = g.cy + g.rS * 0.55f
     for ((xa, xb) in listOf(g.xEsq + g.rS + 6 * u to cx - g.rBerco, cx + g.rBerco to g.xDir - g.rS - 6 * u)) {
         drawLine(
@@ -303,22 +356,27 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharFundo(g: Ge
             Offset(xa, yLig), Offset(xb, yLig), 2f * u,
         )
     }
-    // Halo dos mostradores laterais.
     for (x in floatArrayOf(g.xEsq, g.xDir)) {
         drawCircle(
-            Brush.radialGradient(
-                0.64f to azul.copy(alpha = p.brilho), 1f to Color.Transparent,
-                center = Offset(x, g.cy), radius = g.rS * 1.25f,
-            ),
+            Brush.radialGradient(0.64f to azul.copy(alpha = p.brilho), 1f to Color.Transparent, center = Offset(x, g.cy), radius = g.rS * 1.25f),
             g.rS * 1.25f, Offset(x, g.cy),
         )
     }
 }
 
-/** Indicador sem caixa: ícone, rótulo pequeno e valor grande. */
+/** Indicador sem caixa. Normal: rótulo em cima e valor grande. Compacto: tudo numa linha (cabem três). */
 @Composable
-private fun InfoPainel(rotulo: String, icone: ImageVector, valor: String?, unidade: String) {
+private fun InfoPainel(rotulo: String, icone: ImageVector, valor: String?, unidade: String, compacto: Boolean = false) {
     val p = coresPainel()
+    if (compacto) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(icone, null, tint = p.texto, modifier = Modifier.size(22.dp))
+            Text(rotulo, color = p.suave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(valor ?: "—", color = p.texto, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (valor != null) Text(unidade, color = p.texto, fontSize = 14.sp)
+        }
+        return
+    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(icone, null, tint = p.texto, modifier = Modifier.size(30.dp))
         Column {
@@ -340,24 +398,38 @@ private fun BotaoRedondoPainel(icone: ImageVector, aoClicar: () -> Unit) {
     ) { Icon(icone, null, tint = p.texto, modifier = Modifier.size(20.dp)) }
 }
 
-/** Mini player do Spotify em uma linha: nota, título/artista e anterior / tocar / próxima. */
+/** Spotify com a capa do álbum à esquerda; à direita título, artista e anterior / tocar / próxima. */
 @Composable
-private fun MiniSpotify(monitor: MediaMonitor) {
+private fun SpotifyPainel(monitor: MediaMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
     val p = coresPainel()
     val m = monitor.estado
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val capa = remember(m.capa) { m.capa?.asImageBitmap() }
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val formaCapa = RoundedCornerShape(16.dp)
         Box(
-            Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFF4D9BFF), Color(0xFF15367F)))),
+            Modifier.fillMaxHeight().aspectRatio(1f).clip(formaCapa)
+                .background(Brush.linearGradient(listOf(Color(0xFF4D9BFF), Color(0xFF15367F))))
+                .border(1.dp, p.borda, formaCapa).clickable { ctx.abrirSpotify() },
             contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Filled.MusicNote, null, tint = Color.White, modifier = Modifier.size(20.dp)) }
-        Column(Modifier.weight(1f).clickable { ctx.abrirSpotify() }) {
-            Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = p.texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(if (m.temSessao) m.artista else "Nada tocando", color = p.suave, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        ) {
+            if (capa != null) Image(capa, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else Icon(painterResource(R.drawable.ic_spotify), null, tint = Color.White, modifier = Modifier.fillMaxSize(0.4f))
         }
-        BotaoMidia(Icons.Filled.SkipPrevious, false) { monitor.anterior() }
-        BotaoMidia(if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, true) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
-        BotaoMidia(Icons.Filled.SkipNext, false) { monitor.proxima() }
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
+            Column(Modifier.clickable { ctx.abrirSpotify() }) {
+                Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = p.texto, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    when { !m.permitido -> "Toque para ativar"; m.temSessao -> m.artista; else -> "Nada tocando" },
+                    color = p.suave, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BotaoMidia(Icons.Filled.SkipPrevious, false) { monitor.anterior() }
+                BotaoMidia(if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, true) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
+                BotaoMidia(Icons.Filled.SkipNext, false) { monitor.proxima() }
+            }
+        }
     }
 }
 

@@ -58,7 +58,8 @@ fun GaugeLateral(fracao: Float, valor: String, unidade: String, icone: ImageVect
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (icone != null) Icon(icone, null, tint = Painel.texto, modifier = Modifier.size(lado * 0.13f))
-                Text(valor, color = Painel.texto, fontSize = (lado.value * 0.26f).sp, lineHeight = (lado.value * 0.28f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1)
+                val escala = minOf(1f, 3f / valor.length.coerceAtLeast(1))
+                Text(valor, color = Painel.texto, fontSize = (lado.value * 0.26f * escala).sp, lineHeight = (lado.value * 0.28f * escala).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1)
                 Text(unidade, color = Painel.texto, fontSize = (lado.value * 0.075f).sp, fontWeight = FontWeight.SemiBold)
             }
         }
@@ -66,13 +67,14 @@ fun GaugeLateral(fracao: Float, valor: String, unidade: String, icone: ImageVect
 }
 
 /**
- * Conta-giros central: face escura, marcas brancas a cada 500 rpm (vermelhas a partir de 6.000),
- * faixa vermelha externa de 6 a 8, arco de progresso e o rpm grande em itálico no centro.
+ * Mostrador central grande: face, marcas (as maiores com número), faixa vermelha no fim da escala,
+ * arco de progresso e o valor grande em itálico no centro. Usado como velocímetro (0–200 km/h).
  */
 @Composable
-fun TacometroPainel(rpm: Int?, modifier: Modifier = Modifier) {
+fun MostradorCentral(fracao: Float, valor: String, rotulo: String, marcas: List<String>, inicioVermelho: Float, modifier: Modifier = Modifier) {
     val Painel = coresPainel()
-    val f = ((rpm ?: 0) / 8000f).coerceIn(0f, 1f)
+    val f = fracao.coerceIn(0f, 1f)
+    val divisoes = (marcas.size - 1) * 2
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val lado = minOf(maxWidth, maxHeight)
         Box(Modifier.size(lado)) {
@@ -81,54 +83,52 @@ fun TacometroPainel(rpm: Int?, modifier: Modifier = Modifier) {
                 val raio = size.minDimension / 2
                 drawCircle(Painel.face, raio * 0.99f, c)
                 drawCircle(Brush.sweepGradient(listOf(Painel.borda, Color(0xFF6B7A90), Painel.borda), c), raio * 0.99f, c, style = Stroke(raio * 0.025f))
-                // Faixa vermelha externa (6.000 a 8.000).
+                // Faixa vermelha externa no fim da escala.
                 val rFaixa = raio * 0.90f
                 drawArc(
-                    Brush.sweepGradient(listOf(Painel.Vermelho, Painel.Vermelho), c), 135f + 270f * 0.75f, 270f * 0.25f, false,
+                    Painel.Vermelho, 135f + 270f * inicioVermelho, 270f * (1f - inicioVermelho), false,
                     Offset(c.x - rFaixa, c.y - rFaixa), Size(rFaixa * 2, rFaixa * 2), style = Stroke(raio * 0.05f),
                 )
-                // Progresso dos giros (azul até 6.000, vermelho depois).
+                // Progresso (ciano, vermelho na faixa final).
                 val rProg = raio * 0.84f
                 val canto = Offset(c.x - rProg, c.y - rProg)
                 val tam = Size(rProg * 2, rProg * 2)
                 drawArc(Painel.trilho, 135f, 270f, false, canto, tam, style = Stroke(raio * 0.035f))
-                val azulFim = minOf(f, 0.75f) * 270f
+                val azulFim = minOf(f, inicioVermelho) * 270f
                 if (azulFim > 0f) drawArc(Painel.Ciano, 135f, azulFim, false, canto, tam, style = Stroke(raio * 0.035f, cap = StrokeCap.Round))
-                if (f > 0.75f) drawArc(Painel.Vermelho, 135f + 270f * 0.75f, (f - 0.75f) * 270f, false, canto, tam, style = Stroke(raio * 0.035f, cap = StrokeCap.Round))
+                if (f > inicioVermelho) drawArc(Painel.Vermelho, 135f + 270f * inicioVermelho, (f - inicioVermelho) * 270f, false, canto, tam, style = Stroke(raio * 0.035f, cap = StrokeCap.Round))
                 // Marcas.
                 val rExt = raio * 0.78f
-                for (i in 0..16) {
-                    val t = i / 16f
+                for (i in 0..divisoes) {
+                    val t = i / divisoes.toFloat()
                     val a = Math.toRadians(135.0 + 270.0 * t)
                     val grande = i % 2 == 0
                     val rInt = rExt - raio * (if (grande) 0.11f else 0.06f)
                     drawLine(
-                        if (t >= 0.75f) Painel.Vermelho else Painel.texto,
+                        if (t >= inicioVermelho) Painel.Vermelho else Painel.texto,
                         Offset(c.x + rInt * cos(a).toFloat(), c.y + rInt * sin(a).toFloat()),
                         Offset(c.x + rExt * cos(a).toFloat(), c.y + rExt * sin(a).toFloat()),
                         strokeWidth = raio * (if (grande) 0.022f else 0.012f), cap = StrokeCap.Round,
                     )
                 }
             }
-            // Números 0–8.
+            // Números da escala.
             val rRot = lado / 2 * 0.55f
-            for (k in 0..8) {
-                val a = Math.toRadians(135.0 + 270.0 * (k / 8.0))
+            val tamRotulo = (lado.value * (if (marcas.maxOf { it.length } >= 3) 0.052f else 0.065f)).sp
+            marcas.forEachIndexed { k, texto ->
+                val t = k / (marcas.size - 1f)
+                val a = Math.toRadians(135.0 + 270.0 * t)
                 Box(
-                    Modifier.offset(x = lado / 2 + rRot * cos(a).toFloat() - 16.dp, y = lado / 2 + rRot * sin(a).toFloat() - 16.dp).size(32.dp),
+                    Modifier.offset(x = lado / 2 + rRot * cos(a).toFloat() - 20.dp, y = lado / 2 + rRot * sin(a).toFloat() - 14.dp).size(40.dp, 28.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("$k", color = if (k >= 6) Painel.Vermelho else Painel.texto, fontSize = (lado.value * 0.065f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1)
+                    Text(texto, color = if (t >= inicioVermelho) Painel.Vermelho else Painel.texto, fontSize = tamRotulo, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1)
                 }
             }
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("x1000 rpm", color = Painel.suave, fontSize = (lado.value * 0.045f).sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    rpm?.let { "%,d".format(java.util.Locale("pt", "BR"), it) } ?: "—",
-                    color = Painel.texto, fontSize = (lado.value * 0.15f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1,
-                )
+                Text(valor, color = Painel.texto, fontSize = (lado.value * 0.22f).sp, lineHeight = (lado.value * 0.24f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1)
+                Text(rotulo, color = Painel.suave, fontSize = (lado.value * 0.06f).sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
-
