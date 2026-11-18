@@ -69,6 +69,7 @@ fun PainelDirecao(
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo.copy(alpha = OPACIDADE_FUNDO))) {
         val larga = maxWidth > maxHeight
+        val alto = maxHeight // guardado aqui: dentro da coluna aninhada o Kotlin não permite ler maxHeight
         Column(Modifier.fillMaxSize()) {
             BarraSuperior(sensores, aoVoltarInicio, aoAlternarTamanho, aoFechar)
             if (larga) {
@@ -81,7 +82,7 @@ fun PainelDirecao(
                 // Coluna estreita (tela em paisagem): velocidade numa linha e a música com todo o resto.
                 Column(Modifier.weight(1f).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Com espaço de sobra (tablet), o velocímetro cresce e a música desce.
-                    if (maxHeight > 460.dp) VelocimetroGrande(sensores, obd, Modifier.weight(0.85f).fillMaxWidth())
+                    if (alto > 460.dp) VelocimetroGrande(sensores, obd, Modifier.weight(0.85f).fillMaxWidth())
                     else Velocidade(sensores, obd, Modifier.fillMaxWidth())
                     Musica(monitor, Modifier.weight(1f).fillMaxWidth())
                 }
