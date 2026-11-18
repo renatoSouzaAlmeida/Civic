@@ -3,10 +3,12 @@ package br.com.civic.launcher
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.view.KeyEvent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -89,11 +91,24 @@ class MediaMonitor(private val ctx: Context) {
         )
     }
 
-    fun alternar() {
-        val t = controller?.transportControls ?: return
-        if (estado.tocando) t.pause() else t.play()
+    /** Reserva sem permissão nenhuma: manda a tecla de mídia ao player ativo. */
+    private fun teclaMidia(codigo: Int) {
+        val audio = ctx.getSystemService(AudioManager::class.java)
+        audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, codigo))
+        audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, codigo))
     }
 
-    fun proxima() { controller?.transportControls?.skipToNext() }
-    fun anterior() { controller?.transportControls?.skipToPrevious() }
+    fun alternar() {
+        val t = controller?.transportControls
+        if (t == null) teclaMidia(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+        else if (estado.tocando) t.pause() else t.play()
+    }
+
+    fun proxima() {
+        controller?.transportControls?.skipToNext() ?: teclaMidia(KeyEvent.KEYCODE_MEDIA_NEXT)
+    }
+
+    fun anterior() {
+        controller?.transportControls?.skipToPrevious() ?: teclaMidia(KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+    }
 }

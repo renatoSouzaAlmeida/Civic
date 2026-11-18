@@ -20,6 +20,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.civic.launcher.Atualizador
+import br.com.civic.launcher.EstadoAtualizacao
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.abrirWaze
 import br.com.civic.launcher.navegarWazeFavorito
@@ -32,7 +34,7 @@ import java.util.Date
  * vai para baixo. Nenhum tamanho é fixo, só proporções.
  */
 @Composable
-fun HomeScreen(monitor: MediaMonitor) {
+fun HomeScreen(monitor: MediaMonitor, atualizador: Atualizador) {
     BoxWithConstraints(
         Modifier
             .fillMaxSize()
@@ -43,12 +45,12 @@ fun HomeScreen(monitor: MediaMonitor) {
         if (maxWidth >= maxHeight) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 CartaoWaze(Modifier.weight(0.62f).fillMaxHeight())
-                PainelLateral(monitor, Modifier.weight(0.38f).fillMaxHeight())
+                PainelLateral(monitor, atualizador, Modifier.weight(0.38f).fillMaxHeight())
             }
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 CartaoWaze(Modifier.weight(0.58f).fillMaxWidth())
-                PainelLateral(monitor, Modifier.weight(0.42f).fillMaxWidth())
+                PainelLateral(monitor, atualizador, Modifier.weight(0.42f).fillMaxWidth())
             }
         }
     }
@@ -79,15 +81,15 @@ private fun CartaoWaze(modifier: Modifier) {
 }
 
 @Composable
-private fun PainelLateral(monitor: MediaMonitor, modifier: Modifier) {
+private fun PainelLateral(monitor: MediaMonitor, atualizador: Atualizador, modifier: Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Relogio(Modifier.fillMaxWidth())
+        Relogio(atualizador, Modifier.fillMaxWidth())
         CartaoSpotify(monitor, Modifier.weight(1f).fillMaxWidth())
     }
 }
 
 @Composable
-private fun Relogio(modifier: Modifier) {
+private fun Relogio(atualizador: Atualizador, modifier: Modifier) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -101,6 +103,15 @@ private fun Relogio(modifier: Modifier) {
     ) {
         Text(hora, color = Cores.Texto, fontSize = 64.sp, fontWeight = FontWeight.Bold)
         Text(data, color = Cores.TextoSuave, fontSize = 20.sp)
+        when (val e = atualizador.estado) {
+            is EstadoAtualizacao.Pronta -> Text(
+                "Instalar ${e.versao}",
+                color = Cores.Destaque, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp).clickable { atualizador.instalar() },
+            )
+            is EstadoAtualizacao.Baixando -> Text("Baixando ${e.versao}…", color = Cores.TextoSuave, fontSize = 16.sp)
+            else -> Text("v${atualizador.versaoAtual}", color = Cores.TextoSuave, fontSize = 14.sp)
+        }
     }
 }
 

@@ -5,9 +5,14 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      TEM_CHAVE: ${{ secrets.CIVIC_KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -15,9 +20,38 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Compilar APK de teste (debug)
+        run: ./gradlew assembleDebug --no-daemon -PversionCodeCI=${{ github.run_number }}
+
       - uses: actions/upload-artifact@v4
         with:
           name: civic-launcher-debug
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Preparar chave de assinatura
+        if: github.ref == 'refs/heads/main' && env.TEM_CHAVE == 'true'
+        run: |
+          echo "${{ secrets.CIVIC_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/civic.jks"
+          echo "CIVIC_KEYSTORE=$RUNNER_TEMP/civic.jks" >> "$GITHUB_ENV"
+          echo "CIVIC_KEYSTORE_PASSWORD=${{ secrets.CIVIC_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "CIVIC_KEY_ALIAS=${{ secrets.CIVIC_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "CIVIC_KEY_PASSWORD=${{ secrets.CIVIC_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Compilar release assinado
+        if: github.ref == 'refs/heads/main' && env.TEM_CHAVE == 'true'
+        run: ./gradlew assembleRelease --no-daemon -PversionCodeCI=${{ github.run_number }}
+
+      - name: Publicar Release (o app lê esta Release para se atualizar)
+        if: github.ref == 'refs/heads/main' && env.TEM_CHAVE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/*.apk civic-launcher.apk
+          gh release create "build-${{ github.run_number }}" civic-launcher.apk \
+            --title "0.3.${{ github.run_number }}" \
+            --notes "Versão automática gerada a partir da main." --latest
+
+      - name: Aviso quando falta a chave
+        if: github.ref == 'refs/heads/main' && env.TEM_CHAVE != 'true'
+        run: echo "::warning::Segredo CIVIC_KEYSTORE_BASE64 não configurado: Release NÃO publicada (sem ela a atualização automática não funciona)."

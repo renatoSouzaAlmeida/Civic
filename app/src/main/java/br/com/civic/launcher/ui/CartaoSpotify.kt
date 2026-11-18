@@ -39,7 +39,17 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        val abrirAcesso = {
+            val abriu = runCatching {
+                ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.isSuccess
+            if (!abriu) Toast.makeText(ctx, "Ative o acesso às notificações do Civic Launcher nas Configurações", Toast.LENGTH_LONG).show()
+        }
+        Row(
+            Modifier.clickable { if (m.permitido) ctx.abrirSpotify() else abrirAcesso() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             if (m.capa != null) {
                 Image(
                     m.capa.asImageBitmap(), null,
@@ -57,7 +67,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
                 )
                 Text(
                     when {
-                        !m.permitido -> "Controle desativado"
+                        !m.permitido -> "Toque aqui para ativar capa e título"
                         m.temSessao -> m.artista
                         else -> "Toque para abrir"
                     },
@@ -66,26 +76,17 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             }
         }
 
-        if (!m.permitido) {
-            Atalho("Ativar controle", Icons.Filled.Settings, Modifier.fillMaxWidth()) {
-                val abriu = runCatching {
-                    ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }.isSuccess
-                if (!abriu) Toast.makeText(ctx, "Ative o acesso às notificações do Civic Launcher nas Configurações", Toast.LENGTH_LONG).show()
-            }
-        } else {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Controle(Icons.Filled.SkipPrevious, 56.dp, Cores.TextoSuave) { monitor.anterior() }
-                Controle(
-                    if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
-                    80.dp, Cores.Spotify,
-                ) { if (m.temSessao) monitor.alternar() else ctx.abrirSpotify() }
-                Controle(Icons.Filled.SkipNext, 56.dp, Cores.TextoSuave) { monitor.proxima() }
-            }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Controle(Icons.Filled.SkipPrevious, 56.dp, Cores.TextoSuave) { monitor.anterior() }
+            Controle(
+                if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                80.dp, Cores.Spotify,
+            ) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
+            Controle(Icons.Filled.SkipNext, 56.dp, Cores.TextoSuave) { monitor.proxima() }
         }
     }
 }

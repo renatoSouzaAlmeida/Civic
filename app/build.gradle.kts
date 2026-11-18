@@ -4,6 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val codigoVersao = (project.findProperty("versionCodeCI") as String?)?.toIntOrNull() ?: 2
+
 android {
     namespace = "br.com.civic.launcher"
     compileSdk = 34
@@ -13,13 +15,26 @@ android {
         // Multimídia TS18 reporta Android 13, mas o build é QP1A (Android 10).
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = codigoVersao
+        versionName = "0.3.$codigoVersao"
+    }
+
+    // Chave de assinatura fixa (obrigatória para a atualização automática funcionar):
+    // vem de variáveis de ambiente preenchidas pelos segredos do GitHub, nunca do repositório.
+    val arquivoChave = System.getenv("CIVIC_KEYSTORE")
+    if (arquivoChave != null) {
+        signingConfigs.create("civic") {
+            storeFile = file(arquivoChave)
+            storePassword = System.getenv("CIVIC_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("CIVIC_KEY_ALIAS")
+            keyPassword = System.getenv("CIVIC_KEY_PASSWORD")
+        }
     }
 
     buildTypes {
         release {
             // App pequeno: R8 + remoção de recursos não usados.
+            signingConfigs.findByName("civic")?.let { signingConfig = it }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))

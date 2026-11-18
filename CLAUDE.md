@@ -9,7 +9,8 @@
 ## Atualização automática do APK
 - Toda nova versão na `main` deve gerar um APK atualizado (build no GitHub Actions publicando uma Release).
 - O aplicativo deve **identificar a nova versão sozinho e baixá-la direto na multimídia**, sem depender de pendrive (só a primeira instalação é manual).
-- Incrementar `versionCode` e `versionName` a cada versão publicada, para o app conseguir comparar.
+- O `versionCode` é o número da execução do CI (`-PversionCodeCI`), então toda publicação na `main` é uma versão nova e comparável.
+- As versões precisam ser assinadas com a **mesma chave**. A chave nunca vai para o repositório (público): fica nos segredos do GitHub (`CIVIC_KEYSTORE_BASE64`, `CIVIC_KEYSTORE_PASSWORD`, `CIVIC_KEY_ALIAS`, `CIVIC_KEY_PASSWORD`).
 
 ## Tamanho do aplicativo
 - Priorizar um app **pequeno**, para facilitar o download (a multimídia tem internet limitada fora da garagem).

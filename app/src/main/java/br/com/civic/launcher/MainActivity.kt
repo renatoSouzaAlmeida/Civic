@@ -9,15 +9,21 @@ import br.com.civic.launcher.ui.HomeScreen
 
 class MainActivity : ComponentActivity() {
     private lateinit var monitor: MediaMonitor
+    private lateinit var atualizador: Atualizador
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         monitor = MediaMonitor(this)
-        setContent { CivicTheme { HomeScreen(monitor) } }
+        atualizador = Atualizador(this)
+        setContent { CivicTheme { HomeScreen(monitor, atualizador) } }
     }
 
     // Reinicia ao voltar das Configurações (onde o acesso é concedido).
-    override fun onStart() { super.onStart(); monitor.iniciar() }
+    override fun onStart() {
+        super.onStart()
+        monitor.iniciar()
+        atualizador.verificar()
+    }
     override fun onStop() { monitor.parar(); super.onStop() }
 }
