@@ -1,6 +1,8 @@
 package br.com.civic.launcher.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -40,14 +42,15 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                 LinhaOBD(sensores, obd, Modifier.fillMaxWidth().height(130.dp))
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CartaoWaze(Modifier.weight(0.9f).fillMaxWidth())
-                CartaoSpotify(monitor, Modifier.weight(1.1f).fillMaxWidth())
-                Row(Modifier.weight(0.6f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Retrato (celular, ou a multimídia virada): blocos com altura fixa e rolagem se faltar espaço.
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CartaoWaze(Modifier.fillMaxWidth().height(260.dp))
+                CartaoSpotify(monitor, Modifier.fillMaxWidth().height(330.dp))
+                Row(Modifier.fillMaxWidth().height(170.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     CartaoClima(sensores.clima, Modifier.weight(1f).fillMaxHeight())
                     CartaoConectividade(sensores.conectividade, Modifier.weight(1f).fillMaxHeight())
                 }
-                LinhaOBD(sensores, obd, Modifier.fillMaxWidth().height(110.dp))
+                LinhaOBD(sensores, obd, Modifier.fillMaxWidth().height(120.dp))
             }
         }
     }
@@ -141,9 +144,12 @@ private fun LinhaOBD(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
 
 @Composable
 internal fun Indicador(icone: ImageVector, valor: String, rotulo: String, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(34.dp))
-        Text(valor, color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-        Text(rotulo, color = Cores.TextoSuave, fontSize = 16.sp, maxLines = 1)
+    BoxWithConstraints(modifier) {
+        val estreito = maxWidth < 100.dp
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(if (estreito) 24.dp else 34.dp))
+            Text(valor, color = Cores.Texto, fontSize = if (estreito) 20.sp else 30.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(rotulo, color = Cores.TextoSuave, fontSize = if (estreito) 11.sp else 16.sp, maxLines = 1)
+        }
     }
 }

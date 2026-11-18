@@ -36,8 +36,8 @@ fun PainelDirecao(sensores: Sensores, monitor: MediaMonitor, aoVoltarInicio: () 
         } else {
             // Coluna estreita (tela em paisagem).
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Velocidade(sensores, Modifier.weight(1f).fillMaxWidth())
-                Musica(monitor, Modifier.weight(1.3f).fillMaxWidth())
+                Velocidade(sensores, Modifier.weight(0.7f).fillMaxWidth())
+                Musica(monitor, Modifier.weight(1.5f).fillMaxWidth())
                 Botoes(aoVoltarInicio, aoFechar, Modifier.fillMaxWidth().height(64.dp), vertical = false)
             }
         }
@@ -62,8 +62,10 @@ private fun Musica(monitor: MediaMonitor, modifier: Modifier) {
     val m = monitor.estado
     Column(
         modifier.clip(RoundedCornerShape(20.dp)).background(Cores.Cartao).padding(12.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        // Capa, título e progresso cedem espaço; os controles abaixo nunca são espremidos.
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (m.capa != null) {
                 Image(m.capa.asImageBitmap(), null, Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
@@ -79,6 +81,7 @@ private fun Musica(monitor: MediaMonitor, modifier: Modifier) {
             }
         }
         if (m.temSessao && m.duracao > 0) BarraProgresso(m)
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
             Controle(Icons.Filled.SkipPrevious, 48.dp, Cores.TextoSuave) { monitor.anterior() }
             Controle(if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled, 64.dp, Cores.Spotify) { monitor.alternar() }

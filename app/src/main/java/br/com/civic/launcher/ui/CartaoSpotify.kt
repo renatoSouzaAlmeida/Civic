@@ -61,6 +61,8 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             }.isSuccess
             if (!abriu) Toast.makeText(ctx, "Ative o acesso às notificações do Civic Launcher nas Configurações", Toast.LENGTH_LONG).show()
         }
+        // Capa, título e progresso (cedem espaço); os controles abaixo nunca são espremidos.
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
         Row(
             Modifier.clickable { if (m.permitido) ctx.abrirSpotify() else abrirAcesso() },
             verticalAlignment = Alignment.CenterVertically,
@@ -93,6 +95,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
         }
 
         if (m.temSessao && m.duracao > 0) BarraProgresso(m)
+        }
 
         Row(
             Modifier.fillMaxWidth(),

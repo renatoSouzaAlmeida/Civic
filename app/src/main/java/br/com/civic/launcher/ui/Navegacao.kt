@@ -57,9 +57,11 @@ private val itens = listOf(
 @Composable
 fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
+    BoxWithConstraints(modifier) {
+    val compacto = maxWidth < 600.dp // celular em retrato: só os ícones, sem rótulos
     Row(
-        modifier.clip(RoundedCornerShape(24.dp)).background(Cores.Cartao).padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Cores.Cartao).padding(if (compacto) 6.dp else 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (compacto) 4.dp else 8.dp),
     ) {
         itens.forEach { item ->
             val ativo = item.tela != null && item.tela == atual
@@ -69,12 +71,13 @@ fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modif
                     .toqueSuave { if (item.tela != null) aoIr(item.tela) else item.acao(ctx) }
                     .clip(RoundedCornerShape(16.dp))
                     .background(if (ativo) Cores.Destaque.copy(alpha = 0.22f) else Cores.CartaoAlto.copy(alpha = 0.5f))
-                    .padding(vertical = 10.dp),
+                    .padding(vertical = if (compacto) 12.dp else 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon(item.icone, null, tint = if (ativo) Cores.Destaque else Cores.Texto, modifier = Modifier.size(34.dp))
-                Text(item.rotulo, color = if (ativo) Cores.Destaque else Cores.TextoSuave, fontSize = 16.sp, maxLines = 1)
+                Icon(item.icone, item.rotulo, tint = if (ativo) Cores.Destaque else Cores.Texto, modifier = Modifier.size(if (compacto) 26.dp else 34.dp))
+                if (!compacto) Text(item.rotulo, color = if (ativo) Cores.Destaque else Cores.TextoSuave, fontSize = 16.sp, maxLines = 1)
             }
         }
+    }
     }
 }
