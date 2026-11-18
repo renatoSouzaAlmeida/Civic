@@ -220,16 +220,21 @@ private fun PainelEsportivo(
             BotaoRedondoPainel(Icons.Filled.Bluetooth) { aoEscolherAdaptador() }
         }
 
-        // Luzes-espia nas laterais: setas nos lados certos, como no painel do carro.
+        // Setas entre os mostradores: esquerda entre rpm e km/h, direita entre km/h e km/l.
+        val ySeta = dp(g.cy - g.rS * 0.25f - 18f)
+        val xSetaEsq = (g.xEsq + g.rS + g.cx - g.rBerco) / 2
+        val xSetaDir = (g.cx + g.rBerco + g.xDir - g.rS) / 2
+        Box(Modifier.offset(dp(xSetaEsq - 18f), ySeta)) { LuzEspia(painterResource(R.drawable.ic_seta), d.setaEsquerda, Color(0xFF22C55E), piscar = true, tamanho = 36.dp) }
+        Box(Modifier.offset(dp(xSetaDir - 18f), ySeta)) { LuzEspia(painterResource(R.drawable.ic_seta), d.setaDireita, Color(0xFF22C55E), piscar = true, espelhar = true, tamanho = 36.dp) }
+
+        // Demais luzes-espia nas laterais.
         val corVerde = Color(0xFF22C55E)
         Column(Modifier.offset(14.dp, 44.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            LuzEspia(painterResource(R.drawable.ic_seta), d.setaEsquerda, corVerde, piscar = true)
             LuzEspia(painterResource(R.drawable.ic_farol), d.farol, corVerde)
             LuzEspia(painterResource(R.drawable.ic_farolete), d.farolete, corVerde)
             LuzEspia(painterResource(R.drawable.ic_motor), if (obd.estado == EstadoObd.Conectado || obd.estado == EstadoObd.Demonstracao) d.luzMotor else null, Color(0xFFFFB020))
         }
         Column(Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            LuzEspia(painterResource(R.drawable.ic_seta), d.setaDireita, corVerde, piscar = true, espelhar = true)
             LuzEspia(rememberVectorPainter(Icons.Filled.Speed), d.pilotoAutomatico, corVerde)
             LuzEspia(painterResource(R.drawable.ic_alerta), d.alerta, p.Vermelho, piscar = true)
             LuzEspia(rememberVectorPainter(Icons.Filled.Thermostat), d.tempMotor?.let { it >= 105 }, p.Vermelho)
@@ -391,7 +396,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharMoldura(g: 
  * desconhecida (o carro/adaptador ainda não informa) = bem esmaecida.
  */
 @Composable
-private fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa: Boolean?, cor: Color, piscar: Boolean = false, espelhar: Boolean = false) {
+private fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa: Boolean?, cor: Color, piscar: Boolean = false, espelhar: Boolean = false, tamanho: Dp = 28.dp) {
     val p = coresPainel()
     val tint = when (ativa) {
         true -> cor
@@ -405,7 +410,7 @@ private fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa:
     } else null
     Icon(
         icone, null, tint = tint,
-        modifier = Modifier.size(28.dp).graphicsLayer {
+        modifier = Modifier.size(tamanho).graphicsLayer {
             alpha = pisca?.value ?: 1f
             if (espelhar) scaleX = -1f
         },

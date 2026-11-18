@@ -26,14 +26,14 @@ import br.com.civic.launcher.obd.ObdMonitor
 import br.com.civic.launcher.ui.CivicTheme
 import br.com.civic.launcher.ui.ModoTema
 import br.com.civic.launcher.ui.PainelDirecao
-import br.com.civic.launcher.ui.FormatoPainel
+import br.com.civic.launcher.ui.PosicaoPainel
 import br.com.civic.launcher.ui.TamanhoPainel
 import java.util.Calendar
 
 /**
  * Painel de direção: uma janela sobreposta ao Waze com velocidade, música e botões.
- * Formato escolhido em Config. (ou pelo botão da barra): coluna à direita (vertical) ou faixa embaixo (horizontal);
- * no automático, coluna com a tela deitada e faixa com a tela em pé.
+ * Posição escolhida em Config. (ou pelo botão da barra): direita, esquerda (coluna) ou topo, baixo (faixa);
+ * no automático, à direita com a tela deitada e embaixo com a tela em pé. A faixa compacta é uma barra fina.
  */
 class PainelService : Service() {
     private lateinit var janela: WindowManager
@@ -68,18 +68,26 @@ class PainelService : Service() {
         remover()
         val tela = resources.displayMetrics
         val paisagem = tela.widthPixels >= tela.heightPixels
-        val vertical = FormatoPainel.ler(this).vertical(paisagem)
+        val posicao = PosicaoPainel.ler(this).resolver(paisagem)
+        val vertical = posicao.vertical
         val tamanho = TamanhoPainel.ler(this)
         // Na coluna, garante uma largura mínima (≈ 260 dp) para caber a barra e a música mesmo em celular.
         val larguraColuna = maxOf((tela.widthPixels * tamanho.fracaoLargura).toInt(), (260 * tela.density).toInt())
             .coerceAtMost(tela.widthPixels)
         val parametros = WindowManager.LayoutParams(
             if (vertical) larguraColuna else WindowManager.LayoutParams.MATCH_PARENT,
-            if (vertical) WindowManager.LayoutParams.MATCH_PARENT else (tela.heightPixels * tamanho.fracaoAltura).toInt(),
+            if (vertical) WindowManager.LayoutParams.MATCH_PARENT else (tamanho.alturaFaixaDp * tela.density).toInt(),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = if (vertical) Gravity.END else Gravity.BOTTOM }
+        ).apply {
+            gravity = when (posicao) {
+                PosicaoPainel.Esquerda -> Gravity.START
+                PosicaoPainel.Topo -> Gravity.TOP
+                PosicaoPainel.Baixo -> Gravity.BOTTOM
+                else -> Gravity.END
+            }
+        }
 
         val vista = ComposeView(this).apply {
             setViewTreeLifecycleOwner(dono)
@@ -99,8 +107,8 @@ class PainelService : Service() {
                             TamanhoPainel.salvar(this@PainelService, TamanhoPainel.ler(this@PainelService).proximo())
                             Handler(Looper.getMainLooper()).post { mostrar() }
                         },
-                        aoAlternarFormato = {
-                            FormatoPainel.salvar(this@PainelService, if (vertical) FormatoPainel.Horizontal else FormatoPainel.Vertical)
+                        aoAlternarPosicao = {
+                            PosicaoPainel.salvar(this@PainelService, posicao.proxima())
                             Handler(Looper.getMainLooper()).post { mostrar() }
                         },
                         aoFechar = { stopSelf() },
