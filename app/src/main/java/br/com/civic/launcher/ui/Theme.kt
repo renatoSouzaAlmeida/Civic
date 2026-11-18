@@ -1,5 +1,6 @@
 package br.com.civic.launcher.ui
 
+import android.content.Context
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -90,5 +91,31 @@ fun CivicTheme(escuro: Boolean = true, content: @Composable () -> Unit) {
     }
     CompositionLocalProvider(LocalPaleta provides paleta) {
         MaterialTheme(colorScheme = esquema, content = content)
+    }
+}
+
+/** Automático = claro de dia (6h às 18h) e escuro à noite. */
+enum class ModoTema(val rotulo: String) {
+    Automatico("Auto"), Claro("Claro"), Escuro("Escuro");
+
+    fun proximo() = entries[(ordinal + 1) % entries.size]
+
+    fun escuro(hora: Int): Boolean = when (this) {
+        Automatico -> hora !in 6..17
+        Claro -> false
+        Escuro -> true
+    }
+
+    companion object {
+        private const val ARQUIVO = "preferencias"
+        private const val CHAVE = "modo_tema"
+
+        fun ler(ctx: Context): ModoTema = runCatching {
+            valueOf(ctx.getSharedPreferences(ARQUIVO, Context.MODE_PRIVATE).getString(CHAVE, null) ?: "")
+        }.getOrDefault(Automatico)
+
+        fun salvar(ctx: Context, modo: ModoTema) {
+            ctx.getSharedPreferences(ARQUIVO, Context.MODE_PRIVATE).edit().putString(CHAVE, modo.name).apply()
+        }
     }
 }

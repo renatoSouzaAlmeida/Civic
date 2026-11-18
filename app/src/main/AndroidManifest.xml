@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Launcher: lista todos os apps instalados (tela Apps). -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- Painel de direção sobre o Waze. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Permite descobrir/abrir Waze e Spotify (Android 11+). -->
@@ -52,6 +54,8 @@
         </service>
 
         <!-- Resultado da instalação de atualizações (ver Atualizador). -->
+        <service android:name=".PainelService" android:exported="false" />
+
         <receiver android:name=".InstalacaoReceiver" android:exported="false" />
     </application>
 </manifest>

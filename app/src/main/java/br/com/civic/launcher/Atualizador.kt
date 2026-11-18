@@ -18,6 +18,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
 
+enum class SituacaoVersao { Verificando, Atualizado, Indisponivel }
+
 sealed interface EstadoAtualizacao {
     data object Nenhuma : EstadoAtualizacao
     data class Baixando(val versao: String) : EstadoAtualizacao
@@ -33,6 +35,10 @@ class Atualizador(private val ctx: Context) {
     var estado by mutableStateOf<EstadoAtualizacao>(EstadoAtualizacao.Nenhuma)
         private set
 
+    /** Resultado da última verificação: usado para mostrar "Atualizado" na tela inicial. */
+    var situacao by mutableStateOf(SituacaoVersao.Verificando)
+        private set
+
     private val info = ctx.packageManager.getPackageInfo(ctx.packageName, 0)
     private val codigoAtual = PackageInfoCompat.getLongVersionCode(info)
     val versaoAtual: String = info.versionName ?: "?"
@@ -44,12 +50,13 @@ class Atualizador(private val ctx: Context) {
     fun verificar() {
         if (ocupado || estado is EstadoAtualizacao.Pronta) return
         ocupado = true
+        situacao = SituacaoVersao.Verificando
         thread(name = "atualizador") {
             try {
                 buscarEBaixar()
             } catch (_: Exception) {
                 // Sem internet (garagem) ou repositório inacessível: tenta de novo na próxima abertura.
-                publicar(EstadoAtualizacao.Nenhuma)
+                publicarSituacao(SituacaoVersao.Indisponivel)
             } finally {
                 ocupado = false
             }
@@ -58,10 +65,16 @@ class Atualizador(private val ctx: Context) {
 
     private fun buscarEBaixar() {
         val resposta = abrir("https://api.github.com/repos/$REPO/releases/latest")
-        if (resposta.responseCode != 200) return
+        if (resposta.responseCode != 200) {
+            publicarSituacao(SituacaoVersao.Indisponivel)
+            return
+        }
         val json = JSONObject(resposta.inputStream.bufferedReader().use { it.readText() })
         val codigo = json.getString("tag_name").removePrefix("build-").toLongOrNull() ?: return
-        if (codigo <= codigoAtual) return
+        if (codigo <= codigoAtual) {
+            publicarSituacao(SituacaoVersao.Atualizado)
+            return
+        }
 
         val assets = json.getJSONArray("assets")
         var url: String? = null
@@ -94,6 +107,8 @@ class Atualizador(private val ctx: Context) {
         }
 
     private fun publicar(novo: EstadoAtualizacao) = principal.post { estado = novo }
+
+    private fun publicarSituacao(nova: SituacaoVersao) = principal.post { situacao = nova }
 
     /** Chamado ao tocar em "Instalar". Pede, uma única vez, a permissão de instalar apps. */
     fun instalar() {

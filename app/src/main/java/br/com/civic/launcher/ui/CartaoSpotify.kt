@@ -111,7 +111,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
 }
 
 @Composable
-private fun Controle(icone: androidx.compose.ui.graphics.vector.ImageVector, tamanho: androidx.compose.ui.unit.Dp, cor: androidx.compose.ui.graphics.Color, aoTocar: () -> Unit) {
+internal fun Controle(icone: androidx.compose.ui.graphics.vector.ImageVector, tamanho: androidx.compose.ui.unit.Dp, cor: androidx.compose.ui.graphics.Color, aoTocar: () -> Unit) {
     Icon(
         icone, null, tint = cor,
         modifier = Modifier.toqueSuave(aoTocar).size(tamanho).clip(RoundedCornerShape(50)),
@@ -119,7 +119,7 @@ private fun Controle(icone: androidx.compose.ui.graphics.vector.ImageVector, tam
 }
 
 @Composable
-private fun BarraProgresso(m: MusicaUi) {
+internal fun BarraProgresso(m: MusicaUi) {
     var agora by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(m.tocando, m.posicao, m.atualizadoEm) {
         agora = SystemClock.elapsedRealtime()

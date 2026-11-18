@@ -30,7 +30,8 @@ import br.com.civic.launcher.EstadoAtualizacao
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.R
 import br.com.civic.launcher.Sensores
-import br.com.civic.launcher.abrirWaze
+import br.com.civic.launcher.SituacaoVersao
+import br.com.civic.launcher.abrirWazeComPainel
 import br.com.civic.launcher.navegarWazeFavorito
 import kotlinx.coroutines.delay
 import java.util.Date
@@ -41,7 +42,7 @@ fun HomeScreen(
     monitor: MediaMonitor,
     atualizador: Atualizador,
     sensores: Sensores,
-    escuro: Boolean,
+    modoTema: ModoTema,
     aoAlternarTema: () -> Unit,
 ) {
     var tela by remember { mutableStateOf(Tela.Inicio) }
@@ -51,7 +52,7 @@ fun HomeScreen(
         Modifier.fillMaxSize().background(Cores.Fundo).systemBarsPadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        BarraTopo(sensores, atualizador, escuro, aoAlternarTema)
+        BarraTopo(sensores, atualizador, modoTema, aoAlternarTema)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tela) {
                 Tela.Inicio -> TelaInicio(monitor, sensores)
@@ -64,7 +65,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, escuro: Boolean, aoAlternarTema: () -> Unit) {
+private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, modoTema: ModoTema, aoAlternarTema: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -90,7 +91,18 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, escuro: Bool
                         modifier = Modifier.clickable { atualizador.instalar() },
                     )
                     is EstadoAtualizacao.Baixando -> Text("Baixando ${e.versao}…", color = Cores.TextoSuave, fontSize = 16.sp)
-                    else -> Text("v${atualizador.versaoAtual}", color = Cores.TextoSuave, fontSize = 14.sp)
+                    else -> {
+                        val (situacao, cor) = when (atualizador.situacao) {
+                            SituacaoVersao.Atualizado -> "✓ Atualizado" to Cores.Spotify
+                            SituacaoVersao.Indisponivel -> "sem verificação" to Cores.TextoSuave
+                            SituacaoVersao.Verificando -> "verificando…" to Cores.TextoSuave
+                        }
+                        // Tocar força uma nova verificação.
+                        Text(
+                            "Versão ${atualizador.versaoAtual} · $situacao", color = cor, fontSize = 16.sp,
+                            modifier = Modifier.clickable { atualizador.verificar() },
+                        )
+                    }
                 }
             }
         }
@@ -106,12 +118,20 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, escuro: Bool
                 Icon(Icons.Filled.SignalCellularAlt, null, tint = Cores.Texto, modifier = Modifier.size(30.dp))
                 if (rede.rede.isNotEmpty()) Text(rede.rede, color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
-            Icon(
-                if (escuro) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                if (escuro) "Usar tema claro" else "Usar tema escuro",
-                tint = Cores.Texto,
-                modifier = Modifier.toqueSuave(aoAlternarTema).size(52.dp).padding(8.dp),
-            )
+            Column(
+                Modifier.toqueSuave(aoAlternarTema).padding(horizontal = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Icon(
+                    when (modoTema) {
+                        ModoTema.Automatico -> Icons.Filled.BrightnessAuto
+                        ModoTema.Claro -> Icons.Filled.LightMode
+                        ModoTema.Escuro -> Icons.Filled.DarkMode
+                    },
+                    "Tema: ${modoTema.rotulo}", tint = Cores.Texto, modifier = Modifier.size(36.dp),
+                )
+                Text(modoTema.rotulo, color = Cores.TextoSuave, fontSize = 14.sp)
+            }
             Column(horizontalAlignment = Alignment.End) {
                 Text(hora, color = Cores.Texto, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                 Text(data, color = Cores.TextoSuave, fontSize = 16.sp)
@@ -125,7 +145,7 @@ internal fun CartaoWaze(modifier: Modifier) {
     val ctx = LocalContext.current
     Column(
         modifier
-            .toqueSuave { ctx.abrirWaze() }
+            .toqueSuave { ctx.abrirWazeComPainel() }
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.linearGradient(listOf(Cores.DegradeWaze, Cores.Cartao)))
             .padding(20.dp),
