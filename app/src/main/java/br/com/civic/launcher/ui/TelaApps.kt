@@ -51,7 +51,7 @@ fun TelaApps() {
     var menuDe by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(Cores.Cartao).padding(16.dp)) {
-        Text("Segure um app para fixá-lo como Telefone, Rádio ou Câmera", color = Cores.TextoSuave, fontSize = 18.sp)
+        Text("Segure um app para fixá-lo como Telefone ou Câmera", color = Cores.TextoSuave, fontSize = 18.sp)
         Spacer(Modifier.height(12.dp))
         LazyVerticalGrid(GridCells.Adaptive(130.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(apps, key = { it.pacote }) { app ->
@@ -65,7 +65,7 @@ fun TelaApps() {
                     Image(app.icone, null, Modifier.size(72.dp))
                     Text(app.nome, color = Cores.Texto, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                     DropdownMenu(expanded = menuDe == app.pacote, onDismissRequest = { menuDe = null }) {
-                        listOf("Telefone" to Atalhos.TELEFONE, "Rádio" to Atalhos.RADIO, "Câmera" to Atalhos.CAMERA).forEach { (nome, chave) ->
+                        listOf("Telefone" to Atalhos.TELEFONE, "Câmera" to Atalhos.CAMERA).forEach { (nome, chave) ->
                             DropdownMenuItem(
                                 text = { Text("Fixar como $nome", fontSize = 20.sp) },
                                 onClick = {

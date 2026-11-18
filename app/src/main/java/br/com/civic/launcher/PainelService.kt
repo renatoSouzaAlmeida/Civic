@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -22,19 +23,23 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import br.com.civic.launcher.ui.CivicTheme
 import br.com.civic.launcher.ui.ModoTema
-import br.com.civic.launcher.ui.PainelDirecao
+import br.com.civic.launcher.obd.ObdMonitor
+import br.com.civic.launcher.ui.FaixaInferior
+import br.com.civic.launcher.ui.FaixaSuperior
 import java.util.Calendar
 
 /**
- * Painel de direção: uma janela sobreposta ao Waze com velocidade, música e botões.
- * Em paisagem fica numa coluna à direita (~28%); em retrato, numa faixa embaixo (~30%).
+ * Modo Direção: duas faixas sobrepostas ao Waze, que fica no meio (~70% da tela).
+ * Faixa de cima: clima, hora e velocidade (+ Início e Fechar). Faixa de baixo: Spotify.
  */
 class PainelService : Service() {
     private lateinit var janela: WindowManager
     private lateinit var sensores: Sensores
     private lateinit var monitor: MediaMonitor
+    private lateinit var obd: ObdMonitor
     private val dono = Dono()
-    private var painel: ComposeView? = null
+    private var faixaTopo: ComposeView? = null
+    private var faixaBase: ComposeView? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -43,6 +48,7 @@ class PainelService : Service() {
         janela = getSystemService(WindowManager::class.java)
         sensores = Sensores(this)
         monitor = MediaMonitor(this)
+        obd = ObdMonitor.obter(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -58,46 +64,51 @@ class PainelService : Service() {
 
     private fun mostrar() {
         remover()
-        val tela = resources.displayMetrics
-        val paisagem = tela.widthPixels >= tela.heightPixels
+        val altura = resources.displayMetrics.heightPixels
+        faixaTopo = adicionar(Gravity.TOP, (altura * 0.12f).toInt()) {
+            FaixaSuperior(
+                sensores, obd,
+                aoVoltarInicio = {
+                    startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    stopSelf()
+                },
+                aoFechar = { stopSelf() },
+            )
+        }
+        faixaBase = adicionar(Gravity.BOTTOM, (altura * 0.18f).toInt()) { FaixaInferior(monitor) }
+    }
+
+    private fun adicionar(gravidade: Int, alturaPx: Int, conteudo: @Composable () -> Unit): ComposeView? {
         val parametros = WindowManager.LayoutParams(
-            if (paisagem) (tela.widthPixels * 0.28f).toInt() else WindowManager.LayoutParams.MATCH_PARENT,
-            if (paisagem) WindowManager.LayoutParams.MATCH_PARENT else (tela.heightPixels * 0.30f).toInt(),
+            WindowManager.LayoutParams.MATCH_PARENT,
+            alturaPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = if (paisagem) Gravity.END else Gravity.BOTTOM }
-
+        ).apply { gravity = gravidade }
         val vista = ComposeView(this).apply {
             setViewTreeLifecycleOwner(dono)
             setViewTreeSavedStateRegistryOwner(dono)
             setViewTreeViewModelStoreOwner(dono)
             setContent {
                 val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-                CivicTheme(ModoTema.ler(this@PainelService).escuro(hora)) {
-                    PainelDirecao(
-                        sensores, monitor,
-                        aoVoltarInicio = {
-                            startActivity(Intent(this@PainelService, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                            stopSelf()
-                        },
-                        aoFechar = { stopSelf() },
-                    )
-                }
+                CivicTheme(ModoTema.ler(this@PainelService).escuro(hora)) { conteudo() }
             }
         }
-        runCatching { janela.addView(vista, parametros) }.onSuccess { painel = vista }
+        return if (runCatching { janela.addView(vista, parametros) }.isSuccess) vista else null
     }
 
     private fun remover() {
-        painel?.let { runCatching { janela.removeView(it) } }
-        painel = null
+        faixaTopo?.let { runCatching { janela.removeView(it) } }
+        faixaBase?.let { runCatching { janela.removeView(it) } }
+        faixaTopo = null
+        faixaBase = null
     }
 
-    // Girar a tela muda a posição do painel (coluna ↔ faixa).
+    // Girar a tela muda a altura das faixas.
     override fun onConfigurationChanged(novaConfiguracao: Configuration) {
         super.onConfigurationChanged(novaConfiguracao)
-        if (painel != null) mostrar()
+        if (faixaTopo != null) mostrar()
     }
 
     override fun onDestroy() {

@@ -1,108 +1,115 @@
 package br.com.civic.launcher.ui
 
+import android.text.format.DateFormat
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.civic.launcher.CondicaoClima
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.Sensores
+import br.com.civic.launcher.obd.ObdMonitor
+import kotlinx.coroutines.delay
+import java.util.Date
 
-/** Conteúdo do painel sobreposto ao Waze: velocímetro, música e botões. */
+/** Faixa de cima do Modo Direção: clima, hora, velocidade e botões Início/Fechar. */
 @Composable
-fun PainelDirecao(sensores: Sensores, monitor: MediaMonitor, aoVoltarInicio: () -> Unit, aoFechar: () -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo).padding(10.dp)) {
-        if (maxWidth > maxHeight) {
-            // Faixa larga (tela em retrato): tudo em linha.
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Velocidade(sensores, Modifier.weight(0.8f).fillMaxHeight())
-                Musica(monitor, Modifier.weight(1.8f).fillMaxHeight())
-                Botoes(aoVoltarInicio, aoFechar, Modifier.weight(0.6f).fillMaxHeight(), vertical = true)
+fun FaixaSuperior(sensores: Sensores, obd: ObdMonitor, aoVoltarInicio: () -> Unit, aoFechar: () -> Unit) {
+    val ctx = LocalContext.current
+    var agora by remember { mutableStateOf(Date()) }
+    LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
+    val hora = DateFormat.getTimeFormat(ctx).format(agora)
+    val clima = sensores.clima
+    val vel = (obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f).toInt()
+
+    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo)) {
+        // Tamanhos acompanham a altura da faixa (que é uma % da tela).
+        val h = maxHeight.value
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (clima != null) {
+                    val (icone, cor) = iconeClima(clima.condicao)
+                    Icon(icone, null, tint = cor, modifier = Modifier.size((h * 0.5f).dp))
+                    Text("${clima.temperatura}°C", color = Cores.Texto, fontSize = (h * 0.38f).sp, fontWeight = FontWeight.Bold)
+                } else {
+                    Text("—", color = Cores.TextoSuave, fontSize = (h * 0.38f).sp)
+                }
             }
-        } else {
-            // Coluna estreita (tela em paisagem).
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Velocidade(sensores, Modifier.weight(0.7f).fillMaxWidth())
-                Musica(monitor, Modifier.weight(1.5f).fillMaxWidth())
-                Botoes(aoVoltarInicio, aoFechar, Modifier.fillMaxWidth().height(64.dp), vertical = false)
+            Text(hora, color = Cores.Texto, fontSize = (h * 0.38f).sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("$vel", color = Cores.Texto, fontSize = (h * 0.62f).sp, fontWeight = FontWeight.Bold)
+                Text("km/h", color = Cores.TextoSuave, fontSize = (h * 0.24f).sp, modifier = Modifier.padding(bottom = (h * 0.08f).dp))
             }
+            Spacer(Modifier.weight(1f))
+            BotaoIcone(Icons.Filled.Home, "Início", Modifier.height((h * 0.85f).dp).aspectRatio(1.2f), aoVoltarInicio)
+            BotaoIcone(Icons.Filled.Close, "Fechar", Modifier.height((h * 0.85f).dp).aspectRatio(1.2f), aoFechar)
         }
     }
 }
 
+/** Faixa de baixo do Modo Direção: Spotify (capa, título, progresso e controles). */
 @Composable
-private fun Velocidade(sensores: Sensores, modifier: Modifier) {
-    val vel = sensores.velocidadeKmh ?: 0f
-    Box(modifier, contentAlignment = Alignment.Center) {
-        Medidor(vel / 220f, Cores.Destaque, Modifier.aspectRatio(1f), espessura = 12.dp) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = 48.sp, fontWeight = FontWeight.Bold)
-                Text("km/h", color = Cores.TextoSuave, fontSize = 18.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun Musica(monitor: MediaMonitor, modifier: Modifier) {
+fun FaixaInferior(monitor: MediaMonitor) {
     val m = monitor.estado
-    Column(
-        modifier.clip(RoundedCornerShape(20.dp)).background(Cores.Cartao).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        // Capa, título e progresso cedem espaço; os controles abaixo nunca são espremidos.
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo)) {
+        val h = maxHeight.value
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             if (m.capa != null) {
-                Image(m.capa.asImageBitmap(), null, Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
+                Image(m.capa.asImageBitmap(), null, Modifier.fillMaxHeight().aspectRatio(1f).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
             } else {
-                Icon(Icons.Filled.MusicNote, null, tint = Cores.Spotify, modifier = Modifier.size(40.dp))
+                Icon(Icons.Filled.MusicNote, null, tint = Cores.Spotify, modifier = Modifier.size((h * 0.5f).dp))
             }
-            Column {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Música",
-                    color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify",
+                    color = Cores.Texto, fontSize = (h * 0.24f).sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
-                Text(if (m.temSessao) m.artista else "Nada tocando", color = Cores.TextoSuave, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (m.temSessao) m.artista else "Nada tocando",
+                    color = Cores.TextoSuave, fontSize = (h * 0.18f).sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                if (m.temSessao && m.duracao > 0) BarraProgresso(m, mostrarTempos = false)
             }
-        }
-        if (m.temSessao && m.duracao > 0) BarraProgresso(m)
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            Controle(Icons.Filled.SkipPrevious, 48.dp, Cores.TextoSuave) { monitor.anterior() }
-            Controle(if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled, 64.dp, Cores.Spotify) { monitor.alternar() }
-            Controle(Icons.Filled.SkipNext, 48.dp, Cores.TextoSuave) { monitor.proxima() }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Controle(Icons.Filled.SkipPrevious, (h * 0.5f).dp, Cores.TextoSuave) { monitor.anterior() }
+                Controle(if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled, (h * 0.7f).dp, Cores.Spotify) { monitor.alternar() }
+                Controle(Icons.Filled.SkipNext, (h * 0.5f).dp, Cores.TextoSuave) { monitor.proxima() }
+            }
         }
     }
 }
 
 @Composable
-private fun Botoes(aoVoltarInicio: () -> Unit, aoFechar: () -> Unit, modifier: Modifier, vertical: Boolean) {
-    if (vertical) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            BotaoIcone(Icons.Filled.Home, "Início", Modifier.weight(1f).fillMaxWidth(), aoVoltarInicio)
-            BotaoIcone(Icons.Filled.Close, "Fechar", Modifier.weight(1f).fillMaxWidth(), aoFechar)
-        }
-    } else {
-        Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            BotaoIcone(Icons.Filled.Home, "Início", Modifier.weight(1f).fillMaxHeight(), aoVoltarInicio)
-            BotaoIcone(Icons.Filled.Close, "Fechar", Modifier.weight(1f).fillMaxHeight(), aoFechar)
-        }
-    }
+private fun iconeClima(c: CondicaoClima): Pair<ImageVector, androidx.compose.ui.graphics.Color> = when (c) {
+    CondicaoClima.Limpo -> Icons.Filled.WbSunny to Cores.Amarelo
+    CondicaoClima.Nublado -> Icons.Filled.Cloud to Cores.TextoSuave
+    CondicaoClima.Chuva -> Icons.Filled.WaterDrop to Cores.Waze
+    CondicaoClima.Tempestade -> Icons.Filled.Bolt to Cores.Amarelo
 }
 
 @Composable

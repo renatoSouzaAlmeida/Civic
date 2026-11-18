@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import br.com.civic.launcher.Atalhos
 import br.com.civic.launcher.abrir
 import br.com.civic.launcher.abrirSpotify
+import br.com.civic.launcher.abrirWazeComPainel
 
 enum class Tela { Inicio, Central, Apps }
 
@@ -49,14 +50,13 @@ private fun abrirFixado(ctx: Context, chave: String, nome: String, reserva: (() 
 
 private val itens = listOf(
     Item("Início", Icons.Filled.Home, Tela.Inicio),
+    Item("Direção", Icons.Filled.Navigation, null) { it.abrirWazeComPainel() },
     Item("Telefone", Icons.Filled.Phone, null) { c ->
         abrirFixado(c, Atalhos.TELEFONE, "Telefone") {
             c.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     },
     Item("Spotify", Icons.Filled.MusicNote, null, "com.spotify.music") { it.abrirSpotify() },
-    Item("Rádio", Icons.Filled.Radio, null) { abrirFixado(it, Atalhos.RADIO, "Rádio") },
-    Item("YouTube", Icons.Filled.OndemandVideo, null) { it.abrir("com.google.android.youtube") },
     Item("Câmera", Icons.Filled.Videocam, null) { abrirFixado(it, Atalhos.CAMERA, "Câmera") },
     Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),

@@ -122,7 +122,7 @@ internal fun Controle(icone: androidx.compose.ui.graphics.vector.ImageVector, ta
 }
 
 @Composable
-internal fun BarraProgresso(m: MusicaUi) {
+internal fun BarraProgresso(m: MusicaUi, mostrarTempos: Boolean = true) {
     var agora by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(m.tocando, m.posicao, m.atualizadoEm) {
         agora = SystemClock.elapsedRealtime()
@@ -139,7 +139,7 @@ internal fun BarraProgresso(m: MusicaUi) {
         ) {
             Box(Modifier.fillMaxWidth(fracao).fillMaxHeight().background(Cores.Spotify))
         }
-        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        if (mostrarTempos) Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(formatarTempo(posicao), color = Cores.TextoSuave, fontSize = 16.sp)
             Text(formatarTempo(m.duracao), color = Cores.TextoSuave, fontSize = 16.sp)
         }
