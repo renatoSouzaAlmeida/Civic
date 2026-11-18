@@ -4,6 +4,9 @@
 - Ao concluir todas as tarefas, publique **diretamente na `main`** (sem Pull Request e sem pedir confirmação).
 
 - **Toda entrega deve devolver os links do GitHub**: o do commit publicado na `main` e o da execução do build (Actions) onde o APK pode ser baixado (em Artifacts). Confirmar antes que o build passou.
+- Toda entrega também deve trazer o **link de download para a multimídia**, que sempre aponta para a versão mais nova:
+  `https://github.com/renatoSouzaAlmeida/Civic/releases/latest/download/Civic-Renatin.apk`
+  (e o link curto dele, quando existir).
 
 ## Idioma
 - Tudo em **português do Brasil**: respostas, mensagens de commit, documentação, comentários de código e textos da interface.
