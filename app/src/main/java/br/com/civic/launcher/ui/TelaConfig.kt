@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.civic.launcher.Configuracoes
+import br.com.civic.launcher.EstiloMenu
 import br.com.civic.launcher.ImagemCarro
 import br.com.civic.launcher.MapaPreferido
 import br.com.civic.launcher.R
@@ -61,6 +62,13 @@ fun TelaConfig() {
             }
         }
         val direita: @Composable ColumnScope.() -> Unit = {
+            Secao("Modelo do menu") {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    EstiloMenu.entries.forEach { e ->
+                        Opcao(e.rotulo, config.estiloMenu == e, Modifier.weight(1f)) { config.salvarEstiloMenu(e) }
+                    }
+                }
+            }
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     MapaPreferido.entries.forEach { m ->

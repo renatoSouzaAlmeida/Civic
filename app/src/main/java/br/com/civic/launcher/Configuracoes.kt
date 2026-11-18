@@ -7,6 +7,9 @@ import androidx.compose.runtime.setValue
 
 enum class ImagemCarro(val rotulo: String) { Civic("Civic"), Fit("Fit") }
 
+/** Modelo do menu: B = barra fina embaixo; D = dock flutuante no centro. */
+enum class EstiloMenu(val rotulo: String) { Barra("Barra fina"), Dock("Dock flutuante") }
+
 enum class MapaPreferido(val rotulo: String, val pacote: String) {
     Waze("Waze", "com.waze"),
     GoogleMaps("Google Maps", "com.google.android.apps.maps"),
@@ -31,6 +34,8 @@ class Configuracoes private constructor(ctx: Context) {
         private set
     var mapa by mutableStateOf(lerEnum("mapa", MapaPreferido.Waze))
         private set
+    var estiloMenu by mutableStateOf(lerEnum("estilo_menu", EstiloMenu.Barra))
+        private set
     var enderecoCasa by mutableStateOf(prefs.getString("endereco_casa", "") ?: "")
         private set
     var enderecoTrabalho by mutableStateOf(prefs.getString("endereco_trabalho", "") ?: "")
@@ -45,6 +50,7 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarAno(v: String) { ano = v; gravar("ano", v) }
     fun salvarImagem(v: ImagemCarro) { imagemCarro = v; gravar("imagem_carro", v.name) }
     fun salvarMapa(v: MapaPreferido) { mapa = v; gravar("mapa", v.name) }
+    fun salvarEstiloMenu(v: EstiloMenu) { estiloMenu = v; gravar("estilo_menu", v.name) }
     fun salvarEnderecoCasa(v: String) { enderecoCasa = v; gravar("endereco_casa", v) }
     fun salvarEnderecoTrabalho(v: String) { enderecoTrabalho = v; gravar("endereco_trabalho", v) }
 

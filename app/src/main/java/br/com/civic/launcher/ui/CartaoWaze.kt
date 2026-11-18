@@ -48,7 +48,7 @@ fun CartaoWaze(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
         MapaDecorativo(Modifier.fillMaxSize())
         val compacto = maxHeight < 300.dp
         Column(
-            Modifier.fillMaxSize().padding(if (compacto) 14.dp else 22.dp),
+            Modifier.fillMaxSize().padding(if (compacto) 14.dp else 22.dp).padding(bottom = LocalEspacoDock.current),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {

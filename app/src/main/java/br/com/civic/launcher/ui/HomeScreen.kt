@@ -21,6 +21,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.CompositionLocalProvider
+import br.com.civic.launcher.EstiloMenu
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +58,7 @@ fun HomeScreen(
     aoAlternarTema: () -> Unit,
 ) {
     var tela by remember { mutableStateOf(Tela.Inicio) }
+    val config = Configuracoes.obter(LocalContext.current)
     BackHandler(tela != Tela.Inicio) { tela = Tela.Inicio }
 
     Column(
@@ -67,15 +70,24 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         BarraTopo(sensores, atualizador, obd, modoTema, aoAlternarTema)
+        val dock = config.estiloMenu == EstiloMenu.Dock
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (tela) {
-                Tela.Inicio -> TelaInicio(monitor, sensores, obd)
-                Tela.Central -> TelaCentral(sensores, obd, monitor)
-                Tela.Apps -> TelaApps()
-                Tela.Config -> TelaConfig()
+            // Com o dock, o Início vai até embaixo (o cartão do mapa recua por dentro);
+            // nas demais telas o conteúdo para acima do dock, para nada ficar escondido.
+            val recuo = if (dock && tela != Tela.Inicio) ALTURA_DOCK + 10.dp else 0.dp
+            CompositionLocalProvider(LocalEspacoDock provides if (dock) ALTURA_DOCK + 10.dp else 0.dp) {
+                Box(Modifier.fillMaxSize().padding(bottom = recuo)) {
+                    when (tela) {
+                        Tela.Inicio -> TelaInicio(monitor, sensores, obd)
+                        Tela.Central -> TelaCentral(sensores, obd, monitor)
+                        Tela.Apps -> TelaApps()
+                        Tela.Config -> TelaConfig()
+                    }
+                }
             }
+            if (dock) DockNavegacao(tela, { tela = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
         }
-        BarraNavegacao(tela, { tela = it }, Modifier.fillMaxWidth())
+        if (!dock) BarraNavegacao(tela, { tela = it }, Modifier.fillMaxWidth())
     }
 
     ModalNovaVersao(atualizador)

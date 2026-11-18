@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -68,40 +69,67 @@ private val itens = listOf(
     Item("Config.", Icons.Filled.Settings, Tela.Config),
 )
 
+/** Altura reservada para o dock flutuante (estilo D): os cartões que ficam sob ele recuam esse tanto. */
+val LocalEspacoDock = androidx.compose.runtime.compositionLocalOf { 0.dp }
+val ALTURA_DOCK = 64.dp
+
+@Composable
+private fun IconeItem(item: Item, cor: Color, tamanho: androidx.compose.ui.unit.Dp) {
+    if (item.iconeRes != null) Icon(painterResource(item.iconeRes), item.rotulo, tint = cor, modifier = Modifier.size(tamanho * 0.9f))
+    else Icon(item.icone, item.rotulo, tint = cor, modifier = Modifier.size(tamanho))
+}
+
+private val DestaqueMenu = Brush.verticalGradient(listOf(Color(0xFF4D9BFF), Color(0xFF1F66E0)))
+
+/** Menu B — barra fina (≈ 52 dp) embaixo; só o item ativo mostra o rótulo. */
 @Composable
 fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
-    val formaBarra = RoundedCornerShape(26.dp)
-    val formaItem = RoundedCornerShape(20.dp)
-    val destaque = Brush.verticalGradient(listOf(Color(0xFF4D9BFF), Color(0xFF1F66E0)))
-    BoxWithConstraints(modifier) {
-        val compacto = maxWidth < 600.dp // celular em retrato: só os ícones, sem rótulos
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(if (compacto) 6.dp else 12.dp),
-        ) {
-            itens.forEach { item ->
-                val ativo = item.tela != null && item.tela == atual
-                val corItem = if (ativo) Color.White else Cores.TextoSuave
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .toqueSuave { if (item.tela != null) aoIr(item.tela) else item.acao(ctx) }
-                        .clip(formaItem)
-                        .then(if (ativo) Modifier.background(destaque).border(1.dp, Color(0xE6AAD2FF), formaItem) else Modifier.background(Cores.Cartao).border(1.dp, Cores.Borda, formaItem))
-                        .padding(vertical = if (compacto) 12.dp else 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    val tamanho = if (compacto) 26.dp else 32.dp
-                    if (item.iconeRes != null) {
-                        Icon(painterResource(item.iconeRes), item.rotulo, tint = corItem, modifier = Modifier.size(tamanho * 0.9f))
-                    } else {
-                        Icon(item.icone, item.rotulo, tint = corItem, modifier = Modifier.size(tamanho))
-                    }
-                    if (!compacto) Text(item.rotulo, color = corItem, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                }
+    val formaBarra = RoundedCornerShape(18.dp)
+    val formaItem = RoundedCornerShape(14.dp)
+    Row(
+        modifier.height(52.dp).clip(formaBarra).background(Cores.Cartao).border(1.dp, Cores.Borda, formaBarra).padding(horizontal = 6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        itens.forEach { item ->
+            val ativo = item.tela != null && item.tela == atual
+            Row(
+                Modifier
+                    .toqueSuave { if (item.tela != null) aoIr(item.tela) else item.acao(ctx) }
+                    .clip(formaItem)
+                    .then(if (ativo) Modifier.background(DestaqueMenu) else Modifier)
+                    .padding(horizontal = if (ativo) 16.dp else 18.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                IconeItem(item, if (ativo) Color.White else Cores.TextoSuave, 26.dp)
+                if (ativo) Text(item.rotulo, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
+        }
+    }
+}
+
+/** Menu D — dock flutuante em cápsula, centralizado sobre o conteúdo, só com ícones. */
+@Composable
+fun DockNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val forma = RoundedCornerShape(50)
+    Row(
+        modifier.height(ALTURA_DOCK).clip(forma).background(Cores.CartaoSolido.copy(alpha = 0.94f))
+            .border(1.dp, Cores.Destaque.copy(alpha = 0.45f), forma).padding(horizontal = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        itens.forEach { item ->
+            val ativo = item.tela != null && item.tela == atual
+            Box(
+                Modifier.size(50.dp)
+                    .toqueSuave { if (item.tela != null) aoIr(item.tela) else item.acao(ctx) }
+                    .clip(CircleShape)
+                    .then(if (ativo) Modifier.background(DestaqueMenu) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) { IconeItem(item, if (ativo) Color.White else Cores.TextoSuave, 26.dp) }
         }
     }
 }
