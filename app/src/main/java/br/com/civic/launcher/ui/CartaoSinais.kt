@@ -23,7 +23,7 @@ import br.com.civic.launcher.Sensores
 import br.com.civic.launcher.obd.ObdMonitor
 
 /**
- * Dados rápidos da Tela Início (abaixo do mapa): km/h, km/l, combustível, °C do motor, °C do ar e setas.
+ * Dados rápidos da Tela Início (abaixo do mapa): km/h, km/l, combustível, °C do motor, farol e setas.
  * O que depende do OBD mostra "—" enquanto o adaptador não informa.
  */
 @Composable
@@ -43,7 +43,7 @@ fun CartaoSinais(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 Celula(d.tempMotor?.toString() ?: "—", "°C motor", Modifier.weight(1f))
                 Divisor()
-                Celula(d.tempAdmissao?.toString() ?: "—", "°C ar", Modifier.weight(1f))
+                Farol(d.farol, Modifier.weight(1f))
                 Divisor()
                 Setas(d.setaEsquerda, d.setaDireita, Modifier.weight(1f))
             }
@@ -64,6 +64,29 @@ private fun Celula(valor: String, unidade: String, modifier: Modifier) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(valor, color = Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
             Text(unidade, color = Cores.TextoSuave, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
+    }
+}
+
+/** Farol: ícone verde e "farol ligado" quando aceso; apagado e "farol desligado"; "—" se o carro não informa. */
+@Composable
+private fun Farol(ligado: Boolean?, modifier: Modifier) {
+    BoxWithConstraints(modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
+        val icone = minOf(maxHeight.value * 0.38f, 40f).dp
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                painterResource(R.drawable.ic_farol), null,
+                tint = when (ligado) {
+                    true -> Color(0xFF22C55E)
+                    false -> Cores.TextoSuave.copy(alpha = 0.4f)
+                    null -> Cores.TextoSuave.copy(alpha = 0.18f)
+                },
+                modifier = Modifier.size(icone),
+            )
+            Text(
+                when (ligado) { true -> "farol ligado"; false -> "farol desligado"; null -> "farol —" },
+                color = Cores.TextoSuave, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+            )
         }
     }
 }

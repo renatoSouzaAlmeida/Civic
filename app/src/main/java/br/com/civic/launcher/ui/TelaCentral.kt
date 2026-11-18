@@ -235,7 +235,7 @@ private fun PainelEsportivo(
             LuzEspia(painterResource(R.drawable.ic_motor), if (obd.estado == EstadoObd.Conectado || obd.estado == EstadoObd.Demonstracao) d.luzMotor else null, Color(0xFFFFB020))
         }
         Column(Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            LuzEspia(rememberVectorPainter(Icons.Filled.Speed), d.pilotoAutomatico, corVerde)
+            LuzEspia(painterResource(R.drawable.ic_piloto), d.pilotoAutomatico, corVerde)
             LuzEspia(painterResource(R.drawable.ic_alerta), d.alerta, p.Vermelho, piscar = true)
             LuzEspia(rememberVectorPainter(Icons.Filled.Thermostat), d.tempMotor?.let { it >= 105 }, p.Vermelho)
         }
