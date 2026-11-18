@@ -38,6 +38,7 @@ fun TelaConfig() {
     val ctx = LocalContext.current
     val config = remember { Configuracoes.obter(ctx) }
     var tamanhoPainel by remember { mutableStateOf(TamanhoPainel.ler(ctx)) }
+    var formatoPainel by remember { mutableStateOf(FormatoPainel.ler(ctx)) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val duasColunas = maxWidth >= 860.dp
@@ -74,6 +75,13 @@ fun TelaConfig() {
                 )
             }
             Secao("Painel de direção") {
+                Text("Formato", color = Cores.TextoSuave, fontSize = 15.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FormatoPainel.entries.forEach { f ->
+                        Opcao(f.rotulo, formatoPainel == f, Modifier.weight(1f)) { formatoPainel = f; FormatoPainel.salvar(ctx, f) }
+                    }
+                }
+                Text("Tamanho", color = Cores.TextoSuave, fontSize = 15.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TamanhoPainel.entries.forEach { t ->
                         Opcao(t.rotulo, tamanhoPainel == t, Modifier.weight(1f)) { tamanhoPainel = t; TamanhoPainel.salvar(ctx, t) }

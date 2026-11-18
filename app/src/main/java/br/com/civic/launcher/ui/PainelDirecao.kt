@@ -34,6 +34,31 @@ import java.util.Date
 private const val OPACIDADE_FUNDO = 0.68f
 private const val OPACIDADE_CARTAO = 0.78f
 
+/** Formato do painel: automático (segue a tela), coluna lateral (vertical) ou faixa embaixo (horizontal). */
+enum class FormatoPainel(val rotulo: String) {
+    Automatico("Automático"), Vertical("Vertical"), Horizontal("Horizontal");
+
+    /** true = coluna lateral; false = faixa embaixo. */
+    fun vertical(telaEmPaisagem: Boolean) = when (this) {
+        Automatico -> telaEmPaisagem
+        Vertical -> true
+        Horizontal -> false
+    }
+
+    companion object {
+        private const val ARQUIVO = "preferencias"
+        private const val CHAVE = "formato_painel"
+
+        fun ler(ctx: Context): FormatoPainel = runCatching {
+            valueOf(ctx.getSharedPreferences(ARQUIVO, Context.MODE_PRIVATE).getString(CHAVE, null) ?: "")
+        }.getOrDefault(Automatico)
+
+        fun salvar(ctx: Context, formato: FormatoPainel) {
+            ctx.getSharedPreferences(ARQUIVO, Context.MODE_PRIVATE).edit().putString(CHAVE, formato.name).apply()
+        }
+    }
+}
+
 /** Tamanho do painel sobre o Waze: fração da largura (paisagem) ou da altura (retrato). */
 enum class TamanhoPainel(val fracaoLargura: Float, val fracaoAltura: Float, val rotulo: String) {
     Compacto(0.22f, 0.26f, "Compacto"), Medio(0.28f, 0.32f, "Médio"), Grande(0.36f, 0.42f, "Grande");
@@ -55,7 +80,7 @@ enum class TamanhoPainel(val fracaoLargura: Float, val fracaoAltura: Float, val 
 }
 
 /**
- * Modo Direção: painel sobre o Waze. Em cima, uma barra opaca e pequena (Início, hora/clima, tamanho, Fechar);
+ * Modo Direção: painel sobre o Waze. Em cima, uma barra opaca e pequena (Início, hora/clima, formato, tamanho, Fechar);
  * embaixo, a velocidade em uma linha e o Spotify ocupando o resto.
  */
 @Composable
@@ -65,13 +90,14 @@ fun PainelDirecao(
     obd: ObdMonitor,
     aoVoltarInicio: () -> Unit,
     aoAlternarTamanho: () -> Unit,
+    aoAlternarFormato: () -> Unit,
     aoFechar: () -> Unit,
 ) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo.copy(alpha = OPACIDADE_FUNDO))) {
         val larga = maxWidth > maxHeight
         val alto = maxHeight // guardado aqui: dentro da coluna aninhada o Kotlin não permite ler maxHeight
         Column(Modifier.fillMaxSize()) {
-            BarraSuperior(sensores, aoVoltarInicio, aoAlternarTamanho, aoFechar)
+            BarraSuperior(sensores, aoVoltarInicio, aoAlternarTamanho, aoAlternarFormato, aoFechar)
             if (larga) {
                 // Faixa larga (tela em retrato): velocidade à esquerda, música ocupa o resto.
                 Row(Modifier.weight(1f).fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -92,7 +118,7 @@ fun PainelDirecao(
 }
 
 @Composable
-private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoFechar: () -> Unit) {
+private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoAlternarFormato: () -> Unit, aoFechar: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -100,7 +126,7 @@ private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlte
     val clima = sensores.clima
 
     BoxWithConstraints(Modifier.fillMaxWidth().background(Cores.CartaoSolido).padding(horizontal = 6.dp, vertical = 5.dp)) {
-        val estreita = maxWidth < 230.dp
+        val estreita = maxWidth < 270.dp
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BotaoPequeno(Icons.Filled.Home, "Início", aoVoltarInicio)
             Row(
@@ -115,6 +141,7 @@ private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlte
                 }
                 Text(hora, color = Cores.Texto, fontSize = 15.sp, fontFamily = FonteTitulo, maxLines = 1)
             }
+            BotaoPequeno(Icons.Filled.ScreenRotation, "Vertical / horizontal", aoAlternarFormato)
             BotaoPequeno(Icons.Filled.OpenInFull, "Tamanho do painel", aoAlternarTamanho)
             BotaoPequeno(Icons.Filled.Close, "Fechar", aoFechar)
         }
