@@ -1,4 +1,4 @@
-# Civic Launcher
+# Civic Renatin
 
 Launcher Android pessoal para a multimídia do Honda Civic G9 2012 (1.8).
 Abre direto ao ligar o carro, com **Waze e Spotify lado a lado** como prioridade.
@@ -7,7 +7,7 @@ Uso próprio, sem fins comerciais.
 
 ## Como instalar
 
-1. Em **Actions → Build APK**, abra a execução mais recente e baixe o artefato `civic-launcher-debug` (contém o `.apk`).
+1. Em **Actions → Build APK**, abra a execução mais recente e baixe o artefato `Civic-Renatin` (contém `Civic-Renatin.apk`).
 2. Instale no tablet/multimídia (permita "fontes desconhecidas").
 3. Aperte o botão Home e escolha **Civic Launcher** → "Sempre".
 

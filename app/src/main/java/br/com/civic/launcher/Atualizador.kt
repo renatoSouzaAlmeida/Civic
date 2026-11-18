@@ -80,7 +80,7 @@ class Atualizador(private val ctx: Context) {
         var url: String? = null
         for (i in 0 until assets.length()) {
             val a = assets.getJSONObject(i)
-            if (a.getString("name") == "civic-launcher.apk") url = a.getString("browser_download_url")
+            if (a.getString("name") == "Civic-Renatin.apk") url = a.getString("browser_download_url")
         }
         url ?: return
         val versao = json.optString("name", "build $codigo")
@@ -124,7 +124,7 @@ class Atualizador(private val ctx: Context) {
         val id = instalador.createSession(PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL))
         instalador.openSession(id).use { sessao ->
             apk.inputStream().use { entrada ->
-                sessao.openWrite("civic-launcher.apk", 0, apk.length()).use { saida ->
+                sessao.openWrite("Civic-Renatin.apk", 0, apk.length()).use { saida ->
                     entrada.copyTo(saida)
                     sessao.fsync(saida)
                 }

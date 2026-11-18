@@ -24,10 +24,15 @@ jobs:
       - name: Compilar APK de teste (debug)
         run: ./gradlew assembleDebug --no-daemon -PversionCodeCI=${{ github.run_number }}
 
+      - name: Nomear o APK de teste
+        run: |
+          mkdir -p saida
+          cp app/build/outputs/apk/debug/*.apk saida/Civic-Renatin.apk
+
       - uses: actions/upload-artifact@v4
         with:
-          name: civic-launcher-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: Civic-Renatin
+          path: saida/Civic-Renatin.apk
 
       - name: Preparar chave de assinatura
         if: github.ref == 'refs/heads/main' && env.TEM_CHAVE == 'true'
@@ -47,8 +52,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/release/*.apk civic-launcher.apk
-          gh release create "build-${{ github.run_number }}" civic-launcher.apk \
+          cp app/build/outputs/apk/release/*.apk saida/Civic-Renatin-release.apk
+          gh release create "build-${{ github.run_number }}" saida/Civic-Renatin-release.apk#Civic-Renatin.apk \
             --title "0.3.${{ github.run_number }}" \
             --notes "Versão automática gerada a partir da main." --latest
 
