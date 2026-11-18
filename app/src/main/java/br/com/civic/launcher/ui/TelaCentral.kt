@@ -114,11 +114,6 @@ internal class CoresPainel(
     val fundo: Brush, val face: Color, val borda: Color, val trilho: Color, val texto: Color, val suave: Color,
     val estrada: Brush, val brilho: Float, val faixa: Color, val botao: Color,
 ) {
-    val Face get() = face
-    val Borda get() = borda
-    val Trilho get() = trilho
-    val Texto get() = texto
-    val Suave get() = suave
     val Azul = Color(0xFF2F7BFF)
     val Ciano = Color(0xFF38C8FF)
     val Vermelho = Color(0xFFFF3B3B)
