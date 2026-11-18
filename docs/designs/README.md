@@ -1,6 +1,6 @@
 # Direções visuais (propostas)
 
-Quatro direções de interface para a Tela Início e a Central do Civic (OBD), desenhadas em 2000×1200
+Cinco direções de interface para a Tela Início e a Central do Civic (OBD), desenhadas em 2000×1200
 (proporção da multimídia). Servem para escolher o estilo antes de implementar no app.
 
 | Direção | Conceito | Observação para a multimídia (GPU fraca) |
@@ -10,5 +10,6 @@ Quatro direções de interface para a Tela Início e a Central do Civic (OBD), d
 | **C — Cockpit Carbono** | Fibra de carbono, vermelho Honda, cantos chanfrados, menu lateral e luzes de troca de marcha | Fibra de carbono vira imagem repetida (barata) |
 
 | **D — HUD Digital** | Números de sete segmentos, barra de giros em degraus (como o HUD) e lista de leituras OBD (PIDs) | Só formas simples e texto: o mais leve em GPU |
+| **E — Estilo BYD** | Carro grande em destaque, cartões de vidro de cantos bem arredondados e dock de apps coloridos (inspirado nas multimídias BYD DiLink); já mostra a versão em **retrato**, para a tela que vira | Usa translucidez, mas dá para simular com degradês |
 
 Dados mostrados são fictícios. Consumo é uma estimativa; pressão de óleo e marcha (P/D) não existem no OBD padrão do Civic G9.
