@@ -22,8 +22,8 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= maxHeight) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                CartaoCarro(obd, Modifier.weight(1.25f).fillMaxHeight())
-                CartaoWaze(sensores, obd, Modifier.weight(1.05f).fillMaxHeight())
+                CartaoCarro(obd, Modifier.weight(0.9f).fillMaxHeight())
+                CartaoWaze(sensores, obd, Modifier.weight(1.7f).fillMaxHeight())
                 Column(Modifier.weight(1.1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     CartaoSpotify(monitor, Modifier.weight(1.15f).fillMaxWidth())
                     QuatroCaixas(sensores, obd, Modifier.weight(1f).fillMaxWidth())
