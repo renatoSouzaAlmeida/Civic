@@ -77,6 +77,7 @@ fun HomeScreen(
                 when (tela) {
                     Tela.Inicio -> TelaInicio(monitor, sensores, obd)
                     Tela.Central -> TelaCentral(sensores, obd, monitor)
+                    Tela.Veiculo -> TelaVeiculo()
                     Tela.Apps -> TelaApps()
                     Tela.Config -> TelaConfig()
                 }

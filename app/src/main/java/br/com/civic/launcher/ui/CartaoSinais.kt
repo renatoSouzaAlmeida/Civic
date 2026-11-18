@@ -35,7 +35,7 @@ fun CartaoSinais(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 Celula("$vel", "km/h", Modifier.weight(1f))
                 Divisor()
-                Celula(d.consumoMedio?.let { "%.1f".format(it) } ?: "—", "km/l", Modifier.weight(1f))
+                Celula((d.consumoMedio ?: br.com.civic.launcher.Veiculo.obter(androidx.compose.ui.platform.LocalContext.current).consumoMedio())?.let { "%.1f".format(it) } ?: "—", "km/l", Modifier.weight(1f))
                 Divisor()
                 Celula(d.nivelCombustivel?.toString() ?: "—", "% combustível", Modifier.weight(1f))
             }

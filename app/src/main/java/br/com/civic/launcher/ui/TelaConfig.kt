@@ -125,7 +125,7 @@ fun TelaConfig() {
 }
 
 @Composable
-private fun Secao(titulo: String, conteudo: @Composable ColumnScope.() -> Unit) {
+internal fun Secao(titulo: String, conteudo: @Composable ColumnScope.() -> Unit) {
     Cartao(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(titulo, color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -135,7 +135,7 @@ private fun Secao(titulo: String, conteudo: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun Campo(
+internal fun Campo(
     rotulo: String,
     valor: String,
     modifier: Modifier = Modifier,
@@ -151,7 +151,7 @@ private fun Campo(
 }
 
 @Composable
-private fun Opcao(texto: String, selecionada: Boolean, modifier: Modifier, aoTocar: () -> Unit) {
+internal fun Opcao(texto: String, selecionada: Boolean, modifier: Modifier, aoTocar: () -> Unit) {
     val forma = RoundedCornerShape(50)
     Box(
         modifier.clip(forma)
