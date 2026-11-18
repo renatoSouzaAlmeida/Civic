@@ -21,6 +21,10 @@ data class MusicaUi(
     val artista: String = "",
     val capa: Bitmap? = null,
     val tocando: Boolean = false,
+    val duracao: Long = 0,
+    val posicao: Long = 0,
+    val atualizadoEm: Long = 0,
+    val velocidade: Float = 1f,
 )
 
 /** Observa a sessão de mídia ativa (Spotify tem prioridade) e expõe estado + controles. */
@@ -88,6 +92,10 @@ class MediaMonitor(private val ctx: Context) {
                 ?: m?.getBitmap(MediaMetadata.METADATA_KEY_ART)
                 ?: m?.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON),
             tocando = c.playbackState?.state == PlaybackState.STATE_PLAYING,
+            duracao = m?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0,
+            posicao = (c.playbackState?.position ?: 0).coerceAtLeast(0),
+            atualizadoEm = c.playbackState?.lastPositionUpdateTime ?: 0,
+            velocidade = c.playbackState?.playbackSpeed ?: 1f,
         )
     }
 

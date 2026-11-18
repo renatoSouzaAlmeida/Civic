@@ -61,17 +61,22 @@ private fun CartaoWaze(modifier: Modifier) {
     val ctx = LocalContext.current
     Column(
         modifier
+            .toqueSuave { ctx.abrirWaze() }
             .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF12202B), Cores.Cartao)))
-            .clickable { ctx.abrirWaze() }
+            .background(Brush.linearGradient(listOf(Color(0xFF0E2A3A), Color(0xFF111827), Cores.Cartao)))
             .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column {
-            Icon(Icons.Filled.Navigation, null, tint = Cores.Waze, modifier = Modifier.size(56.dp))
-            Spacer(Modifier.height(8.dp))
-            Text("Waze", color = Cores.Texto, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-            Text("Toque para abrir o mapa", color = Cores.TextoSuave, fontSize = 18.sp)
+            Box(
+                Modifier.size(72.dp).clip(RoundedCornerShape(20.dp)).background(Cores.Waze.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Navigation, null, tint = Cores.Waze, modifier = Modifier.size(44.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("Waze", color = Cores.Texto, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+            Text("Toque para abrir o mapa", color = Cores.TextoSuave, fontSize = 20.sp)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Atalho("Casa", Icons.Filled.Home, Modifier.weight(1f)) { ctx.navegarWazeFavorito("Home") }
@@ -101,6 +106,7 @@ private fun Relogio(atualizador: Atualizador, modifier: Modifier) {
             .background(Cores.Cartao)
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
+        Text(saudacao(), color = Cores.Destaque, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         Text(hora, color = Cores.Texto, fontSize = 64.sp, fontWeight = FontWeight.Bold)
         Text(data, color = Cores.TextoSuave, fontSize = 20.sp)
         when (val e = atualizador.estado) {
@@ -120,10 +126,10 @@ internal fun Atalho(rotulo: String, icone: ImageVector, modifier: Modifier, aoTo
     // Alvo de toque grande (80dp de altura) para uso em direção.
     Row(
         modifier
+            .toqueSuave(aoTocar)
             .height(80.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Cores.CartaoAlto)
-            .clickable(onClick = aoTocar)
             .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -131,4 +137,10 @@ internal fun Atalho(rotulo: String, icone: ImageVector, modifier: Modifier, aoTo
         Icon(icone, null, tint = Cores.Destaque, modifier = Modifier.size(36.dp))
         Text(rotulo, color = Cores.Texto, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
     }
+}
+
+private fun saudacao(): String = when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
+    in 5..11 -> "Bom dia"
+    in 12..17 -> "Boa tarde"
+    else -> "Boa noite"
 }

@@ -12,10 +12,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import android.os.SystemClock
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.civic.launcher.MediaMonitor
+import br.com.civic.launcher.MusicaUi
 import br.com.civic.launcher.abrirSpotify
 
 @Composable
@@ -34,7 +44,10 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
     Column(
         modifier
             .clip(RoundedCornerShape(24.dp))
-            .background(Cores.Cartao)
+            .background(
+                if (m.temSessao) Brush.verticalGradient(listOf(Color(0xFF123524), Cores.Cartao))
+                else Brush.verticalGradient(listOf(Cores.Cartao, Cores.Cartao))
+            )
             .clickable { ctx.abrirSpotify() }
             .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
@@ -53,7 +66,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             if (m.capa != null) {
                 Image(
                     m.capa.asImageBitmap(), null,
-                    Modifier.size(96.dp).clip(RoundedCornerShape(16.dp)),
+                    Modifier.size(112.dp).clip(RoundedCornerShape(20.dp)),
                     contentScale = ContentScale.Crop,
                 )
             } else {
@@ -76,6 +89,8 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             }
         }
 
+        if (m.temSessao && m.duracao > 0) BarraProgresso(m)
+
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -95,6 +110,36 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
 private fun Controle(icone: androidx.compose.ui.graphics.vector.ImageVector, tamanho: androidx.compose.ui.unit.Dp, cor: androidx.compose.ui.graphics.Color, aoTocar: () -> Unit) {
     Icon(
         icone, null, tint = cor,
-        modifier = Modifier.size(tamanho).clip(RoundedCornerShape(50)).clickable(onClick = aoTocar),
+        modifier = Modifier.toqueSuave(aoTocar).size(tamanho).clip(RoundedCornerShape(50)),
     )
+}
+
+@Composable
+private fun BarraProgresso(m: MusicaUi) {
+    var agora by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    LaunchedEffect(m.tocando, m.posicao, m.atualizadoEm) {
+        agora = SystemClock.elapsedRealtime()
+        while (m.tocando) {
+            delay(1_000)
+            agora = SystemClock.elapsedRealtime()
+        }
+    }
+    val posicao = if (m.tocando) m.posicao + ((agora - m.atualizadoEm) * m.velocidade).toLong() else m.posicao
+    val fracao = (posicao.toFloat() / m.duracao).coerceIn(0f, 1f)
+    Column(Modifier.fillMaxWidth()) {
+        Box(
+            Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Cores.CartaoAlto)
+        ) {
+            Box(Modifier.fillMaxWidth(fracao).fillMaxHeight().background(Cores.Spotify))
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(formatarTempo(posicao), color = Cores.TextoSuave, fontSize = 16.sp)
+            Text(formatarTempo(m.duracao), color = Cores.TextoSuave, fontSize = 16.sp)
+        }
+    }
+}
+
+private fun formatarTempo(ms: Long): String {
+    val total = (ms / 1000).coerceAtLeast(0)
+    return "%d:%02d".format(total / 60, total % 60)
 }
