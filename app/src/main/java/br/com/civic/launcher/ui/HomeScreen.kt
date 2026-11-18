@@ -70,7 +70,7 @@ fun HomeScreen(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tela) {
                 Tela.Inicio -> TelaInicio(monitor, sensores, obd)
-                Tela.Central -> TelaCentral(sensores, obd)
+                Tela.Central -> TelaCentral(sensores, obd, monitor)
                 Tela.Apps -> TelaApps()
                 Tela.Config -> TelaConfig()
             }

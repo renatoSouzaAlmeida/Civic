@@ -1,6 +1,11 @@
 package br.com.civic.launcher.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import br.com.civic.launcher.MediaMonitor
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,9 +27,9 @@ import br.com.civic.launcher.obd.DadosObd
 import br.com.civic.launcher.obd.EstadoObd
 import br.com.civic.launcher.obd.ObdMonitor
 
-/** Central do Civic: giros e velocidade | indicadores do OBD | carro (à direita, como na Tela Início). */
+/** Painel esportivo do OBD: velocidade | giros + carro avançando | Spotify, com indicadores nas laterais. */
 @Composable
-fun TelaCentral(sensores: Sensores, obd: ObdMonitor) {
+fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
     val d = obd.dados
     val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     var escolhendo by remember { mutableStateOf(false) }
@@ -32,15 +37,41 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= maxHeight) {
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                CartaoHud(d, vel, Modifier.weight(1.7f).fillMaxHeight())
-                Indicadores(d, Modifier.weight(0.95f).fillMaxHeight(), vertical = true)
-                CartaoCarroCentral(obd, d, Modifier.weight(0.9f).fillMaxHeight()) { escolhendo = true }
+                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Cartao(Modifier.weight(1.5f).fillMaxWidth()) {
+                        GaugeArco(vel / 180f, "${vel.toInt()}", "km/h", Modifier.fillMaxSize().padding(10.dp))
+                    }
+                    Indic("Temp. motor", Icons.Filled.Thermostat, Cores.Ok, d.tempMotor?.toString(), "°C", (d.tempMotor ?: 0) / 120f, Modifier.weight(0.5f))
+                    Indic("Bateria", Icons.Filled.BatteryChargingFull, Cores.Ok, d.tensao?.let { "%.1f".format(it) }, "V", ((d.tensao ?: 10f) - 10f) / 5f, Modifier.weight(0.5f))
+                }
+                Column(Modifier.weight(1.45f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Cartao(Modifier.weight(1.75f).fillMaxWidth()) {
+                        Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
+                            TacometroEsportivo(d.rpm, vel, Modifier.fillMaxSize(), centroRpm = true)
+                        }
+                    }
+                    CartaoCarroAvancando(obd, d, vel, Modifier.weight(1f).fillMaxWidth()) { escolhendo = true }
+                }
+                Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CartaoSpotify(monitor, Modifier.weight(1.5f).fillMaxWidth())
+                    Indic("Ar de admissão", Icons.Filled.AcUnit, Cores.Destaque, d.tempAdmissao?.toString(), "°C", (d.tempAdmissao ?: 0) / 80f, Modifier.weight(0.5f))
+                    Indic("Carga do motor", Icons.Filled.Speed, Cores.Destaque, d.carga?.toString(), "%", (d.carga ?: 0) / 100f, Modifier.weight(0.5f))
+                }
             }
         } else {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                CartaoHud(d, vel, Modifier.fillMaxWidth().height(380.dp))
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Cartao(Modifier.fillMaxWidth().height(380.dp)) {
+                    Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
+                        TacometroEsportivo(d.rpm, vel, Modifier.fillMaxSize(), centroRpm = true)
+                    }
+                }
+                Row(Modifier.fillMaxWidth().height(200.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Cartao(Modifier.weight(1f).fillMaxHeight()) { GaugeArco(vel / 180f, "${vel.toInt()}", "km/h", Modifier.fillMaxSize().padding(8.dp)) }
+                    Cartao(Modifier.weight(1f).fillMaxHeight()) { GaugeArco((d.carga ?: 0) / 100f, d.carga?.toString() ?: "—", "% carga", Modifier.fillMaxSize().padding(8.dp)) }
+                }
+                CartaoCarroAvancando(obd, d, vel, Modifier.fillMaxWidth().height(300.dp)) { escolhendo = true }
+                CartaoSpotify(monitor, Modifier.fillMaxWidth().height(300.dp))
                 Indicadores(d, Modifier.fillMaxWidth().height(300.dp), vertical = false)
-                CartaoCarroCentral(obd, d, Modifier.fillMaxWidth().height(400.dp)) { escolhendo = true }
             }
         }
     }
@@ -68,33 +99,10 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor) {
     }
 }
 
+
 @Composable
-private fun CartaoHud(d: DadosObd, vel: Float, modifier: Modifier) {
-    Cartao(modifier) {
-        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                    Text("RPM", color = Cores.TextoSuave, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text(d.rpm?.toString() ?: "—", color = Cores.Texto, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
-                        Text(" / 8.000", color = Cores.TextoSuave, fontSize = 14.sp, modifier = Modifier.padding(bottom = 3.dp))
-                    }
-                }
-                BarraSegmentos((d.rpm ?: 0) / 8000f, Modifier.fillMaxWidth(), 34, 24.dp)
-            }
-            // Gráfico esportivo: ocupa todo o espaço que sobra no cartão.
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                TacometroEsportivo(d.rpm, vel, Modifier.fillMaxSize())
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-                    Text("Carga do motor", color = Cores.TextoSuave, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    Text(d.carga?.let { "$it%" } ?: "—", color = Cores.Texto, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                }
-                BarraFina((d.carga ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 8.dp)
-            }
-        }
-    }
+private fun Indic(titulo: String, icone: ImageVector, cor: Color, valor: String?, unidade: String, fracao: Float, modifier: Modifier) {
+    CartaoIndicador(titulo, icone, cor, valor ?: "—", unidade, fracao, modifier.fillMaxWidth())
 }
 
 @Composable
@@ -109,25 +117,51 @@ private fun Indicadores(d: DadosObd, modifier: Modifier, vertical: Boolean) {
         d.tempMotor?.toString() to "°C", d.tensao?.let { "%.1f".format(it) } to "V",
         d.tempAdmissao?.toString() to "°C", d.acelerador?.toString() to "%",
     )
-    val fracoes = listOf(
-        (d.tempMotor ?: 0) / 120f, ((d.tensao ?: 10f) - 10f) / 5f, (d.tempAdmissao ?: 0) / 80f, (d.acelerador ?: 0) / 100f,
-    )
-    if (vertical) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            itens.forEachIndexed { i, (t, ic, cor) ->
-                CartaoIndicador(t, ic, cor, valores[i].first ?: "—", valores[i].second, fracoes[i], Modifier.weight(1f).fillMaxWidth())
+    val fracoes = listOf((d.tempMotor ?: 0) / 120f, ((d.tensao ?: 10f) - 10f) / 5f, (d.tempAdmissao ?: 0) / 80f, (d.acelerador ?: 0) / 100f)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        for (linha in 0..1) Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            for (col in 0..1) {
+                val i = linha * 2 + col
+                val (t, ic, cor) = itens[i]
+                CartaoIndicador(t, ic, cor, valores[i].first ?: "—", valores[i].second, fracoes[i], Modifier.weight(1f).fillMaxHeight())
             }
         }
-    } else {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            for (linha in 0..1) Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                for (col in 0..1) {
-                    val i = linha * 2 + col
-                    val (t, ic, cor) = itens[i]
-                    CartaoIndicador(t, ic, cor, valores[i].first ?: "—", valores[i].second, fracoes[i], Modifier.weight(1f).fillMaxHeight())
-                }
-            }
+    }
+}
+
+/** Carro de trás avançando pela estrada; embaixo, estado do adaptador e botões pequenos. */
+@Composable
+private fun CartaoCarroAvancando(obd: ObdMonitor, d: DadosObd, vel: Float, modifier: Modifier, aoEscolherAdaptador: () -> Unit) {
+    Cartao(modifier) {
+        CarroAvancando(vel, Modifier.fillMaxSize())
+        Row(Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.Top) {
+            Text(
+                when (obd.estado) {
+                    EstadoObd.Desconectado -> "Adaptador não conectado"
+                    EstadoObd.Procurando -> "Procurando o adaptador…"
+                    EstadoObd.Conectando -> "Conectando…"
+                    EstadoObd.Conectado -> if (d.rpm == null) "Conectado — ligue o motor" else "Conectado"
+                    EstadoObd.Demonstracao -> "Demonstração (simulado)"
+                },
+                color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f),
+            )
         }
+        Row(Modifier.align(Alignment.TopEnd).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BotaoMini(if (obd.estado == EstadoObd.Demonstracao) "Sair" else "Demo", Icons.Filled.PlayArrow) { obd.alternarDemonstracao() }
+            BotaoMini("Adaptador", Icons.Filled.Bluetooth) { aoEscolherAdaptador() }
+        }
+    }
+}
+
+@Composable
+private fun BotaoMini(rotulo: String, icone: ImageVector, aoClicar: () -> Unit) {
+    Row(
+        Modifier.clip(RoundedCornerShape(14.dp)).background(Cores.Chip).border(1.dp, Cores.ChipBorda, RoundedCornerShape(14.dp))
+            .clickable { aoClicar() }.padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        androidx.compose.material3.Icon(icone, null, tint = Cores.Texto, modifier = Modifier.size(16.dp))
+        Text(rotulo, color = Cores.Texto, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
@@ -156,36 +190,6 @@ private fun CartaoIndicador(titulo: String, icone: ImageVector, cor: Color, valo
                     }
                 }
                 BarraFina(fracao, cor, Modifier.fillMaxWidth(), 6.dp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun CartaoCarroCentral(obd: ObdMonitor, d: DadosObd, modifier: Modifier, aoEscolherAdaptador: () -> Unit) {
-    Cartao(modifier) {
-        FotoCarro(Modifier.fillMaxSize(), 0.5f)
-        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            TituloCarro()
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ChipsCarro(d)
-                Text(
-                    when (obd.estado) {
-                        EstadoObd.Desconectado -> "Adaptador não conectado"
-                        EstadoObd.Procurando -> "Procurando o adaptador…"
-                        EstadoObd.Conectando -> "Conectando…"
-                        EstadoObd.Conectado -> if (d.rpm == null) "Conectado — ligue o motor" else "Conectado"
-                        EstadoObd.Demonstracao -> "Demonstração (dados simulados)"
-                    },
-                    color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1,
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BotaoPilula(
-                        if (obd.estado == EstadoObd.Demonstracao) "Sair da demonstração" else "Demonstração",
-                        Icons.Filled.PlayArrow, Modifier.fillMaxWidth(),
-                    ) { obd.alternarDemonstracao() }
-                    BotaoPilula("Escolher adaptador", Icons.Filled.Bluetooth, Modifier.fillMaxWidth()) { aoEscolherAdaptador() }
-                }
             }
         }
     }

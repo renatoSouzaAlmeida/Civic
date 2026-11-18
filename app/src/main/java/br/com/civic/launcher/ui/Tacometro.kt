@@ -22,7 +22,7 @@ import kotlin.math.sin
  * Desenho simples em Canvas, sem blur, para poupar a GPU da multimídia.
  */
 @Composable
-fun TacometroEsportivo(rpm: Int?, vel: Float, modifier: Modifier = Modifier) {
+fun TacometroEsportivo(rpm: Int?, vel: Float, modifier: Modifier = Modifier, centroRpm: Boolean = false) {
     val trilho = Cores.SegVazio
     val azul = Cores.Destaque
     val ambar = Cores.Amarelo
@@ -96,14 +96,19 @@ fun TacometroEsportivo(rpm: Int?, vel: Float, modifier: Modifier = Modifier) {
                 }
             }
 
-            // Velocidade digital no centro, levemente abaixo do cubo do ponteiro.
+            // Centro: giros (modo painel) ou velocidade digital (modo compacto).
             Column(
                 Modifier.align(Alignment.Center).offset(y = lado * 0.17f),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.20f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.05f).sp, fontWeight = FontWeight.SemiBold)
-                Text(rpm?.let { "$it rpm" } ?: "— rpm", color = Cores.Destaque, fontSize = (lado.value * 0.045f).sp, fontWeight = FontWeight.Bold)
+                if (centroRpm) {
+                    Text(rpm?.let { "%,d".format(java.util.Locale("pt", "BR"), it) } ?: "—", color = Cores.Texto, fontSize = (lado.value * 0.17f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    Text("rpm", color = Cores.TextoSuave, fontSize = (lado.value * 0.05f).sp, fontWeight = FontWeight.SemiBold)
+                } else {
+                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.20f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.05f).sp, fontWeight = FontWeight.SemiBold)
+                    Text(rpm?.let { "$it rpm" } ?: "— rpm", color = Cores.Destaque, fontSize = (lado.value * 0.045f).sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

@@ -61,7 +61,6 @@ private val itens = listOf(
         }
     },
     Item("Spotify", Icons.Filled.MusicNote, null, "com.spotify.music") { it.abrirSpotify() },
-    Item("Câmera", Icons.Filled.Videocam, null) { abrirFixado(it, Atalhos.CAMERA, "Câmera") },
     Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),
     Item("Config.", Icons.Filled.Settings, Tela.Config),
@@ -76,9 +75,8 @@ fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modif
     BoxWithConstraints(modifier) {
         val compacto = maxWidth < 600.dp // celular em retrato: só os ícones, sem rótulos
         Row(
-            Modifier.fillMaxWidth().clip(formaBarra).background(Cores.Cartao).border(1.dp, Cores.Borda, formaBarra)
-                .padding(if (compacto) 6.dp else 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(if (compacto) 4.dp else 8.dp),
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (compacto) 6.dp else 12.dp),
         ) {
             itens.forEach { item ->
                 val ativo = item.tela != null && item.tela == atual
@@ -88,7 +86,7 @@ fun BarraNavegacao(atual: Tela, aoIr: (Tela) -> Unit, modifier: Modifier = Modif
                         .weight(1f)
                         .toqueSuave { if (item.tela != null) aoIr(item.tela) else item.acao(ctx) }
                         .clip(formaItem)
-                        .then(if (ativo) Modifier.background(destaque).border(1.dp, Color(0xE6AAD2FF), formaItem) else Modifier)
+                        .then(if (ativo) Modifier.background(destaque).border(1.dp, Color(0xE6AAD2FF), formaItem) else Modifier.background(Cores.Cartao).border(1.dp, Cores.Borda, formaItem))
                         .padding(vertical = if (compacto) 12.dp else 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
