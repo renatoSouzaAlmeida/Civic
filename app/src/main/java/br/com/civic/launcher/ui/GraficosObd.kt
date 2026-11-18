@@ -32,6 +32,7 @@ import kotlin.math.sin
  */
 @Composable
 fun GaugeLateral(fracao: Float, valor: String, unidade: String, icone: ImageVector?, modifier: Modifier = Modifier) {
+    val Painel = coresPainel()
     val f = fracao.coerceIn(0f, 1f)
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val lado = minOf(maxWidth, maxHeight)
@@ -40,7 +41,7 @@ fun GaugeLateral(fracao: Float, valor: String, unidade: String, icone: ImageVect
                 val c = Offset(size.width / 2, size.height / 2)
                 val raio = size.minDimension / 2
                 drawCircle(Painel.Face, raio * 0.98f, c)
-                drawCircle(Painel.Borda, raio * 0.98f, c, style = Stroke(raio * 0.015f))
+                drawCircle(Painel.Borda, raio * 0.98f, c, style = Stroke(raio * 0.02f))
                 val esp = raio * 0.14f
                 val rArco = raio * 0.80f
                 val canto = Offset(c.x - rArco, c.y - rArco)
@@ -70,6 +71,7 @@ fun GaugeLateral(fracao: Float, valor: String, unidade: String, icone: ImageVect
  */
 @Composable
 fun TacometroPainel(rpm: Int?, modifier: Modifier = Modifier) {
+    val Painel = coresPainel()
     val f = ((rpm ?: 0) / 8000f).coerceIn(0f, 1f)
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val lado = minOf(maxWidth, maxHeight)
@@ -101,7 +103,7 @@ fun TacometroPainel(rpm: Int?, modifier: Modifier = Modifier) {
                     val grande = i % 2 == 0
                     val rInt = rExt - raio * (if (grande) 0.11f else 0.06f)
                     drawLine(
-                        if (t >= 0.75f) Painel.Vermelho else Color.White,
+                        if (t >= 0.75f) Painel.Vermelho else Painel.Texto,
                         Offset(c.x + rInt * cos(a).toFloat(), c.y + rInt * sin(a).toFloat()),
                         Offset(c.x + rExt * cos(a).toFloat(), c.y + rExt * sin(a).toFloat()),
                         strokeWidth = raio * (if (grande) 0.022f else 0.012f), cap = StrokeCap.Round,
@@ -116,67 +118,17 @@ fun TacometroPainel(rpm: Int?, modifier: Modifier = Modifier) {
                     Modifier.offset(x = lado / 2 + rRot * cos(a).toFloat() - 16.dp, y = lado / 2 + rRot * sin(a).toFloat() - 16.dp).size(32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("$k", color = if (k >= 6) Painel.Vermelho else Color.White, fontSize = (lado.value * 0.065f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1)
+                    Text("$k", color = if (k >= 6) Painel.Vermelho else Painel.Texto, fontSize = (lado.value * 0.065f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1)
                 }
             }
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("x1000 rpm", color = Painel.Suave, fontSize = (lado.value * 0.045f).sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     rpm?.let { "%,d".format(java.util.Locale("pt", "BR"), it) } ?: "—",
-                    color = Color.White, fontSize = (lado.value * 0.15f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1,
+                    color = Painel.Texto, fontSize = (lado.value * 0.15f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1,
                 )
             }
         }
     }
 }
 
-/**
- * Carro visto de trás "avançando": a estrada em perspectiva corre em direção ao carro
- * numa velocidade proporcional à velocidade real. Parado, a estrada para (sem movimento falso).
- */
-@Composable
-fun CarroAvancando(velKmh: Float, modifier: Modifier = Modifier) {
-    val vel by rememberUpdatedState(velKmh)
-    var fase by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        var ultimo = 0L
-        while (true) {
-            androidx.compose.runtime.withFrameNanos { t ->
-                if (ultimo != 0L) fase = (fase + (t - ultimo) / 1e9f * (vel / 100f) * 4f) % 6f
-                ultimo = t
-            }
-        }
-    }
-    val azul = Cores.Destaque
-    Box(modifier) {
-        Canvas(Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val fuga = Offset(w / 2, h * 0.22f)
-            // brilho do horizonte
-            drawRect(Brush.verticalGradient(listOf(Color.Transparent, azul.copy(alpha = 0.22f), Color.Transparent), fuga.y - h * 0.12f, fuga.y + h * 0.12f))
-            // bordas da pista (com um traço mais largo e fraco para dar o brilho)
-            for ((largura, alfa) in listOf(10f to 0.14f, 3f to 0.85f)) {
-                drawLine(azul.copy(alpha = alfa), fuga, Offset(w * 0.04f, h), largura, StrokeCap.Round)
-                drawLine(azul.copy(alpha = alfa), fuga, Offset(w * 0.96f, h), largura, StrokeCap.Round)
-            }
-            // faixas tracejadas que vêm em direção ao carro
-            for (k in 0 until 6) {
-                val t0 = ((k + fase) % 6f) / 6f
-                val t1 = (t0 + 0.07f).coerceAtMost(1f)
-                for (lado in listOf(-0.30f, 0f, 0.30f)) {
-                    val x0 = w / 2 + lado * w * t0
-                    val x1 = w / 2 + lado * w * t1
-                    val y0 = fuga.y + (h - fuga.y) * t0 * t0
-                    val y1 = fuga.y + (h - fuga.y) * t1 * t1
-                    drawLine(Color.White.copy(alpha = 0.15f + 0.55f * t0), Offset(x0, y0), Offset(x1, y1), 1.5f + 7f * t0, StrokeCap.Round)
-                }
-            }
-        }
-        Image(
-            painterResource(R.drawable.carro_traseira), null,
-            Modifier.align(Alignment.BottomCenter).fillMaxHeight(0.62f).padding(bottom = 4.dp),
-            contentScale = ContentScale.Fit,
-        )
-    }
-}
