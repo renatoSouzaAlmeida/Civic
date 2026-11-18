@@ -68,7 +68,7 @@ fun ChipInfo(texto: String, icone: ImageVector, corIcone: Color, modifier: Modif
     }
 }
 
-/** Caixa pequena com título, valor grande e uma linha de apoio (clima, rede, motor, bateria). */
+/** Caixa pequena com título, valor grande e uma linha de apoio (clima, rede, motor, bateria). O valor escala com a altura da caixa. */
 @Composable
 fun MiniCartao(
     titulo: String,
@@ -80,16 +80,19 @@ fun MiniCartao(
     modifier: Modifier = Modifier,
 ) {
     Cartao(modifier) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(icone, null, tint = corIcone, modifier = Modifier.size(20.dp))
-                Text(titulo, color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp)) {
+            val tamanho = (maxHeight.value * 0.36f).coerceIn(18f, 40f).sp
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(icone, null, tint = corIcone, modifier = Modifier.size(18.dp))
+                    Text(titulo, color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                }
+                Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(valor, color = Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    if (unidade.isNotEmpty()) Text(unidade, color = Cores.TextoSuave, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 3.dp))
+                }
+                Text(apoio, color = Cores.TextoSuave, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(valor, color = Cores.Texto, fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                if (unidade.isNotEmpty()) Text(unidade, color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 6.dp))
-            }
-            Text(apoio, color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

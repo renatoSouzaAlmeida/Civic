@@ -135,29 +135,31 @@ private fun Indicadores(d: DadosObd, modifier: Modifier, vertical: Boolean) {
     }
 }
 
-/** Indicador do OBD: título no canto, valor grande alinhado à direita (acompanha o tamanho da caixa) e barra embaixo. */
+/**
+ * Indicador do OBD: título à esquerda e valor grande à direita NA MESMA LINHA, barra embaixo.
+ * Assim cabe mesmo em caixas baixas (tablet pequeno); o número acompanha a altura da caixa.
+ */
 @Composable
 private fun CartaoIndicador(titulo: String, icone: ImageVector, cor: Color, valor: String, unidade: String, fracao: Float, modifier: Modifier) {
     Cartao(modifier) {
-        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp)) {
-            // O número usa a altura que sobra na caixa, então nunca é cortado.
-            val tamanho = minOf(maxHeight.value * 0.46f, maxWidth.value * 0.24f).sp
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    androidx.compose.material3.Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(22.dp))
-                    Text(titulo, color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                }
+        BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            val tamanho = minOf((maxHeight.value - 14f) * 0.62f, maxWidth.value * 0.22f).coerceAtLeast(16f).sp
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 Row(
                     Modifier.fillMaxWidth().weight(1f),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(valor, color = Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                    if (valor != "—") {
-                        Text(unidade, color = Cores.TextoSuave, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp, top = 6.dp))
+                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(20.dp))
+                        Text(titulo, color = Cores.TextoSuave, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2)
+                    }
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(valor, color = Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                        if (valor != "—") Text(unidade, color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 2.dp))
                     }
                 }
-                BarraFina(fracao, cor, Modifier.fillMaxWidth(), 7.dp)
+                BarraFina(fracao, cor, Modifier.fillMaxWidth(), 6.dp)
             }
         }
     }

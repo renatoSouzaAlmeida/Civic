@@ -2,6 +2,13 @@ package br.com.civic.launcher.ui
 
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +70,8 @@ fun HomeScreen(
         }
         BarraNavegacao(tela, { tela = it }, Modifier.fillMaxWidth())
     }
+
+    ModalNovaVersao(atualizador)
 }
 
 /** Hora e data à esquerda, nome do app ao centro e situação (versão, OBD, conexões, tema) à direita. */
@@ -125,15 +134,35 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
     }
 }
 
+/** Bolinha vermelha que pisca, para a nova versão ficar evidente. */
+@Composable
+private fun PontoPiscando() {
+    val transicao = rememberInfiniteTransition(label = "pisca")
+    val alfa by transicao.animateFloat(
+        1f, 0.12f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "alfa",
+    )
+    Box(Modifier.size(12.dp).clip(CircleShape).background(Cores.Vermelho.copy(alpha = alfa)))
+}
+
 @Composable
 private fun Versao(atualizador: Atualizador, compacto: Boolean) {
     val tamanho = if (compacto) 11.sp else 14.sp
     when (val e = atualizador.estado) {
-        is EstadoAtualizacao.Pronta -> Text(
-            "Instalar ${e.versao}", color = Cores.Destaque, fontSize = if (compacto) 13.sp else 16.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.clickable { atualizador.instalar() },
-        )
-        is EstadoAtualizacao.Baixando -> Text("Baixando ${e.versao}…", color = Cores.TextoSuave, fontSize = tamanho)
+        is EstadoAtualizacao.Pronta -> Row(
+            Modifier.clickable { atualizador.instalar() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PontoPiscando()
+            Text(
+                "Nova versão ${e.versao} · Instalar", color = Cores.Vermelho,
+                fontSize = if (compacto) 13.sp else 16.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+            )
+        }
+        is EstadoAtualizacao.Baixando -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PontoPiscando()
+            Text("Baixando ${e.versao}…", color = Cores.Vermelho, fontSize = tamanho, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
         else -> {
             val (situacao, cor) = when (atualizador.situacao) {
                 SituacaoVersao.Atualizado -> "✓ Atualizado" to Cores.Ok
@@ -146,5 +175,33 @@ private fun Versao(atualizador: Atualizador, compacto: Boolean) {
                 modifier = Modifier.clickable { atualizador.verificar() },
             )
         }
+    }
+}
+
+/** Janela que aparece ao abrir o app quando há versão nova pronta (uma vez por versão e por abertura). */
+@Composable
+private fun ModalNovaVersao(atualizador: Atualizador) {
+    val e = atualizador.estado
+    var dispensada by remember { mutableStateOf<String?>(null) }
+    if (e is EstadoAtualizacao.Pronta && dispensada != e.versao) {
+        AlertDialog(
+            onDismissRequest = { dispensada = e.versao },
+            title = { Text("Nova versão disponível", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "A versão ${e.versao} do Civic Renatin já foi baixada e está pronta para instalar.\n\n" +
+                        "O Android vai pedir uma confirmação, e o app reabre sozinho ao final.",
+                    fontSize = 18.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { dispensada = e.versao; atualizador.instalar() }) {
+                    Text("Instalar agora", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { dispensada = e.versao }) { Text("Depois", fontSize = 20.sp) }
+            },
+        )
     }
 }
