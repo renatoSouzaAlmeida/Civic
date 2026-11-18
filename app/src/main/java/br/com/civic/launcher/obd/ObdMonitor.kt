@@ -37,6 +37,17 @@ data class DadosObd(
     val falhas: Int? = null,
     val luzMotor: Boolean = false,
     val codigos: List<String> = emptyList(),
+    // Combustível (previsto; ver docs/BACKLOG.md). Nulo = ainda não lido.
+    val nivelCombustivel: Int? = null,      // % do tanque (PID 012F, se o carro informar)
+    val consumoMedio: Float? = null,        // km/l desde que o app começou a medir
+    // Sinais do carro (previstos). Não fazem parte do OBD padrão: dependem da rede CAN de carroceria
+    // do Honda. Nulo = desconhecido (a luz-espia aparece apagada e esmaecida).
+    val farol: Boolean? = null,
+    val farolete: Boolean? = null,
+    val pilotoAutomatico: Boolean? = null,
+    val alerta: Boolean? = null,
+    val setaEsquerda: Boolean? = null,
+    val setaDireita: Boolean? = null,
 )
 
 class DispositivoBle(val nome: String, val endereco: String)
@@ -359,6 +370,15 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 tempAdmissao = 34,
                 acelerador = (8 + onda * 30).toInt(),
                 falhas = 0,
+                nivelCombustivel = 62,
+                consumoMedio = 11.8f + (sin(t / 15) * 0.4f).toFloat(),
+                // Ciclo de 60 s para mostrar as luzes-espia: farol, setas, piloto e alerta.
+                farol = (t % 60) < 40,
+                farolete = (t % 60) < 50,
+                pilotoAutomatico = onda > 0.75,
+                setaEsquerda = (t % 60) in 5.0..10.0,
+                setaDireita = (t % 60) in 20.0..25.0,
+                alerta = (t % 60) in 45.0..50.0,
             )
             principal.postDelayed(this, 300)
         }

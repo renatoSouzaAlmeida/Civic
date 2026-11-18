@@ -12,6 +12,13 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   (MAF, 0110) ou, se não houver MAF, estimado pelo MAP (010B) + temperatura do ar + rpm. O Civic 2012 é flex:
   o cálculo precisa saber se é gasolina ou etanol (opção em Config. e ajuste fino comparando com abastecimentos).
 
+- [ ] **Luzes-espia reais (farol, farolete, setas, pisca-alerta, piloto automático)** — a tela já está pronta
+  (aparecem esmaecidas enquanto o dado é desconhecido; no modo Demo acendem). Esses sinais NÃO fazem parte do
+  OBD-II padrão: ficam na rede CAN do Honda. Com o adaptador em mãos, testar o modo monitor do ELM327 (ATMA)
+  para ver se esses quadros chegam pela tomada OBD do Civic 2012 e, se chegarem, descobrir os IDs/bits de cada
+  sinal. Pode não ser possível (muitos Honda deixam a carroceria numa rede separada da tomada).
+  A luz de injeção (MIL) e a temperatura alta já vêm de dados reais do OBD.
+
 ## Navegação / mapa
 - [ ] Decidir o mapa dentro do launcher: A) Google Maps embutido (Maps SDK, precisa de chave e Play Services),
   B) OpenStreetMap embutido, ou C) manter Waze/Maps em tela cheia com o painel de direção por cima.

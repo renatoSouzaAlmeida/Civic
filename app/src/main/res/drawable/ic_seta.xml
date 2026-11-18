@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Luz-espia: seta (aponta para a esquerda; a direita é espelhada no código). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M2,12 L10,4 L10,8.5 L22,8.5 L22,15.5 L10,15.5 L10,20 Z"/>
+</vector>

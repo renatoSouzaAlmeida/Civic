@@ -19,6 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -177,10 +183,10 @@ private fun PainelEsportivo(
         // Camada 3 (estática): reflexo das lanternas, berço que liga os mostradores e halos.
         Canvas(Modifier.fillMaxSize()) { desenharMoldura(GeoPainel(size.width, size.height, density), p, caminho) }
 
-        // Mostradores: rpm à esquerda, velocidade grande no centro, carga à direita.
+        // Mostradores: rpm à esquerda, velocidade grande no centro, consumo médio à direita.
         GaugeLateral((d.rpm ?: 0) / 8000f, d.rpm?.let { "%,d".format(java.util.Locale("pt", "BR"), it) } ?: "—", "rpm", null,
             Modifier.offset(dp(g.xEsq - g.rS), dp(g.cy - g.rS)).size(dp(g.rS * 2)))
-        GaugeLateral((d.carga ?: 0) / 100f, d.carga?.toString() ?: "—", "% carga", null,
+        GaugeLateral((d.consumoMedio ?: 0f) / 20f, d.consumoMedio?.let { "%.1f".format(it) } ?: "—", "km/l médio", null,
             Modifier.offset(dp(g.xDir - g.rS), dp(g.cy - g.rS)).size(dp(g.rS * 2)))
         MostradorCentral(
             vel / 200f, "${vel.toInt()}", "km/h", (0..10).map { "${it * 20}" }, 0.8f,
@@ -214,6 +220,21 @@ private fun PainelEsportivo(
             BotaoRedondoPainel(Icons.Filled.Bluetooth) { aoEscolherAdaptador() }
         }
 
+        // Luzes-espia nas laterais: setas nos lados certos, como no painel do carro.
+        val corVerde = Color(0xFF22C55E)
+        Column(Modifier.offset(14.dp, 44.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LuzEspia(painterResource(R.drawable.ic_seta), d.setaEsquerda, corVerde, piscar = true)
+            LuzEspia(painterResource(R.drawable.ic_farol), d.farol, corVerde)
+            LuzEspia(painterResource(R.drawable.ic_farolete), d.farolete, corVerde)
+            LuzEspia(painterResource(R.drawable.ic_motor), if (obd.estado == EstadoObd.Conectado || obd.estado == EstadoObd.Demonstracao) d.luzMotor else null, Color(0xFFFFB020))
+        }
+        Column(Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LuzEspia(painterResource(R.drawable.ic_seta), d.setaDireita, corVerde, piscar = true, espelhar = true)
+            LuzEspia(rememberVectorPainter(Icons.Filled.Speed), d.pilotoAutomatico, corVerde)
+            LuzEspia(painterResource(R.drawable.ic_alerta), d.alerta, p.Vermelho, piscar = true)
+            LuzEspia(rememberVectorPainter(Icons.Filled.Thermostat), d.tempMotor?.let { it >= 105 }, p.Vermelho)
+        }
+
         if (comInfos) {
             val topo = dp(g.yBerco + 8f)
             val altura = dp(g.h - g.yBerco - 14f)
@@ -224,6 +245,7 @@ private fun PainelEsportivo(
                 InfoPainel("Temp. Motor", Icons.Filled.Thermostat, d.tempMotor?.toString(), "°C", compacto = true)
                 InfoPainel("Temp. Admissão", Icons.Filled.AcUnit, d.tempAdmissao?.toString(), "°C", compacto = true)
                 InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V", compacto = true)
+                InfoPainel("Combustível", Icons.Filled.LocalGasStation, d.nivelCombustivel?.toString(), "%", compacto = true)
             }
             SpotifyPainel(monitor, Modifier.offset(dp(g.w * 0.71f), topo).width(dp(g.w * 0.29f - 16f)).height(altura))
         }
@@ -364,16 +386,42 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharMoldura(g: 
     }
 }
 
+/**
+ * Luz-espia do painel. Acesa = cor do sinal (setas e alerta piscam); apagada = cinza;
+ * desconhecida (o carro/adaptador ainda não informa) = bem esmaecida.
+ */
+@Composable
+private fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa: Boolean?, cor: Color, piscar: Boolean = false, espelhar: Boolean = false) {
+    val p = coresPainel()
+    val tint = when (ativa) {
+        true -> cor
+        false -> p.suave.copy(alpha = 0.45f)
+        null -> p.suave.copy(alpha = 0.18f)
+    }
+    val pisca = if (ativa == true && piscar) {
+        rememberInfiniteTransition(label = "pisca").animateFloat(
+            1f, 0.12f, infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "alfa",
+        )
+    } else null
+    Icon(
+        icone, null, tint = tint,
+        modifier = Modifier.size(28.dp).graphicsLayer {
+            alpha = pisca?.value ?: 1f
+            if (espelhar) scaleX = -1f
+        },
+    )
+}
+
 /** Indicador sem caixa. Normal: rótulo em cima e valor grande. Compacto: tudo numa linha (cabem três). */
 @Composable
 private fun InfoPainel(rotulo: String, icone: ImageVector, valor: String?, unidade: String, compacto: Boolean = false) {
     val p = coresPainel()
     if (compacto) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(icone, null, tint = p.texto, modifier = Modifier.size(22.dp))
-            Text(rotulo, color = p.suave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
-            Text(valor ?: "—", color = p.texto, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            if (valor != null) Text(unidade, color = p.texto, fontSize = 14.sp)
+            Icon(icone, null, tint = p.texto, modifier = Modifier.size(20.dp))
+            Text(rotulo, color = p.suave, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+            Text(valor ?: "—", color = p.texto, fontSize = 20.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (valor != null) Text(unidade, color = p.texto, fontSize = 13.sp)
         }
         return
     }
