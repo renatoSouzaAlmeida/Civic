@@ -4,7 +4,9 @@ import android.app.Service
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.PixelFormat
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
@@ -24,6 +26,7 @@ import br.com.civic.launcher.obd.ObdMonitor
 import br.com.civic.launcher.ui.CivicTheme
 import br.com.civic.launcher.ui.ModoTema
 import br.com.civic.launcher.ui.PainelDirecao
+import br.com.civic.launcher.ui.TamanhoPainel
 import java.util.Calendar
 
 /**
@@ -63,9 +66,10 @@ class PainelService : Service() {
         remover()
         val tela = resources.displayMetrics
         val paisagem = tela.widthPixels >= tela.heightPixels
+        val tamanho = TamanhoPainel.ler(this)
         val parametros = WindowManager.LayoutParams(
-            if (paisagem) (tela.widthPixels * 0.28f).toInt() else WindowManager.LayoutParams.MATCH_PARENT,
-            if (paisagem) WindowManager.LayoutParams.MATCH_PARENT else (tela.heightPixels * 0.30f).toInt(),
+            if (paisagem) (tela.widthPixels * tamanho.fracaoLargura).toInt() else WindowManager.LayoutParams.MATCH_PARENT,
+            if (paisagem) WindowManager.LayoutParams.MATCH_PARENT else (tela.heightPixels * tamanho.fracaoAltura).toInt(),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
@@ -83,6 +87,11 @@ class PainelService : Service() {
                         aoVoltarInicio = {
                             startActivity(Intent(this@PainelService, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                             stopSelf()
+                        },
+                        aoAlternarTamanho = {
+                            // Refaz a janela fora do clique, pois ela mesma será substituída.
+                            TamanhoPainel.salvar(this@PainelService, TamanhoPainel.ler(this@PainelService).proximo())
+                            Handler(Looper.getMainLooper()).post { mostrar() }
                         },
                         aoFechar = { stopSelf() },
                     )

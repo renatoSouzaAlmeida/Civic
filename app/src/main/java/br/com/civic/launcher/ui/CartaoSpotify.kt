@@ -40,7 +40,7 @@ import br.com.civic.launcher.MusicaUi
 import br.com.civic.launcher.abrirSpotify
 import kotlinx.coroutines.delay
 
-private val GradienteSpotify = Brush.linearGradient(listOf(Color(0xFFFF9A3C), Color(0xFFFF5F6D), Color(0xFF6A3DF0)))
+private val GradienteSpotify = Brush.linearGradient(listOf(Color(0xFF4D9BFF), Color(0xFF2563EB), Color(0xFF15367F)))
 private val VeuSpotify = Brush.verticalGradient(listOf(Color(0x0D000000), Color(0x800A0A28)))
 private val BrancoSuave = Color(0x3DFFFFFF)
 
@@ -120,7 +120,7 @@ private fun Capa(m: MusicaUi, tamanho: Dp) {
         )
     } else {
         Box(
-            Modifier.size(tamanho).clip(forma).background(Brush.linearGradient(listOf(Color(0xFFFFB347), Color(0xFFFF5F6D), Color(0xFF5B3CC4))))
+            Modifier.size(tamanho).clip(forma).background(Brush.linearGradient(listOf(Color(0xFF7DB4FF), Color(0xFF3D7BFF), Color(0xFF1E3FA0))))
                 .border(2.dp, Color(0x59FFFFFF), forma),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.Filled.MusicNote, null, tint = Color.White, modifier = Modifier.size(tamanho * 0.4f)) }

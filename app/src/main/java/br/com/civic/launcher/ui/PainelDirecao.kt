@@ -1,5 +1,6 @@
 package br.com.civic.launcher.ui
 
+import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,124 +30,149 @@ import br.com.civic.launcher.obd.ObdMonitor
 import kotlinx.coroutines.delay
 import java.util.Date
 
-// Fundos parcialmente transparentes: o mapa do Waze continua aparecendo por trás.
+// Só o fundo do painel e o cartão da música são translúcidos; a barra de botões é opaca.
 private const val OPACIDADE_FUNDO = 0.68f
 private const val OPACIDADE_CARTAO = 0.78f
 
+/** Tamanho do painel sobre o Waze: fração da largura (paisagem) ou da altura (retrato). */
+enum class TamanhoPainel(val fracaoLargura: Float, val fracaoAltura: Float, val rotulo: String) {
+    Compacto(0.22f, 0.26f, "Compacto"), Medio(0.28f, 0.32f, "Médio"), Grande(0.36f, 0.42f, "Grande");
+
+    fun proximo() = entries[(ordinal + 1) % entries.size]
+
+    companion object {
+        private const val ARQUIVO = "preferencias"
+        private const val CHAVE = "tamanho_painel"
+
+        fun ler(ctx: Context): TamanhoPainel = runCatching {
+            valueOf(ctx.getSharedPreferences(ARQUIVO, Context.MODE_PRIVATE).getString(CHAVE, null) ?: "")
+        }.getOrDefault(Medio)
+
+        fun salvar(ctx: Context, tamanho: TamanhoPainel) {
+            ctx.getSharedPreferences(ARQUIVO, Context.MODE_PRIVATE).edit().putString(CHAVE, tamanho.name).apply()
+        }
+    }
+}
+
 /**
- * Modo Direção: coluna sobre o Waze (à direita em paisagem; faixa embaixo em retrato).
- * Mostra clima e hora, velocidade, música e os botões Início/Fechar.
+ * Modo Direção: painel sobre o Waze. Em cima, uma barra opaca e pequena (Início, hora/clima, tamanho, Fechar);
+ * embaixo, a velocidade em uma linha e o Spotify ocupando o resto.
  */
 @Composable
-fun PainelDirecao(sensores: Sensores, monitor: MediaMonitor, obd: ObdMonitor, aoVoltarInicio: () -> Unit, aoFechar: () -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo.copy(alpha = OPACIDADE_FUNDO)).padding(10.dp)) {
-        if (maxWidth > maxHeight) {
-            // Faixa larga (tela em retrato): tudo em linha.
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Velocidade(sensores, obd, Modifier.weight(0.8f).fillMaxHeight())
-                Musica(monitor, Modifier.weight(1.8f).fillMaxHeight())
-                Botoes(aoVoltarInicio, aoFechar, Modifier.weight(0.6f).fillMaxHeight(), vertical = true)
-            }
-        } else {
-            // Coluna estreita (tela em paisagem).
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Cabecalho(sensores)
-                Velocidade(sensores, obd, Modifier.weight(0.7f).fillMaxWidth())
-                Musica(monitor, Modifier.weight(1.5f).fillMaxWidth())
-                Botoes(aoVoltarInicio, aoFechar, Modifier.fillMaxWidth().height(64.dp), vertical = false)
+fun PainelDirecao(
+    sensores: Sensores,
+    monitor: MediaMonitor,
+    obd: ObdMonitor,
+    aoVoltarInicio: () -> Unit,
+    aoAlternarTamanho: () -> Unit,
+    aoFechar: () -> Unit,
+) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo.copy(alpha = OPACIDADE_FUNDO))) {
+        val larga = maxWidth > maxHeight
+        Column(Modifier.fillMaxSize()) {
+            BarraSuperior(sensores, aoVoltarInicio, aoAlternarTamanho, aoFechar)
+            if (larga) {
+                // Faixa larga (tela em retrato): velocidade à esquerda, música ocupa o resto.
+                Row(Modifier.weight(1f).fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Velocidade(sensores, obd, Modifier.width(110.dp).fillMaxHeight())
+                    Musica(monitor, Modifier.weight(1f).fillMaxHeight())
+                }
+            } else {
+                // Coluna estreita (tela em paisagem): velocidade numa linha e a música com todo o resto.
+                Column(Modifier.weight(1f).fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Velocidade(sensores, obd, Modifier.fillMaxWidth())
+                    Musica(monitor, Modifier.weight(1f).fillMaxWidth())
+                }
             }
         }
     }
 }
 
 @Composable
-private fun Cabecalho(sensores: Sensores) {
+private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoFechar: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
     val hora = DateFormat.getTimeFormat(ctx).format(agora)
     val clima = sensores.clima
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (clima != null) {
-                val (icone, cor) = iconeClima(clima.condicao)
-                Icon(icone, null, tint = cor, modifier = Modifier.size(28.dp))
-                Text("${clima.temperatura}°C", color = Cores.Texto, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+    BoxWithConstraints(Modifier.fillMaxWidth().background(Cores.CartaoSolido).padding(horizontal = 6.dp, vertical = 5.dp)) {
+        val estreita = maxWidth < 230.dp
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            BotaoPequeno(Icons.Filled.Home, "Início", aoVoltarInicio)
+            Row(
+                Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (!estreita && clima != null) {
+                    val (icone, cor) = iconeClima(clima.condicao)
+                    Icon(icone, null, tint = cor, modifier = Modifier.size(18.dp))
+                    Text("${clima.temperatura}°", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                Text(hora, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             }
+            BotaoPequeno(Icons.Filled.OpenInFull, "Tamanho do painel", aoAlternarTamanho)
+            BotaoPequeno(Icons.Filled.Close, "Fechar", aoFechar)
         }
-        Text(hora, color = Cores.Texto, fontSize = 22.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 private fun Velocidade(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     val vel = obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
-    Box(modifier, contentAlignment = Alignment.Center) {
-        Medidor(vel / 220f, Cores.Destaque, Modifier.aspectRatio(1f), espessura = 12.dp) { dm ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (dm.value * 0.30f).sp, fontWeight = FontWeight.Bold)
-                Text("km/h", color = Cores.TextoSuave, fontSize = (dm.value * 0.10f).sp)
-            }
-        }
+    Row(modifier, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
+        Text("${vel.toInt()}", color = Cores.Texto, fontSize = 38.sp, lineHeight = 40.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text(" km/h", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 5.dp))
     }
 }
 
 @Composable
 private fun Musica(monitor: MediaMonitor, modifier: Modifier) {
     val m = monitor.estado
-    Column(
-        modifier.clip(RoundedCornerShape(20.dp)).background(Cores.Cartao.copy(alpha = OPACIDADE_CARTAO)).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        // Capa, título e progresso cedem espaço; os controles abaixo nunca são espremidos.
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (m.capa != null) {
-                    Image(m.capa.asImageBitmap(), null, Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
-                } else {
-                    Icon(Icons.Filled.MusicNote, null, tint = Cores.Spotify, modifier = Modifier.size(40.dp))
-                }
-                Column {
+    BoxWithConstraints(modifier.clip(RoundedCornerShape(20.dp)).background(Cores.Cartao.copy(alpha = OPACIDADE_CARTAO))) {
+        val estreita = maxWidth < 190.dp
+        val capa = minOf(maxWidth * 0.4f, 120.dp)
+        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Capa, título e progresso cedem espaço; os controles abaixo nunca são espremidos.
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceBetween) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (m.capa != null) {
+                        Image(m.capa.asImageBitmap(), null, Modifier.size(capa).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop)
+                    } else {
+                        Icon(Icons.Filled.MusicNote, null, tint = Cores.Spotify, modifier = Modifier.size(capa * 0.5f))
+                    }
                     Text(
                         if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify",
-                        color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = Cores.Texto, fontSize = if (estreita) 17.sp else 21.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
-                    Text(if (m.temSessao) m.artista else "Nada tocando", color = Cores.TextoSuave, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (m.temSessao) m.artista else "Nada tocando",
+                        color = Cores.TextoSuave, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
                 }
+                if (m.temSessao && m.duracao > 0) BarraProgresso(m)
             }
-            if (m.temSessao && m.duracao > 0) BarraProgresso(m)
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            Controle(Icons.Filled.SkipPrevious, 48.dp, Cores.TextoSuave) { monitor.anterior() }
-            Controle(if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled, 64.dp, Cores.Spotify) { monitor.alternar() }
-            Controle(Icons.Filled.SkipNext, 48.dp, Cores.TextoSuave) { monitor.proxima() }
-        }
-    }
-}
-
-@Composable
-private fun Botoes(aoVoltarInicio: () -> Unit, aoFechar: () -> Unit, modifier: Modifier, vertical: Boolean) {
-    if (vertical) {
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            BotaoIcone(Icons.Filled.Home, "Início", Modifier.weight(1f).fillMaxWidth(), aoVoltarInicio)
-            BotaoIcone(Icons.Filled.Close, "Fechar", Modifier.weight(1f).fillMaxWidth(), aoFechar)
-        }
-    } else {
-        Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            BotaoIcone(Icons.Filled.Home, "Início", Modifier.weight(1f).fillMaxHeight(), aoVoltarInicio)
-            BotaoIcone(Icons.Filled.Close, "Fechar", Modifier.weight(1f).fillMaxHeight(), aoFechar)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                Controle(Icons.Filled.SkipPrevious, if (estreita) 40.dp else 52.dp, Cores.TextoSuave) { monitor.anterior() }
+                Controle(
+                    if (m.tocando) Icons.Filled.PauseCircleFilled else Icons.Filled.PlayCircleFilled,
+                    if (estreita) 56.dp else 72.dp, Cores.Spotify,
+                ) { monitor.alternar() }
+                Controle(Icons.Filled.SkipNext, if (estreita) 40.dp else 52.dp, Cores.TextoSuave) { monitor.proxima() }
+            }
         }
     }
 }
 
+/** Botão pequeno (36 dp) da barra superior do painel. */
 @Composable
-private fun BotaoIcone(icone: ImageVector, descricao: String, modifier: Modifier, aoTocar: () -> Unit) {
+private fun BotaoPequeno(icone: ImageVector, descricao: String, aoTocar: () -> Unit) {
     Box(
-        modifier.toqueSuave(aoTocar).clip(RoundedCornerShape(16.dp)).background(Cores.CartaoAlto.copy(alpha = OPACIDADE_CARTAO)),
+        Modifier.toqueSuave(aoTocar).size(36.dp).clip(RoundedCornerShape(10.dp)).background(Cores.CartaoAlto),
         contentAlignment = Alignment.Center,
-    ) {
-        Icon(icone, descricao, tint = Cores.Texto, modifier = Modifier.size(32.dp))
-    }
+    ) { Icon(icone, descricao, tint = Cores.Texto, modifier = Modifier.size(20.dp)) }
 }
 
 @Composable
