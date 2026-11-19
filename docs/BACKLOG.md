@@ -20,7 +20,7 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   A luz de injeção (MIL) e a temperatura alta já vêm de dados reais do OBD.
 
 ## Funcionalidades de especialista (ordem de prioridade)
-1. [ ] **Alertas inteligentes** (sobre qualquer tela): motor frio (< 70 °C) com giro alto (> 3.000 rpm);
+1. [x] **Alertas inteligentes** (sobre qualquer tela): motor frio (< 70 °C) com giro alto (> 3.000 rpm);
    superaquecimento (> 105 °C); alternador sem carga (< 13,2 V com motor ligado); bateria fraca (< 12,2 V desligado).
 2. [ ] **Tela de falhas (DTC)** — ver item acima, em OBD.
 3. [x] **Registro de abastecimentos** — consumo real (tanque cheio a tanque cheio), gasto no mês, custo por km.

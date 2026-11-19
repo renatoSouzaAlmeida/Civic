@@ -83,6 +83,8 @@ fun HomeScreen(
                 }
             }
             if (dock) DockNavegacao(tela, { tela = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+            // Alertas do motor por cima de qualquer tela.
+            BannerAlerta(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.7f).padding(top = 4.dp))
         }
         if (!dock) BarraNavegacao(tela, { tela = it }, Modifier.fillMaxWidth())
     }

@@ -113,6 +113,7 @@ fun PainelDirecao(
             BarraFina(sensores, monitor, obd, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
         } else Column(Modifier.fillMaxSize()) {
             BarraSuperior(sensores, obd, mostrarIndicadores = larga, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
+            BannerAlerta(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp), compacto = true)
             if (larga) {
                 // Faixa larga (tela em retrato): velocidade à esquerda, música ocupa o resto.
                 Row(Modifier.weight(1f).fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -161,7 +162,10 @@ private fun BarraFina(
             if (m.capa != null) {
                 Image(m.capa.asImageBitmap(), null, Modifier.fillMaxHeight().aspectRatio(1f).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
             }
-            Column(Modifier.weight(1f)) {
+            // Com alerta do motor, a faixa ocupa o lugar do título da música.
+            if (br.com.civic.launcher.obd.AlertasMotor.obter(ctx).atual != null) {
+                BannerAlerta(Modifier.weight(1f), compacto = true)
+            } else Column(Modifier.weight(1f)) {
                 Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(if (m.temSessao) m.artista else "Nada tocando", color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

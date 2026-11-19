@@ -61,8 +61,15 @@ class DispositivoBle(val nome: String, val endereco: String)
 class ObdMonitor private constructor(private val ctx: Context) {
     var estado by mutableStateOf(EstadoObd.Desconectado)
         private set
-    var dados by mutableStateOf(DadosObd())
-        private set
+    private var dadosAtuais by mutableStateOf(DadosObd())
+    /** Últimos dados lidos. Cada atualização passa pelos alertas inteligentes do motor. */
+    var dados: DadosObd
+        get() = dadosAtuais
+        private set(novo) {
+            dadosAtuais = novo
+            alertas.avaliar(novo, demonstracao = demo)
+        }
+    private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
         private set
     var buscandoLista by mutableStateOf(false)
@@ -76,6 +83,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
 
     private var iniciado = false
     private var demo = false
+    private var inicioDemo = 0L
     private var estadoReal = EstadoObd.Desconectado
     private var gatt: BluetoothGatt? = null
     private var escrita: BluetoothGattCharacteristic? = null
@@ -351,6 +359,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             estado = estadoReal
         } else {
             demo = true
+            inicioDemo = SystemClock.elapsedRealtime()
             estado = EstadoObd.Demonstracao
             tique.run()
         }
@@ -361,10 +370,21 @@ class ObdMonitor private constructor(private val ctx: Context) {
             if (!demo) return
             val t = SystemClock.elapsedRealtime() / 1000.0
             val onda = (sin(t * 2 * PI / 20) + 1) / 2 // 0..1 a cada 20 s
+            // Roteiro para mostrar os alertas: motor frio nos primeiros 40 s (com uma acelerada acima de
+            // 3.000 rpm entre 15 e 25 s) e, depois, 15 s de superaquecimento a cada minuto.
+            val desde = (SystemClock.elapsedRealtime() - inicioDemo) / 1000.0
+            val frio = desde < 40
+            val ciclo = (desde - 40) % 60
+            val temperatura = when {
+                frio -> (55 + desde * 0.9).toInt()
+                ciclo in 45.0..59.9 -> 107
+                else -> 90 + (sin(t / 30) * 2).toInt()
+            }
+            val rpmDemo = if (frio && desde in 15.0..25.0) 3400 else (900 + onda * 2600 + abs(sin(t * 3)) * 150).toInt()
             dados = DadosObd(
-                rpm = (900 + onda * 2600 + abs(sin(t * 3)) * 150).toInt(),
+                rpm = rpmDemo,
                 velocidade = (onda * 90).toInt(),
-                tempMotor = 90 + (sin(t / 30) * 2).toInt(),
+                tempMotor = temperatura,
                 tensao = 14.1f + (sin(t) * 0.1f).toFloat(),
                 carga = (20 + onda * 45).toInt(),
                 tempAdmissao = 34,
