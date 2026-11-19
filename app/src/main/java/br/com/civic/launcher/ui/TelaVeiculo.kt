@@ -148,6 +148,8 @@ private fun NovoAbastecimento(v: Veiculo) {
     var km by remember { mutableStateOf("") }
     var litros by remember { mutableStateOf("") }
     var preco by remember { mutableStateOf("") }
+    var total by remember { mutableStateOf("") }
+    var aditivada by remember { mutableStateOf(false) }
     var comb by remember { mutableStateOf(v.abastecimentos.lastOrNull()?.combustivel ?: Combustivel.Gasolina) }
     var cheio by remember { mutableStateOf(true) }
     var erro by remember { mutableStateOf<String?>(null) }
@@ -156,28 +158,33 @@ private fun NovoAbastecimento(v: Veiculo) {
             Campo("Km do painel", km, Modifier.weight(1f), mascara = Mascara.Milhar) { km = it }
             Campo("Litros", litros, Modifier.weight(1f), mascara = Mascara.Decimal2) { litros = it }
             Campo("Preço por litro", preco, Modifier.weight(1f), mascara = Mascara.Moeda) { preco = it }
+            Campo("Valor total pago", total, Modifier.weight(1f), mascara = Mascara.Moeda) { total = it }
         }
+        Text("Informe o preço por litro OU o valor total (o que você tiver).", color = Cores.TextoSuave, fontSize = 13.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Combustivel.entries.forEach { c -> Opcao(c.rotulo, comb == c, Modifier.weight(1f)) { comb = c } }
             Opcao(if (cheio) "Tanque cheio ✓" else "Parcial", cheio, Modifier.weight(1f)) { cheio = !cheio }
         }
+        if (comb == Combustivel.Gasolina) Row { Opcao(if (aditivada) "Aditivada ✓" else "Gasolina comum", aditivada, Modifier.fillMaxWidth()) { aditivada = !aditivada } }
         erro?.let { Text(it, color = Cores.Vermelho, fontSize = 14.sp) }
         BotaoPilula("Salvar abastecimento", Icons.Filled.LocalGasStation, Modifier.fillMaxWidth()) {
             val k = km.toIntOrNull()
             val l = Mascara.centavos(litros)
             val p = Mascara.centavos(preco)
+            val t = Mascara.centavos(total)
             erro = when {
                 k == null || k <= 0 -> "Informe o km do painel."
                 l != null && l > 80f -> "Litros acima de 80: confira (o tanque do Civic tem 50 l)."
                 p != null && p > 20f -> "Preço por litro acima de R$ 20,00: confira."
                 l == null || l <= 0f -> "Informe os litros."
-                p == null || p <= 0f -> "Informe o preço por litro."
+                (p == null || p <= 0f) && (t == null || t <= 0f) -> "Informe o preço por litro ou o valor total."
+                t != null && t > 2000f -> "Valor total acima de R$ 2.000,00: confira."
                 v.abastecimentos.isNotEmpty() && k < (v.abastecimentos.maxOf { it.km }) -> "O km é menor que o do último abastecimento."
                 else -> null
             }
             if (erro == null) {
-                v.adicionar(Abastecimento(System.currentTimeMillis(), System.currentTimeMillis(), k!!, l!!, p!!, comb, cheio))
-                km = ""; litros = ""; preco = ""
+                v.adicionar(Abastecimento(System.currentTimeMillis(), System.currentTimeMillis(), k!!, l!!, p ?: 0f, comb, cheio, valorTotal = t ?: 0f, aditivada = aditivada && comb == Combustivel.Gasolina))
+                km = ""; litros = ""; preco = ""; total = ""; aditivada = false
             }
         }
         Text("Dica: para o consumo real, encha o tanque até o desarme da bomba e marque \"Tanque cheio\".", color = Cores.TextoSuave, fontSize = 13.sp)
@@ -196,6 +203,11 @@ private fun Resumo(v: Veiculo) {
             Numero("Gasto no mês", reais(v.gastoNoMes()), Modifier.weight(1f))
             Numero("Custo por km", v.custoPorKm()?.let { reais(it) } ?: "—", Modifier.weight(1f))
             Numero("Km atual", if (v.kmAtual > 0) "%,d".format(BR, v.kmAtual) else "—", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Numero("Abastecimentos", v.abastecimentos.size.toString(), Modifier.weight(1f))
+            Numero("Km entre abast.", v.kmEntreAbastecimentos()?.let { "%,d".format(BR, it) } ?: "—", Modifier.weight(1f))
+            Numero("Pendentes de valor", v.abastecimentos.count { it.semValor }.toString(), Modifier.weight(1f))
         }
         if (v.consumoMedio() == null) Text("O consumo aparece a partir do segundo abastecimento com tanque cheio.", color = Cores.TextoSuave, fontSize = 13.sp)
     }
@@ -242,6 +254,8 @@ private fun EtanolOuGasolina(v: Veiculo) {
 private fun Historico(v: Veiculo) {
     val consumos = v.consumos()
     var apagar by remember { mutableStateOf<Abastecimento?>(null) }
+    var editar by remember { mutableStateOf<Abastecimento?>(null) }
+    editar?.let { a -> EditarAbastecimento(v, a) { editar = null } }
     Secao("Histórico (${v.abastecimentos.size})") {
         if (v.abastecimentos.isEmpty()) Text("Nenhum abastecimento registrado ainda.", color = Cores.TextoSuave, fontSize = 15.sp)
         v.abastecimentos.asReversed().forEach { a ->
@@ -252,11 +266,15 @@ private fun Historico(v: Veiculo) {
                 Column(Modifier.weight(1f)) {
                     Text("${formatoData.format(Date(a.data))} · ${"%,d".format(BR, a.km)} km · ${a.combustivel.rotulo}", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     Text(
-                        "%.2f l × %s = %s".format(BR, a.litros, reais(a.precoLitro), reais(a.total)) + (if (!a.tanqueCheio) " · parcial" else ""),
-                        color = Cores.TextoSuave, fontSize = 13.sp,
+                        (if (a.semValor) "%.2f l · aguardando o valor pago".format(BR, a.litros)
+                        else "%.2f l × %s = %s".format(BR, a.litros, reais(a.precoEfetivo), reais(a.total))) +
+                            (if (!a.tanqueCheio) " · parcial" else "") + (if (a.aditivada) " · aditivada" else "") +
+                            (if (a.automatico) " · detectado pelo tanque (${a.nivelAntes}% → ${a.nivelDepois}%)" else ""),
+                        color = if (a.semValor) Cores.Destaque else Cores.TextoSuave, fontSize = 13.sp,
                     )
                 }
                 consumos[a.id]?.let { Text("%.1f km/l".format(BR, it), color = Cores.Ok, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold) }
+                Icon(Icons.Filled.Edit, "Editar", tint = if (a.semValor) Cores.Destaque else Cores.TextoSuave, modifier = Modifier.size(26.dp).clickable { editar = a })
                 Icon(Icons.Filled.Delete, "Apagar", tint = Cores.TextoSuave, modifier = Modifier.size(26.dp).clickable { apagar = a })
             }
         }
@@ -270,6 +288,48 @@ private fun Historico(v: Veiculo) {
             dismissButton = { TextButton(onClick = { apagar = null }) { Text("Cancelar", fontSize = 18.sp) } },
         )
     }
+}
+
+/** Informa ou corrige um abastecimento (ex.: o valor pago de um abastecimento detectado pelo tanque). */
+@Composable
+private fun EditarAbastecimento(v: Veiculo, a: Abastecimento, aoFechar: () -> Unit) {
+    var km by remember { mutableStateOf(a.km.toString()) }
+    var litros by remember { mutableStateOf(Mascara.paraCentavos(a.litros)) }
+    var preco by remember { mutableStateOf(if (a.precoLitro > 0f) Mascara.paraCentavos(a.precoLitro) else "") }
+    var total by remember { mutableStateOf(if (a.valorTotal > 0f) Mascara.paraCentavos(a.valorTotal) else "") }
+    var aditivada by remember { mutableStateOf(a.aditivada) }
+    var comb by remember { mutableStateOf(a.combustivel) }
+    AlertDialog(
+        onDismissRequest = aoFechar,
+        title = { Text(if (a.automatico) "Abastecimento detectado" else "Editar abastecimento") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("${formatoData.format(Date(a.data))}" + (if (a.automatico) " · tanque ${a.nivelAntes}% → ${a.nivelDepois}%" else ""), color = Cores.TextoSuave, fontSize = 14.sp)
+                Campo("Valor total pago (R$)", total, mascara = Mascara.Moeda) { total = it }
+                Campo("ou preço por litro", preco, mascara = Mascara.Moeda) { preco = it }
+                Campo("Litros (corrija com o da bomba)", litros, mascara = Mascara.Decimal2) { litros = it }
+                Campo("Km do painel", km, mascara = Mascara.Milhar) { km = it }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Combustivel.entries.forEach { c -> Opcao(c.rotulo, comb == c, Modifier.weight(1f)) { comb = c } }
+                }
+                if (comb == Combustivel.Gasolina) Opcao(if (aditivada) "Aditivada ✓" else "Gasolina comum", aditivada, Modifier.fillMaxWidth()) { aditivada = !aditivada }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val l = Mascara.centavos(litros)?.takeIf { it > 0f } ?: a.litros
+                v.atualizar(
+                    a.copy(
+                        km = km.toIntOrNull() ?: a.km, litros = l,
+                        precoLitro = Mascara.centavos(preco) ?: 0f, valorTotal = Mascara.centavos(total) ?: 0f,
+                        combustivel = comb, aditivada = aditivada && comb == Combustivel.Gasolina,
+                    )
+                )
+                aoFechar()
+            }) { Text("Salvar", fontSize = 18.sp) }
+        },
+        dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar", fontSize = 18.sp) } },
+    )
 }
 
 // ---------------- Manutenção ----------------

@@ -19,8 +19,18 @@ data class Abastecimento(
     val precoLitro: Float,
     val combustivel: Combustivel,
     val tanqueCheio: Boolean,
+    /** Valor total pago (R$). Pode ser o único valor conhecido: vale o total OU o preço por litro. */
+    val valorTotal: Float = 0f,
+    val aditivada: Boolean = false,
+    /** Detectado pelo app quando o nível do tanque subiu (o valor pago é informado depois). */
+    val automatico: Boolean = false,
+    val nivelAntes: Int? = null,
+    val nivelDepois: Int? = null,
 ) {
-    val total: Float get() = litros * precoLitro
+    val total: Float get() = if (valorTotal > 0f) valorTotal else litros * precoLitro
+    /** Preço por litro: o informado ou calculado do valor total. 0 = ainda sem valor. */
+    val precoEfetivo: Float get() = if (precoLitro > 0f) precoLitro else if (valorTotal > 0f && litros > 0f) valorTotal / litros else 0f
+    val semValor: Boolean get() = total <= 0f
 }
 
 /** Item de manutenção: vence pelo que chegar primeiro, km ou tempo. */
@@ -95,6 +105,32 @@ class Veiculo private constructor(ctx: Context) {
         nuvem.verificarManutencao(this)
     }
 
+    /** Troca um abastecimento (mesmo id) pelo editado, ex.: ao informar o valor pago de um abastecimento automático. */
+    fun atualizar(novo: Abastecimento) {
+        val i = abastecimentos.indexOfFirst { it.id == novo.id }
+        if (i < 0) return
+        abastecimentos[i] = novo
+        abastecimentos.sortBy { it.km }
+        gravarAbastecimentos()
+        aposMudanca()
+    }
+
+    /** Registra um abastecimento detectado pelo nível do tanque (sem valor pago ainda). */
+    fun adicionarAutomatico(a: Abastecimento) {
+        abastecimentos.add(a)
+        abastecimentos.sortBy { it.km }
+        zerarDistancia()
+        gravarAbastecimentos()
+        val br = java.util.Locale("pt", "BR")
+        val consumo = consumos()[a.id]?.let { " · consumo %.1f km/l".format(br, it) } ?: ""
+        nuvem.avisar(
+            "abastecimento",
+            "⛽ Abastecimento detectado: ~%.1f l (tanque %d%% → %d%%) · %,d km%s\nInforme o valor pago em Veículo → Abastecimentos.".format(
+                br, a.litros, a.nivelAntes ?: 0, a.nivelDepois ?: 0, a.km, consumo),
+        )
+        aposMudanca()
+    }
+
     fun remover(a: Abastecimento) { abastecimentos.remove(a); gravarAbastecimentos(); nuvem.removerAbastecimento(a.id) }
 
     /**
@@ -122,6 +158,13 @@ class Veiculo private constructor(ctx: Context) {
         return if (lista.isEmpty()) null else lista.average().toFloat()
     }
 
+    /** Média de km rodados entre um abastecimento e o seguinte. */
+    fun kmEntreAbastecimentos(): Int? {
+        val kms = abastecimentos.map { it.km }
+        if (kms.size < 2) return null
+        return ((kms.last() - kms.first()) / (kms.size - 1))
+    }
+
     fun gastoNoMes(): Float {
         val agora = Calendar.getInstance()
         return abastecimentos.filter {
@@ -132,9 +175,9 @@ class Veiculo private constructor(ctx: Context) {
 
     /** Custo por km com base no consumo médio e no último preço pago. */
     fun custoPorKm(): Float? {
-        val ultimo = abastecimentos.lastOrNull() ?: return null
+        val ultimo = abastecimentos.lastOrNull { it.precoEfetivo > 0f } ?: return null
         val consumo = consumoMedio(ultimo.combustivel) ?: consumoMedio() ?: return null
-        return ultimo.precoLitro / consumo
+        return ultimo.precoEfetivo / consumo
     }
 
     /**
@@ -218,6 +261,8 @@ class Veiculo private constructor(ctx: Context) {
                         o.getLong("id"), o.getLong("data"), o.getInt("km"), o.getDouble("litros").toFloat(),
                         o.getDouble("preco").toFloat(), runCatching { Combustivel.valueOf(o.getString("comb")) }.getOrDefault(Combustivel.Gasolina),
                         o.optBoolean("cheio", true),
+                        o.optDouble("total", 0.0).toFloat(), o.optBoolean("adit", false), o.optBoolean("auto", false),
+                        if (o.has("na")) o.getInt("na") else null, if (o.has("nd")) o.getInt("nd") else null,
                     )
                 )
             }
@@ -242,7 +287,9 @@ class Veiculo private constructor(ctx: Context) {
         val arr = JSONArray()
         abastecimentos.forEach {
             arr.put(JSONObject().put("id", it.id).put("data", it.data).put("km", it.km).put("litros", it.litros.toDouble())
-                .put("preco", it.precoLitro.toDouble()).put("comb", it.combustivel.name).put("cheio", it.tanqueCheio))
+                .put("preco", it.precoLitro.toDouble()).put("comb", it.combustivel.name).put("cheio", it.tanqueCheio)
+                .put("total", it.valorTotal.toDouble()).put("adit", it.aditivada).put("auto", it.automatico)
+                .also { o -> it.nivelAntes?.let { v -> o.put("na", v) }; it.nivelDepois?.let { v -> o.put("nd", v) } })
         }
         prefs.edit().putString("abastecimentos", arr.toString()).apply()
     }

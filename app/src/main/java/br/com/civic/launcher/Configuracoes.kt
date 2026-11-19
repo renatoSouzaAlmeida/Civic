@@ -42,6 +42,10 @@ class Configuracoes private constructor(ctx: Context) {
     /** Modo leve (multimídia mais simples, ex.: Honda Fit): sem animações contínuas nem vibração de toque. */
     var modoLeve by mutableStateOf(prefs.getBoolean("modo_leve", false))
         private set
+    /** Capacidade do tanque em litros; 0 = padrão do carro (Civic 56 l, Fit 45 l). Usada para estimar os litros pelo nível. */
+    var capacidadeTanque by mutableStateOf(prefs.getInt("capacidade_tanque", 0))
+        private set
+    val capacidadeEfetiva: Int get() = if (capacidadeTanque > 0) capacidadeTanque else if (imagemCarro == ImagemCarro.Fit) 45 else 56
     var enderecoCasa by mutableStateOf(prefs.getString("endereco_casa", "") ?: "")
         private set
     var enderecoTrabalho by mutableStateOf(prefs.getString("endereco_trabalho", "") ?: "")
@@ -64,6 +68,7 @@ class Configuracoes private constructor(ctx: Context) {
         if (Regex("^[A-Z]{3}[0-9]{4}$").matches(placa)) placa.substring(0, 3) + "-" + placa.substring(3) else placa
     fun salvarImagem(v: ImagemCarro) { imagemCarro = v; gravar("imagem_carro", v.name) }
     fun salvarModoLeve(v: Boolean) { modoLeve = v; prefs.edit().putBoolean("modo_leve", v).apply() }
+    fun salvarCapacidade(v: String) { capacidadeTanque = v.filter { it.isDigit() }.take(3).toIntOrNull() ?: 0; prefs.edit().putInt("capacidade_tanque", capacidadeTanque).apply() }
     fun salvarMapa(v: MapaPreferido) { mapa = v; gravar("mapa", v.name) }
     fun salvarEstiloMenu(v: EstiloMenu) { estiloMenu = v; gravar("estilo_menu", v.name) }
     fun salvarEnderecoCasa(v: String) { enderecoCasa = v; gravar("endereco_casa", v) }

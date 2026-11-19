@@ -85,6 +85,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             br.com.civic.launcher.RetomarMusica.obter(ctx).amostra(novo.rpm, demonstracao = demo)
             br.com.civic.launcher.EstadoCarro.obter(ctx).amostra(novo, demonstracao = demo)
             br.com.civic.launcher.Telemetria.obter(ctx).amostra(novo.rpm, novo.tensao, demonstracao = demo)
+            br.com.civic.launcher.AbastecimentoAuto.obter(ctx).amostra(novo.nivelCombustivel, novo.rpm, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
@@ -408,7 +409,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 consultar("010F")?.firstOrNull()?.let { d = d.copy(tempAdmissao = it - 40) }
                 if (suportados == null) suportados = lerSuportados()
                 d = lerCombustivel(d)
-                if (ciclo % 40 == 0 && suporta(0x2F)) consultar("012F")?.firstOrNull()?.let { d = d.copy(nivelCombustivel = it * 100 / 255) }
+                if (ciclo % 10 == 0 && suporta(0x2F)) consultar("012F")?.firstOrNull()?.let { d = d.copy(nivelCombustivel = it * 100 / 255) }
                 // Correção de combustível (fuel trims) e estado da malha da injeção.
                 consultar("0106")?.firstOrNull()?.let { d = d.copy(stft = (it - 128) * 100f / 128f) }
                 consultar("0107")?.firstOrNull()?.let { d = d.copy(ltft = (it - 128) * 100f / 128f) }

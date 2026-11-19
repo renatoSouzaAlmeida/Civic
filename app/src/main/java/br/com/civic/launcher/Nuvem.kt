@@ -83,8 +83,12 @@ class Nuvem private constructor(ctx: Context) {
                 val arr = JSONArray()
                 abast.forEach {
                     arr.put(JSONObject().put("dispositivo", token).put("id", it.id).put("data", iso(it.data)).put("km", it.km)
-                        .put("litros", it.litros.toDouble()).put("preco_litro", it.precoLitro.toDouble())
-                        .put("combustivel", it.combustivel.name).put("tanque_cheio", it.tanqueCheio))
+                        .put("litros", it.litros.toDouble())
+                        .put("preco_litro", if (it.precoEfetivo > 0f) it.precoEfetivo.toDouble() else JSONObject.NULL)
+                        .put("valor_total", if (it.total > 0f) it.total.toDouble() else JSONObject.NULL)
+                        .put("combustivel", it.combustivel.name).put("tanque_cheio", it.tanqueCheio)
+                        .put("aditivada", it.aditivada).put("automatico", it.automatico)
+                        .put("nivel_antes", it.nivelAntes ?: JSONObject.NULL).put("nivel_depois", it.nivelDepois ?: JSONObject.NULL))
                 }
                 http("POST", "/rest/v1/civic_abastecimentos", arr.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"))
             }

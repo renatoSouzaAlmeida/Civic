@@ -53,6 +53,10 @@ fun TelaConfig() {
                     Campo("Placa", config.placa, Modifier.weight(0.8f), KeyboardType.Ascii) { config.salvarPlaca(it) }
                 }
             }
+            Secao("Tanque de combustível") {
+                Campo("Capacidade do tanque em litros (vazio = padrão do carro: ${config.capacidadeEfetiva} l)", if (config.capacidadeTanque > 0) config.capacidadeTanque.toString() else "", Modifier, KeyboardType.Number) { config.salvarCapacidade(it) }
+                Text("Usada para estimar os litros de cada abastecimento detectado pela subida do nível do tanque.", color = Cores.TextoSuave, fontSize = 13.sp)
+            }
             Secao("Imagem do carro") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ImagemCarro.entries.forEach { opcao ->

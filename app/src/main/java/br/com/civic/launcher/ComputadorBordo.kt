@@ -118,7 +118,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         val veiculo = Veiculo.obter(ctx)
         val consumo = veiculo.consumoMedio() ?: return null
         val litros = (v.distanciaKm / consumo).toFloat()
-        val preco = veiculo.abastecimentos.lastOrNull()?.precoLitro ?: return litros to 0f
+        val preco = veiculo.abastecimentos.lastOrNull { it.precoEfetivo > 0f }?.precoEfetivo ?: return litros to 0f
         return litros to litros * preco
     }
 
