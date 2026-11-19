@@ -72,6 +72,8 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         BarraTopo(sensores, atualizador, obd, modoTema, aoAlternarTema)
+        // Sugestão da rotina diária (só aparece no período cadastrado).
+        BannerRotina()
         val dock = config.estiloMenu == EstiloMenu.Dock
         Box(Modifier.weight(1f).fillMaxWidth()) {
             // Com o dock, o conteúdo para acima dele (nada fica escondido embaixo do dock).

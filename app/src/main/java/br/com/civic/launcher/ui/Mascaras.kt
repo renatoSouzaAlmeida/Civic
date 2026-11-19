@@ -19,7 +19,9 @@ enum class Mascara(val maxDigitos: Int) {
     /** Dinheiro: 589 → R$ 5,89 */
     Moeda(7),
     /** Data: 19112026 → 19/11/2026 */
-    Data(8);
+    Data(8),
+    /** Hora: 0710 → 07:10 */
+    Hora(4);
 
     /** Mantém só os dígitos, no limite do campo. */
     fun limpar(texto: String): String = if (this == Nenhuma) texto else texto.filter(Char::isDigit).take(maxDigitos)
@@ -32,6 +34,7 @@ enum class Mascara(val maxDigitos: Int) {
             val inteiro = n.dropLast(2).reversed().chunked(3).joinToString(".").reversed()
             (if (this == Moeda) "R$ " else "") + inteiro + "," + n.takeLast(2)
         }
+        Hora -> if (d.length <= 2) d else d.take(2) + ":" + d.drop(2)
         Data -> buildString {
             d.forEachIndexed { i, c -> if (i == 2 || i == 4) append('/'); append(c) }
         }
@@ -48,6 +51,13 @@ enum class Mascara(val maxDigitos: Int) {
         }
 
     companion object {
+        /** "0710" → minutos desde 00:00 (430); null se a hora for inválida (ex.: 2575). */
+        fun minutos(d: String): Int? {
+            if (d.length != 4) return null
+            val h = d.take(2).toIntOrNull() ?: return null
+            val m = d.drop(2).toIntOrNull() ?: return null
+            return if (h in 0..23 && m in 0..59) h * 60 + m else null
+        }
         /** Dígitos de valores com 2 casas (litros, preço) → número. */
         fun centavos(d: String): Float? = d.toLongOrNull()?.let { it / 100f }
         /** Converte um número em dígitos de 2 casas (para preencher um campo já existente). */

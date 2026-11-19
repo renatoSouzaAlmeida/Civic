@@ -43,6 +43,17 @@ fun Context.abrirNavegacaoComPainel() {
  * Navega para Casa ("Home") ou Trabalho ("Work"). Com endereço cadastrado em Config., usa o endereço
  * (funciona nos dois mapas); sem endereço, o Waze usa os favoritos dele. O Google Maps precisa do endereço.
  */
+/** Navega até um endereço ou nome de local digitado (rotina diária), no mapa escolhido em Config. */
+fun Context.navegarPara(destino: String) {
+    if (!iniciarPainel()) return
+    val mapa = Configuracoes.obter(this).mapa
+    val intent = when (mapa) {
+        MapaPreferido.Waze -> Intent(Intent.ACTION_VIEW, Uri.parse("waze://?q=${Uri.encode(destino)}&navigate=yes"))
+        else -> Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=${Uri.encode(destino)}"))
+    }
+    runCatching { startActivity(intent.setPackage(mapa.pacote)) }.onFailure { abrirNavegacao() }
+}
+
 fun Context.navegarFavorito(destino: String) {
     if (!iniciarPainel()) return
     val config = Configuracoes.obter(this)

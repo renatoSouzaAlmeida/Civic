@@ -83,6 +83,7 @@ fun TelaConfig() {
                     color = Cores.TextoSuave, fontSize = 13.sp,
                 )
             }
+            RotinaDiariaConfig()
             VolumeAuto()
             Secao("Painel de direção") {
                 Text("Posição", color = Cores.TextoSuave, fontSize = 15.sp)
