@@ -34,9 +34,9 @@ import java.util.Locale
 
 private val BR = Locale("pt", "BR")
 private fun reais(v: Float) = "R$ %,.2f".format(BR, v)
-private fun numero(texto: String): Float? = texto.trim().replace(".", "").replace(",", ".").toFloatOrNull()
-private fun numeroDecimal(texto: String): Float? = texto.trim().replace(",", ".").toFloatOrNull()
 private val formatoData = SimpleDateFormat("dd/MM/yyyy", BR)
+/** Data digitada só com números (ddMMaaaa), sem aceitar datas impossíveis como 31/02. */
+private val formatoDataEstrito = SimpleDateFormat("ddMMyyyy", BR).apply { isLenient = false }
 
 /** Veículo: abastecimentos (consumo real, gastos, etanol × gasolina) e manutenção (lembretes por km e tempo). */
 @Composable
@@ -85,9 +85,9 @@ private fun NovoAbastecimento(v: Veiculo) {
     var erro by remember { mutableStateOf<String?>(null) }
     Secao("Novo abastecimento") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Campo("Km do painel", km, Modifier.weight(1f), KeyboardType.Number) { km = it.filter(Char::isDigit) }
-            Campo("Litros", litros, Modifier.weight(1f), KeyboardType.Decimal) { litros = it }
-            Campo("Preço por litro (R$)", preco, Modifier.weight(1f), KeyboardType.Decimal) { preco = it }
+            Campo("Km do painel", km, Modifier.weight(1f), mascara = Mascara.Milhar) { km = it }
+            Campo("Litros", litros, Modifier.weight(1f), mascara = Mascara.Decimal2) { litros = it }
+            Campo("Preço por litro", preco, Modifier.weight(1f), mascara = Mascara.Moeda) { preco = it }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Combustivel.entries.forEach { c -> Opcao(c.rotulo, comb == c, Modifier.weight(1f)) { comb = c } }
@@ -96,10 +96,12 @@ private fun NovoAbastecimento(v: Veiculo) {
         erro?.let { Text(it, color = Cores.Vermelho, fontSize = 14.sp) }
         BotaoPilula("Salvar abastecimento", Icons.Filled.LocalGasStation, Modifier.fillMaxWidth()) {
             val k = km.toIntOrNull()
-            val l = numeroDecimal(litros)
-            val p = numeroDecimal(preco)
+            val l = Mascara.centavos(litros)
+            val p = Mascara.centavos(preco)
             erro = when {
                 k == null || k <= 0 -> "Informe o km do painel."
+                l != null && l > 80f -> "Litros acima de 80: confira (o tanque do Civic tem 50 l)."
+                p != null && p > 20f -> "Preço por litro acima de R$ 20,00: confira."
                 l == null || l <= 0f -> "Informe os litros."
                 p == null || p <= 0f -> "Informe o preço por litro."
                 v.abastecimentos.isNotEmpty() && k < (v.abastecimentos.maxOf { it.km }) -> "O km é menor que o do último abastecimento."
@@ -146,11 +148,11 @@ private fun EtanolOuGasolina(v: Veiculo) {
     val (razao, real) = v.razaoEtanolGasolina()
     Secao("Etanol ou gasolina?") {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Campo("Etanol (R$/l)", etanol, Modifier.weight(1f), KeyboardType.Decimal) { etanol = it }
-            Campo("Gasolina (R$/l)", gasolina, Modifier.weight(1f), KeyboardType.Decimal) { gasolina = it }
+            Campo("Etanol (litro)", etanol, Modifier.weight(1f), mascara = Mascara.Moeda) { etanol = it }
+            Campo("Gasolina (litro)", gasolina, Modifier.weight(1f), mascara = Mascara.Moeda) { gasolina = it }
         }
-        val e = numeroDecimal(etanol)
-        val g = numeroDecimal(gasolina)
+        val e = Mascara.centavos(etanol)
+        val g = Mascara.centavos(gasolina)
         if (e != null && g != null && e > 0f && g > 0f) {
             val proporcao = e / g
             val compensaEtanol = proporcao < razao
@@ -212,7 +214,7 @@ private fun AbaManutencao() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Secao("Quilometragem") {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Campo("Km atual do painel", km, Modifier.weight(1f), KeyboardType.Number) { km = it.filter(Char::isDigit) }
+                Campo("Km atual do painel", km, Modifier.weight(1f), mascara = Mascara.Milhar) { km = it }
                 BotaoPilula("Atualizar km", Icons.Filled.Speed, Modifier.weight(1f)) { km.toIntOrNull()?.let { v.salvarKmManual(it) } }
             }
             Text(
@@ -266,23 +268,26 @@ private fun LinhaManutencao(v: Veiculo, item: ItemManutencao, aoFeito: () -> Uni
 @Composable
 private fun DialogoUltimo(v: Veiculo, item: ItemManutencao, aoFechar: () -> Unit) {
     var km by remember { mutableStateOf(item.ultimoKm?.toString() ?: "") }
-    var data by remember { mutableStateOf(item.ultimaData?.let { formatoData.format(Date(it)) } ?: "") }
+    var data by remember { mutableStateOf(item.ultimaData?.let { formatoData.format(Date(it)).filter(Char::isDigit) } ?: "") }
     var erro by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = aoFechar,
         title = { Text("Última vez: ${item.nome}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Campo("Km em que foi feito", km, Modifier, KeyboardType.Number) { km = it.filter(Char::isDigit) }
-                Campo("Data (dd/mm/aaaa)", data, Modifier, KeyboardType.Number) { data = it }
+                Campo("Km em que foi feito", km, Modifier, mascara = Mascara.Milhar) { km = it }
+                Campo("Data", data, Modifier, mascara = Mascara.Data) { data = it }
                 erro?.let { Text(it, color = Cores.Vermelho) }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                val d = runCatching { formatoData.parse(data.trim())?.time }.getOrNull()
-                if (data.isNotBlank() && d == null) { erro = "Data inválida (use dd/mm/aaaa)." }
-                else { v.informarUltimo(item, km.toIntOrNull(), d); aoFechar() }
+                val d = if (data.length == 8) runCatching { formatoDataEstrito.parse(data)?.time }.getOrNull() else null
+                val k = km.toIntOrNull()
+                if (data.isNotEmpty() && d == null) { erro = "Data inválida: digite dia, mês e ano (ex.: 19112026)." }
+                else if (d != null && d > System.currentTimeMillis()) { erro = "A data não pode ser no futuro." }
+                else if (k != null && v.kmAtual > 0 && k > v.kmAtual) { erro = "O km não pode ser maior que o km atual (%,d).".format(BR, v.kmAtual) }
+                else { v.informarUltimo(item, k, d); aoFechar() }
             }) { Text("Salvar", fontSize = 18.sp) }
         },
         dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar", fontSize = 18.sp) } },

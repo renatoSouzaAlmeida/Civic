@@ -141,12 +141,15 @@ internal fun Campo(
     valor: String,
     modifier: Modifier = Modifier,
     teclado: KeyboardType = KeyboardType.Text,
+    mascara: Mascara = Mascara.Nenhuma,
     aoMudar: (String) -> Unit,
 ) {
+    // Com máscara, o valor guardado são só os dígitos; o campo mostra formatado (120.000, R$ 5,89, 19/11/2026).
     OutlinedTextField(
-        value = valor, onValueChange = aoMudar,
+        value = valor, onValueChange = { aoMudar(mascara.limpar(it)) },
         label = { Text(rotulo) }, singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = teclado),
+        keyboardOptions = KeyboardOptions(keyboardType = if (mascara == Mascara.Nenhuma) teclado else KeyboardType.Number),
+        visualTransformation = mascara.transformacao,
         modifier = modifier.fillMaxWidth(),
     )
 }
