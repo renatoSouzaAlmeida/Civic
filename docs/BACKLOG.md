@@ -58,7 +58,14 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
     posição ao vivo e trajeto das viagens, status online/última comunicação do carro, tensão da bateria ao longo do
     tempo, temperatura, rpm, velocidade, fuel trims, falhas DTC com histórico, eventos de ignição (ligou/desligou),
     consumo, versão do app. Respeitar tamanho do app e uso de dados (envio em lote, só com internet).
-  - A definir: frequência de envio dos dados ao vivo, retenção do histórico e o desenho das telas do dashboard.
+  - **Decidido — como enviar (pouco dado, sem lote):**
+    - Tudo é gravado **localmente** no aparelho durante o uso (sem depender de internet).
+    - Ao **ligar o carro**, o app envia ao Supabase só o **último estado salvo** (resumo da viagem anterior,
+      indicadores finais, status), um envio pequeno e único, sem fila em lote.
+    - **Estacionamento:** a função da nuvem que já manda o Telegram (`civic-notificar`) também **grava a linha no
+      histórico de estacionamentos** na mesma chamada. Um envio só serve aos dois; o app não precisa mandar duas vezes.
+    - Se estiver sem internet na hora, o dado fica guardado e sai no próximo envio.
+  - A definir: quais campos entram no resumo enviado ao ligar, retenção do histórico e o desenho das telas do dashboard.
 
 ## Navegação / mapa
 - [ ] Decidir o mapa dentro do launcher: A) Google Maps embutido (Maps SDK, precisa de chave e Play Services),
