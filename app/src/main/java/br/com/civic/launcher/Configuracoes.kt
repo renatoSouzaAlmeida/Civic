@@ -30,6 +30,9 @@ class Configuracoes private constructor(ctx: Context) {
         private set
     var ano by mutableStateOf(prefs.getString("ano", "2012") ?: "")
         private set
+    /** Placa só com letras e números, em maiúsculas (ex.: ABC1D23 ou ABC1234). Fica só no aparelho. */
+    var placa by mutableStateOf(prefs.getString("placa", "") ?: "")
+        private set
     var imagemCarro by mutableStateOf(lerEnum("imagem_carro", ImagemCarro.Civic))
         private set
     var mapa by mutableStateOf(lerEnum("mapa", MapaPreferido.Waze))
@@ -48,6 +51,14 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarNomeCarro(v: String) { nomeCarro = v; gravar("nome_carro", v) }
     fun salvarModelo(v: String) { modelo = v; gravar("modelo", v) }
     fun salvarAno(v: String) { ano = v; gravar("ano", v) }
+    fun salvarPlaca(v: String) {
+        val limpa = v.uppercase().filter { it.isLetterOrDigit() && it.code < 128 }.take(7)
+        placa = limpa; gravar("placa", limpa)
+    }
+
+    /** Placa para exibir: modelo antigo com hífen (ABC-1234); Mercosul como está (ABC1D23). */
+    val placaFormatada: String get() =
+        if (Regex("^[A-Z]{3}[0-9]{4}$").matches(placa)) placa.substring(0, 3) + "-" + placa.substring(3) else placa
     fun salvarImagem(v: ImagemCarro) { imagemCarro = v; gravar("imagem_carro", v.name) }
     fun salvarMapa(v: MapaPreferido) { mapa = v; gravar("mapa", v.name) }
     fun salvarEstiloMenu(v: EstiloMenu) { estiloMenu = v; gravar("estilo_menu", v.name) }

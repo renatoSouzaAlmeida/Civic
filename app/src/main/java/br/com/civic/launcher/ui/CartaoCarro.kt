@@ -2,6 +2,8 @@ package br.com.civic.launcher.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -51,6 +53,28 @@ internal fun TituloCarro() {
     Column {
         Text(config.nomeCarro, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, style = sombra, maxLines = 1)
         Text(config.modeloEAno, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, style = sombra, maxLines = 1)
+        if (config.placa.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            PlacaMercosul(config.placaFormatada)
+        }
+    }
+}
+
+/** Placa no estilo Mercosul: faixa azul "BRASIL" em cima e os caracteres pretos em fundo branco. */
+@Composable
+internal fun PlacaMercosul(texto: String) {
+    val forma = androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
+    Column(
+        Modifier.width(132.dp).clip(forma).background(Color.White)
+            .border(1.5.dp, Color(0xFF1F2937), forma),
+    ) {
+        Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xFF1D4ED8)), contentAlignment = Alignment.Center) {
+            Text("BRASIL", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        }
+        Text(
+            texto, color = Color(0xFF111111), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 1.5.sp,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
+        )
     }
 }
 

@@ -50,6 +50,7 @@ fun TelaConfig() {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Campo("Modelo", config.modelo, Modifier.weight(1f)) { config.salvarModelo(it) }
                     Campo("Ano", config.ano, Modifier.weight(0.6f), KeyboardType.Number) { config.salvarAno(it.filter { c -> c.isDigit() }.take(4)) }
+                    Campo("Placa", config.placa, Modifier.weight(0.8f), KeyboardType.Ascii) { config.salvarPlaca(it) }
                 }
             }
             Secao("Imagem do carro") {
