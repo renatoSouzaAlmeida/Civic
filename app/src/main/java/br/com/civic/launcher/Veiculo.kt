@@ -270,11 +270,12 @@ class Veiculo private constructor(ctx: Context) {
             ItemManutencao("pastilhas", "Pastilhas de freio (revisar)", 20_000, null),
             ItemManutencao("arrefecimento", "Líquido de arrefecimento", 100_000, 60),
             ItemManutencao("velas", "Velas de ignição", 100_000, null),
-            ItemManutencao("atf", "Fluido do câmbio automático", 40_000, null),
+            ItemManutencao("atf", "Fluido do câmbio automático", 40_000, 36),
             ItemManutencao("filtro_combustivel", "Filtro de combustível", 20_000, 24),
             ItemManutencao("bicos", "Limpeza dos bicos injetores", 40_000, null),
             ItemManutencao("bateria", "Bateria (troca)", null, 48),
             ItemManutencao("amortecedores", "Amortecedores (revisar)", 40_000, null),
+            ItemManutencao("correia_auxiliar", "Tensionador e polias da correia auxiliar", 100_000, 60),
         )
 
         @Volatile private var instancia: Veiculo? = null
