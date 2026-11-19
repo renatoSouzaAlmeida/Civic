@@ -106,7 +106,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         historico.add(0, v)
         while (historico.size > 30) historico.removeAt(historico.lastIndex)
         gravarHistorico()
-        if (!v.demonstracao) Nuvem.obter(ctx).avisar("viagem", "🏁 Viagem: ${resumo(v)}")
+        if (!v.demonstracao) Nuvem.obter(ctx).avisar("viagem", "🏁 Viagem: ${resumo(v)}" + (Seguranca.obter(ctx).resumoConducao()?.let { " · $it" } ?: ""))
         // Simulação (botão de demonstração do OBD): manda a mesma mensagem, marcada, para conferir o aviso no Telegram.
         else if (simulacao) Nuvem.obter(ctx).avisar("simulacao", "🧪 SIMULAÇÃO\n🏁 Viagem: ${resumo(v)}")
     }

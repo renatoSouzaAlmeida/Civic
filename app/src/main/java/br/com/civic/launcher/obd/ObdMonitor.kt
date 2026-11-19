@@ -85,6 +85,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             br.com.civic.launcher.RetomarMusica.obter(ctx).amostra(novo.rpm, demonstracao = demo)
             br.com.civic.launcher.EstadoCarro.obter(ctx).amostra(novo, demonstracao = demo)
             br.com.civic.launcher.Telemetria.obter(ctx).amostra(novo.rpm, novo.tensao, demonstracao = demo)
+            br.com.civic.launcher.Seguranca.obter(ctx).amostra(novo, demonstracao = demo)
             br.com.civic.launcher.AbastecimentoAuto.obter(ctx).amostra(novo.nivelCombustivel, novo.rpm, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)

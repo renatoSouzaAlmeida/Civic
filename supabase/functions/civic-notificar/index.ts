@@ -97,8 +97,8 @@ Deno.serve(async (req) => {
     await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {
       method: "POST", headers: cabecalhosDb, body: JSON.stringify({ dispositivo: token, tipo, mensagem, enviado }),
     });
-    // Simulação (botão de demonstração do app): só avisa no Telegram; não entra no histórico do dashboard.
-    if (corpo.origem === "simulado") return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false, simulado: true });
+    // Só o estacionamento (auto ou manual) entra no histórico; simulação, colisão e uso incomum só avisam.
+    if (corpo.origem !== "auto" && corpo.origem !== "manual") return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false });
     // Histórico de estacionamentos (alimenta o dashboard da Casa Tech) na mesma chamada do Telegram.
     const quando = Number(corpo.data);
     const idade = Number(corpo.idade_gps_s);

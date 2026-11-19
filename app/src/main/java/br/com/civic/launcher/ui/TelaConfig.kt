@@ -79,6 +79,24 @@ fun TelaConfig() {
                 }
                 Text("Para multimídias mais simples (ex.: Honda Fit): sem animações contínuas nem vibração ao tocar.", color = Cores.TextoSuave, fontSize = 15.sp)
             }
+            Secao("Segurança") {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Opcao("Alertas falados: ligados", config.vozAlertas, Modifier.weight(1f)) { config.salvarVoz(true) }
+                    Opcao("Desligados", !config.vozAlertas, Modifier.weight(1f)) { config.salvarVoz(false) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Opcao("Vigia total: ligado", config.vigiaTotal, Modifier.weight(1f)) { config.salvarVigia(true) }
+                    Opcao("Desligado", !config.vigiaTotal, Modifier.weight(1f)) { config.salvarVigia(false) }
+                }
+                Text("Vigia total avisa no Telegram toda partida do motor. Com ele desligado, avisa só partidas em horários em que o carro nunca é usado.", color = Cores.TextoSuave, fontSize = 13.sp)
+                BotaoPilula("Testar alerta falado", Icons.Filled.Notifications, Modifier.fillMaxWidth()) {
+                    br.com.civic.launcher.Voz.obter(ctx).falar("Teste do alerta falado do Civic Renatin.", forcar = true)
+                }
+                BotaoPilula("Testar possível colisão (10 s)", Icons.Filled.Layers, Modifier.fillMaxWidth()) {
+                    br.com.civic.launcher.Seguranca.obter(ctx).testarColisao()
+                }
+                Text("Fadiga (2 h sem pausa ou madrugada), frenagens/acelerações bruscas (nota no resumo da viagem) e colisão usam a velocidade e o rpm do OBD.", color = Cores.TextoSuave, fontSize = 13.sp)
+            }
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     MapaPreferido.entries.forEach { m ->

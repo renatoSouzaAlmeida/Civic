@@ -27,6 +27,7 @@ enum class TipoAlerta(
     BateriaFraca("Bateria fraca", Gravidade.Aviso, 30_000, 6 * 3_600_000L, 30 * 60_000L),
     FarolDesligado("Farol desligado", Gravidade.Aviso, 5_000, 0, 10 * 60_000L),
     MotorFrio("Motor frio", Gravidade.Dica, 3_000, 0, 5 * 60_000L),
+    Fadiga("Hora de uma pausa", Gravidade.Aviso, 0, 3 * 3_600_000L, 30 * 60_000L),
 }
 
 data class Alerta(val tipo: TipoAlerta, val mensagem: String)
@@ -45,6 +46,9 @@ class AlertasMotor private constructor(private val ctx: Context) {
     private val silenciadoAte = mutableMapOf<TipoAlerta, Long>()
     private val prefs = ctx.getSharedPreferences("alertas", Context.MODE_PRIVATE)
     private val br = Locale("pt", "BR")
+    /** Condições calculadas fora do OBD (ex.: fadiga, pela Segurança). */
+    private val externas = java.util.concurrent.ConcurrentHashMap<TipoAlerta, String>()
+    fun definirExterna(tipo: TipoAlerta, mensagem: String?) { if (mensagem == null) externas.remove(tipo) else externas[tipo] = mensagem }
 
     fun avaliar(d: DadosObd, demonstracao: Boolean, agora: Long = System.currentTimeMillis()) {
         val rpm = d.rpm ?: 0
@@ -67,6 +71,7 @@ class AlertasMotor private constructor(private val ctx: Context) {
         if (temp != null && temp < 70 && rpm > 3000)
             condicoes[TipoAlerta.MotorFrio] = "Motor a $temp °C: evite passar de 3.000 rpm até aquecer (70 °C)."
 
+        condicoes.putAll(externas)
         // Confirmação: a condição precisa durar o tempo mínimo de cada tipo.
         TipoAlerta.entries.forEach { t -> if (t !in condicoes) inicio.remove(t) else inicio.putIfAbsent(t, agora) }
         val confirmados = condicoes.filterKeys { t -> agora - (inicio[t] ?: agora) >= t.confirmacaoMs }
@@ -84,6 +89,7 @@ class AlertasMotor private constructor(private val ctx: Context) {
         val novo = visivel?.let { Alerta(it.key, it.value) }
         // Cada alerta que aparece na tela também entra no sininho (uma vez por ocorrência).
         if (novo != null && novo.tipo != atual?.tipo) {
+            if (novo.tipo.gravidade != Gravidade.Dica) br.com.civic.launcher.Voz.obter(ctx).falar(novo.tipo.titulo + ". " + novo.mensagem.substringBefore('.') + ".")
             CentralNotificacoes.obter(ctx).registrar(
                 "alerta_motor",
                 "${if (demonstracao) "(Demonstração) " else ""}${if (novo.tipo.gravidade == Gravidade.Critico) "🚨" else "⚠️"} ${novo.tipo.titulo}: ${novo.mensagem}",

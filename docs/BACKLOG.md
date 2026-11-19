@@ -37,6 +37,38 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
     Também retoma o Spotify de onde parou quando o motor liga (Config. > Música ao ligar o carro).
 13. [x] **"Onde parei o carro"** — salva o ponto de GPS ao desligar.
 
+## Propostas de engenharia (por área)
+Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista por decisão do dono.
+
+### Segurança e direção (primeira leva — feitas, faltam validar no carro)
+- [x] **Alertas falados** — voz em português para alertas de aviso e críticos (superaquecimento, alternador, falha, fadiga). Liga/desliga em Config. > Segurança.
+- [x] **Fadiga** — 2 h sem pausa de 15 min, ou dirigindo de madrugada (0h–5h por 30 min): faixa + voz + Telegram.
+- [x] **Frenagem e aceleração bruscas** — contadas pela variação da velocidade do OBD; nota de condução 0–100 no resumo da viagem (Telegram).
+- [x] **Possível colisão** — queda de 30 km/h ou mais em até 3 s (partindo de 35+) seguida do motor apagando: contagem de 30 s com "Estou bem"; sem resposta, manda aviso e localização ao Telegram. Botão de teste (10 s) em Config.
+- [x] **Movimento suspeito** — partida do motor em horário em que o carro nunca é usado (aprende com as últimas 60 partidas) e "Vigia total" opcional (toda partida avisa).
+
+### OBD (engenharia do motor)
+- [ ] **Monitores de prontidão** (modo 01, PID 01) — "pronto para vistoria" e aviso de códigos apagados há pouco tempo.
+- [ ] **Freeze frame** (modo 02) — guarda rpm, temperatura, carga e velocidade quando surge um código de falha.
+- [ ] **Saúde do termostato** — tempo para chegar a 80 °C comparado ao histórico (termostato preso aberto).
+- [ ] **Sondas lambda e catalisador** (PIDs 0114/0115) — frequência de oscilação para explicar o P0420.
+- [ ] **Dreno de bateria** — tensão ao desligar x tensão na próxima partida (consumo parasita).
+- [ ] **Marcha lenta irregular** — variação do rpm parado e contadores de falha de ignição (modo 06).
+- [ ] **Temperatura do fluido do câmbio** (PID Honda, modo 22) — experimental.
+
+### Integrações e notificações
+- [ ] **Comandos no bot do Telegram** — /onde, /status, /bateria, /consumo respondendo com dados do Supabase.
+- [ ] **Resumo semanal no Telegram** — km, consumo, gasto, alertas e manutenção próxima.
+- [ ] **Rodízio e calendário** — aviso no dia do rodízio da placa; lembretes de IPVA e licenciamento pelo final da placa.
+- [ ] **Chuva onde o carro está parado** — cruza a vaga atual com a previsão do tempo.
+- [ ] **Preço da ANP** — compara o preço pago com a média da cidade e melhora "etanol ou gasolina?".
+- [ ] **Revisão com um toque** — quando a manutenção vence, o Telegram oferece botão para avisar a oficina.
+
+### Interface e usabilidade
+- [ ] **Tela "Status do app"** — checklist: OBD, GPS, Telegram, nuvem, permissões e última atualização.
+- [ ] **Modo HUD** — velocidade espelhada em tela cheia para refletir no para-brisa à noite.
+- [ ] **Comando de voz curto** — "onde parei", "quanto de combustível", "ir para casa".
+
 ## Abastecimento automático
 - [x] **Pelo nível do tanque** — pronto, falta validar no carro: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais
   (gasolina, tanque cheio, litros pela capacidade do tanque em Config.), avisa no Telegram, e o valor pago (total OU preço por litro)
