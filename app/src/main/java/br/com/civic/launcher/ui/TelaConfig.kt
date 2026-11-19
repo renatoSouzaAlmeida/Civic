@@ -108,6 +108,7 @@ fun TelaConfig() {
                 }
             }
             AvisosCelular()
+            SecaoLuzesCan()
             Secao("Sistema") {
                 BotaoPilula("Configurações do Android", Icons.Filled.Settings, Modifier.fillMaxWidth()) {
                     ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

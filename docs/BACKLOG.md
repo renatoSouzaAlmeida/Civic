@@ -7,17 +7,15 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   com descrição em português, luz de injeção (MIL) acesa ou não e opção de apagar os códigos (modo 04),
   com confirmação. Acessível a partir da tela do OBD.
 
-- [ ] **Combustível (quando o adaptador chegar)** — ler os PIDs suportados (0100/0120/0140) no Civic e então:
-  nível do tanque se o carro informar o PID 012F; consumo instantâneo e médio (km/l) calculado pela vazão de ar
-  (MAF, 0110) ou, se não houver MAF, estimado pelo MAP (010B) + temperatura do ar + rpm. O Civic 2012 é flex:
-  o cálculo precisa saber se é gasolina ou etanol (opção em Config. e ajuste fino comparando com abastecimentos).
+- [x] **Combustível** (pronto, falta validar no carro) — lê os PIDs suportados (0100/0120/0140); nível do tanque
+  pelo PID 012F se o carro informar; consumo médio e instantâneo pela vazão de ar (MAF 0110) ou, sem MAF, estimado
+  pelo MAP (010B) + temperatura do ar + rpm. Estimativa com gasolina brasileira (~13,2:1); etanol puro e aceleração
+  forte podem desviar. Se o Civic/Fit não informar esses PIDs, os campos ficam em "—" e o item pode ser descontinuado.
 
-- [ ] **Luzes-espia reais (farol, farolete, setas, pisca-alerta, piloto automático)** — a tela já está pronta
-  (aparecem esmaecidas enquanto o dado é desconhecido; no modo Demo acendem). Esses sinais NÃO fazem parte do
-  OBD-II padrão: ficam na rede CAN do Honda. Com o adaptador em mãos, testar o modo monitor do ELM327 (ATMA)
-  para ver se esses quadros chegam pela tomada OBD do Civic 2012 e, se chegarem, descobrir os IDs/bits de cada
-  sinal. Pode não ser possível (muitos Honda deixam a carroceria numa rede separada da tomada).
-  A luz de injeção (MIL) e a temperatura alta já vêm de dados reais do OBD.
+- [x] **Luzes-espia reais pelo CAN** (pronto, experimental) — Config. > "Luzes-espia pelo CAN": captura guiada com o
+  modo monitor do ELM327 (ATMA), com a luz apagada e acesa, mostra os bits que mudaram e grava a regra por luz.
+  Depois o app lê essas regras sozinho. Se a tomada OBD do carro não deixar passar os quadros da carroceria,
+  a captura volta vazia e o recurso pode ser descontinuado.
 
 ## Funcionalidades de especialista (ordem de prioridade)
 1. [x] **Alertas inteligentes** (sobre qualquer tela): motor frio (< 70 °C) com giro alto (> 3.000 rpm);

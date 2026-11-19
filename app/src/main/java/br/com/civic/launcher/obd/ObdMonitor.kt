@@ -47,6 +47,7 @@ data class DadosObd(
     // Combustível (previsto; ver docs/BACKLOG.md). Nulo = ainda não lido.
     val nivelCombustivel: Int? = null,      // % do tanque (PID 012F, se o carro informar)
     val consumoMedio: Float? = null,        // km/l desde que o app começou a medir
+    val consumoInstantaneo: Float? = null,  // km/l agora (parado = nulo)
     // Sinais do carro (previstos). Não fazem parte do OBD padrão: dependem da rede CAN de carroceria
     // do Honda. Nulo = desconhecido (a luz-espia aparece apagada e esmaecida).
     val farol: Boolean? = null,
@@ -112,6 +113,19 @@ class ObdMonitor private constructor(private val ctx: Context) {
     private var escrita: BluetoothGattCharacteristic? = null
     private var sessao: Thread? = null
     private var buscando = false
+    // Combustível: PIDs que o carro diz suportar e acumuladores do consumo médio (litros e km desde que o app abriu).
+    private var suportados: Set<Int>? = null
+    private var litrosAcum = 0.0
+    private var kmAcum = 0.0
+    private var ultimoCombustivel = 0L
+    // Luzes-espia pelo CAN (experimental): captura guiada para descobrir quais bits mudam com cada luz.
+    @Volatile private var tarefaCan: Boolean? = null // null = nada; false = captura "apagado"; true = captura "aceso"
+    var capturaBase by mutableStateOf<Map<String, List<IntArray>>>(emptyMap())
+        private set
+    var capturaLigado by mutableStateOf<Map<String, List<IntArray>>>(emptyMap())
+        private set
+    var situacaoCan by mutableStateOf<String?>(null)
+        private set
     private val falhasPorPid = HashMap<String, Int>()
     private val pausaAte = HashMap<String, Long>()
 
@@ -294,8 +308,14 @@ class ObdMonitor private constructor(private val ctx: Context) {
     }
 
     private fun enviar(comando: String, timeoutMs: Long): String? {
-        val c = escrita ?: return null
-        val g = gatt ?: return null
+        if (!escrever(comando)) return null
+        return aguardar(timeoutMs)
+    }
+
+    /** Manda o comando sem esperar a resposta (limpa o buffer antes). */
+    private fun escrever(comando: String): Boolean {
+        val c = escrita ?: return false
+        val g = gatt ?: return false
         synchronized(trava) {
             resposta.setLength(0)
             respostaPronta = false
@@ -303,7 +323,11 @@ class ObdMonitor private constructor(private val ctx: Context) {
         val semResposta = c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE == 0
         c.writeType = if (semResposta) BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE else BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         c.value = (comando + "\r").toByteArray()
-        if (!g.writeCharacteristic(c)) return null
+        return g.writeCharacteristic(c)
+    }
+
+    /** Espera o ELM327 devolver o prompt ">" e entrega o texto recebido (null = estourou o tempo). */
+    private fun aguardar(timeoutMs: Long): String? {
         synchronized(trava) {
             val fim = SystemClock.elapsedRealtime() + timeoutMs
             while (!respostaPronta) {
@@ -351,7 +375,18 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 val qtd = d.codigos.size + d.codigosPendentes.size
                 principal.post { ocupadoFalhas = false; situacaoFalhas = if (qtd == 0) "Nenhum código de falha no carro." else "Leitura concluída: $qtd código(s)." }
             }
+            tarefaCan?.let { ligado ->
+                tarefaCan = null
+                val quadros = escutarCan(5_000)
+                val total = quadros.values.sumOf { it.size }
+                principal.post {
+                    if (ligado) capturaLigado = quadros else capturaBase = quadros
+                    situacaoCan = if (total == 0) "Nenhum quadro CAN recebido: este carro não passa esses sinais pela tomada OBD (ou a ignição está desligada)."
+                    else "Capturado com a luz ${if (ligado) "ACESA" else "APAGADA"}: $total quadros de ${quadros.size} IDs."
+                }
+            }
             if ((d.rpm ?: 0) < 400) {
+                ultimoCombustivel = 0L
                 // Motor desligado: só tensão e rpm, o mais rápido possível, para registrar a queda de tensão da partida.
                 lerTensao()?.let { d = d.copy(tensao = it) }
                 val rpm = consultar("010C")?.takeIf { it.size >= 2 }?.let { (it[0] * 256 + it[1]) / 4 }
@@ -369,6 +404,9 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 consultar("0104")?.firstOrNull()?.let { d = d.copy(carga = it * 100 / 255) }
                 consultar("0111")?.firstOrNull()?.let { d = d.copy(acelerador = it * 100 / 255) }
                 consultar("010F")?.firstOrNull()?.let { d = d.copy(tempAdmissao = it - 40) }
+                if (suportados == null) suportados = lerSuportados()
+                d = lerCombustivel(d)
+                if (ciclo % 40 == 0 && suporta(0x2F)) consultar("012F")?.firstOrNull()?.let { d = d.copy(nivelCombustivel = it * 100 / 255) }
                 // Correção de combustível (fuel trims) e estado da malha da injeção.
                 consultar("0106")?.firstOrNull()?.let { d = d.copy(stft = (it - 128) * 100f / 128f) }
                 consultar("0107")?.firstOrNull()?.let { d = d.copy(ltft = (it - 128) * 100f / 128f) }
@@ -376,10 +414,101 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 lerTensao()?.let { d = d.copy(tensao = it) }
             }
             if (ciclo % 60 == 0) d = lerFalhas(d)
+            if (ciclo % 8 == 4) {
+                val regras = MapaCan.obter(ctx).regras
+                if (regras.isNotEmpty()) d = aplicarCan(d, regras)
+            }
             val novo = d
             principal.post { if (!demo) dados = novo }
             ciclo++
         }
+    }
+
+    // ---------- combustível ----------
+
+    private fun suporta(pid: Int) = suportados?.contains(pid) ?: true
+
+    /** Lê 0100/0120/0140: a lista de PIDs que o carro suporta. Null = o carro não respondeu (tenta de novo depois). */
+    private fun lerSuportados(): Set<Int>? {
+        val achados = HashSet<Int>()
+        var base = 0
+        while (base <= 0x40) {
+            val b = consultar("01%02X".format(base))?.takeIf { it.size >= 4 } ?: break
+            for (i in 0..31) if ((b[i / 8] shr (7 - i % 8)) and 1 == 1) achados += base + i + 1
+            if (!achados.contains(base + 0x20)) break
+            base += 0x20
+        }
+        return achados.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * Consumo pela vazão de ar: MAF (0110) se o carro tiver; senão estima pelo MAP (010B), temperatura do ar e rpm.
+     * Combustível ≈ ar / 13,2 (gasolina brasileira com ~27% de etanol), densidade 750 g/l. É uma estimativa:
+     * pode variar com etanol puro e com enriquecimento em aceleração forte.
+     */
+    private fun lerCombustivel(d: DadosObd): DadosObd {
+        val rpm = d.rpm ?: return d
+        var arGs: Double? = null
+        if (suporta(0x10)) arGs = consultar("0110")?.takeIf { it.size >= 2 }?.let { (it[0] * 256 + it[1]) / 100.0 }
+        if (arGs == null && suporta(0x0B)) {
+            val mapKpa = consultar("010B")?.firstOrNull()
+            if (mapKpa != null) {
+                val cilindrada = if (br.com.civic.launcher.Configuracoes.obter(ctx).imagemCarro == br.com.civic.launcher.ImagemCarro.Fit) 0.0015 else 0.0018
+                val kelvin = (d.tempAdmissao ?: 30) + 273.15
+                arGs = mapKpa * 1000.0 * cilindrada * 0.80 * (rpm / 120.0) * 28.97 / (8.314 * kelvin) // eficiência volumétrica ~80%
+            }
+        }
+        val agora = SystemClock.elapsedRealtime()
+        val dt = if (ultimoCombustivel == 0L) 0.0 else (agora - ultimoCombustivel).coerceIn(0, 10_000) / 1000.0
+        ultimoCombustivel = agora
+        if (arGs == null || arGs <= 0.0) return d
+        val litrosHora = arGs / 13.2 / 750.0 * 3600.0
+        val vel = d.velocidade ?: 0
+        litrosAcum += litrosHora * dt / 3600.0
+        kmAcum += vel * dt / 3600.0
+        val medio = if (kmAcum > 0.3 && litrosAcum > 0.01) (kmAcum / litrosAcum).toFloat() else d.consumoMedio
+        val inst = if (vel > 3 && litrosHora > 0.05) (vel / litrosHora).toFloat().coerceAtMost(60f) else null
+        return d.copy(consumoMedio = medio, consumoInstantaneo = inst)
+    }
+
+    // ---------- luzes-espia pelo CAN (experimental) ----------
+
+    /** Pede uma captura de 5 s dos quadros CAN (modo monitor do ELM327). Rodada na próxima volta do laço. */
+    fun capturarCan(ligado: Boolean) {
+        if (demo) { situacaoCan = "Desligue a demonstração para capturar."; return }
+        if (estado != EstadoObd.Conectado) { situacaoCan = "Conecte o adaptador OBD primeiro."; return }
+        situacaoCan = "Capturando por 5 s… não mexa na luz."
+        tarefaCan = ligado
+    }
+
+    /** Liga o modo monitor (ATMA) por [ms] e devolve os quadros recebidos, agrupados por ID de 11 bits. */
+    private fun escutarCan(ms: Long): Map<String, List<IntArray>> {
+        enviar("ATH1", 2_000); enviar("ATCAF0", 2_000)
+        escrever("ATMA")
+        Thread.sleep(ms)
+        val texto = synchronized(trava) { resposta.toString() }
+        escrever("") // qualquer caractere interrompe o monitor
+        aguardar(2_000)
+        enviar("ATAR", 2_000); enviar("ATH0", 2_000); enviar("ATCAF1", 2_000)
+        val linha = Regex("^[0-9A-F]{3}([0-9A-F]{2})+$")
+        val quadros = HashMap<String, MutableList<IntArray>>()
+        for (bruto in texto.uppercase().split('\r', '\n')) {
+            val l = bruto.replace(" ", "").replace(">", "")
+            if (!linha.matches(l)) continue
+            val lista = quadros.getOrPut(l.substring(0, 3)) { ArrayList() }
+            if (lista.size < 200) lista += l.substring(3).chunked(2).map { it.toInt(16) }.toIntArray()
+        }
+        return quadros
+    }
+
+    private fun aplicarCan(d: DadosObd, regras: Map<SinalCan, RegraCan>): DadosObd {
+        val quadros = escutarCan(600)
+        fun ativo(s: SinalCan): Boolean? = regras[s]?.let { r -> quadros[r.id]?.any { r.ativo(it) } }
+        return d.copy(
+            farol = ativo(SinalCan.Farol) ?: d.farol, farolete = ativo(SinalCan.Farolete) ?: d.farolete,
+            setaEsquerda = ativo(SinalCan.SetaEsquerda) ?: d.setaEsquerda, setaDireita = ativo(SinalCan.SetaDireita) ?: d.setaDireita,
+            alerta = ativo(SinalCan.Alerta) ?: d.alerta, pilotoAutomatico = ativo(SinalCan.Piloto) ?: d.pilotoAutomatico,
+        )
     }
 
     private fun lerTensao(): Float? =
