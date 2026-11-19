@@ -70,6 +70,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
 
     private fun amostra(vel: Float, rpm: Int, demonstracao: Boolean) {
         val agora = System.currentTimeMillis()
+        VolumeAutomatico.obter(ctx).amostra(vel, agora) // volume pela velocidade (OBD ou GPS)
         val andando = vel >= 3f
         val ligado = rpm > 400
         var v = atual

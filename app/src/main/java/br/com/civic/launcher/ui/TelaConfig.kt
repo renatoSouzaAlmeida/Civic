@@ -83,6 +83,7 @@ fun TelaConfig() {
                     color = Cores.TextoSuave, fontSize = 13.sp,
                 )
             }
+            VolumeAuto()
             Secao("Painel de direção") {
                 Text("Posição", color = Cores.TextoSuave, fontSize = 15.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -211,5 +212,27 @@ private fun AvisosCelular() {
             Opcao("Avisos desligados", !nuvem.avisosLigados, Modifier.weight(1f)) { nuvem.ligarAvisos(false) }
         }
         if (nuvem.situacao.isNotEmpty()) Text(nuvem.situacao, color = Cores.TextoSuave, fontSize = 14.sp)
+    }
+}
+
+/** Volume automático pela velocidade: compensa o ruído da estrada subindo o volume aos poucos. */
+@Composable
+private fun VolumeAuto() {
+    val ctx = LocalContext.current
+    val volume = remember { br.com.civic.launcher.VolumeAutomatico.obter(ctx) }
+    Secao("Volume automático pela velocidade") {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            br.com.civic.launcher.NivelVolumeAuto.entries.forEach { n ->
+                Opcao(n.rotulo, volume.nivel == n, Modifier.weight(1f)) { volume.definirNivel(n) }
+            }
+        }
+        Text(
+            "A partir de 40 km/h o volume sobe aos poucos (máximo perto de 110 km/h) e volta ao normal ao reduzir. " +
+                "O volume que você escolhe parado é a referência; se você mexer no volume, o app aceita o novo valor.",
+            color = Cores.TextoSuave, fontSize = 13.sp,
+        )
+        if (volume.nivel != br.com.civic.launcher.NivelVolumeAuto.Desligado && volume.volumeBase >= 0) {
+            Text("Referência: ${volume.volumeBase} · ajuste agora: ${if (volume.ajusteAtual >= 0) "+" else ""}${volume.ajusteAtual}", color = Cores.Destaque, fontSize = 14.sp)
+        }
     }
 }
