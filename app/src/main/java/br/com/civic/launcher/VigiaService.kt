@@ -17,6 +17,8 @@ import android.os.IBinder
 class VigiaService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onDestroy() { ativo = false; super.onDestroy() }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CANAL, "Civic ativo", NotificationManager.IMPORTANCE_MIN))
@@ -30,6 +32,7 @@ class VigiaService : Service() {
             if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else startForeground(ID, n)
         }
+        ativo = true
         // Os objetos abaixo vivem no processo; só garantimos que existem.
         Telemetria.obter(this)
         return START_STICKY
@@ -41,8 +44,11 @@ class VigiaService : Service() {
         super.onTaskRemoved(rootIntent)
     }
 
-    private companion object {
-        const val CANAL = "vigia"
-        const val ID = 42
+    companion object {
+        /** O serviço está rodando (para a tela Status do app). */
+        @Volatile var ativo = false
+            private set
+        private const val CANAL = "vigia"
+        private const val ID = 42
     }
 }

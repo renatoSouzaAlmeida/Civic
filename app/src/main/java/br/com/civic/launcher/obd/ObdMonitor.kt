@@ -48,6 +48,10 @@ data class DadosObd(
     val nivelCombustivel: Int? = null,      // % do tanque (PID 012F, se o carro informar)
     val consumoMedio: Float? = null,        // km/l desde que o app começou a medir
     val consumoInstantaneo: Float? = null,  // km/l agora (parado = nulo)
+    /** Monitores de emissões (vistoria): quantos estão prontos e quais ainda não rodaram. Null = o carro não informou. */
+    val monitoresProntos: Int? = null,
+    val monitoresTotal: Int? = null,
+    val monitoresPendentes: List<String> = emptyList(),
     // Sinais do carro (previstos). Não fazem parte do OBD padrão: dependem da rede CAN de carroceria
     // do Honda. Nulo = desconhecido (a luz-espia aparece apagada e esmaecida).
     val farol: Boolean? = null,
@@ -428,6 +432,23 @@ class ObdMonitor private constructor(private val ctx: Context) {
         }
     }
 
+    /** PID 0101 (carros a gasolina): quais monitores de emissões o carro suporta e quais já terminaram (pronto para vistoria). */
+    private fun lerMonitores(d: DadosObd, b: IntArray): DadosObd {
+        val nomes = mutableListOf<Pair<String, Boolean>>() // nome, completo
+        fun item(nome: String, suporta: Boolean, incompleto: Boolean) { if (suporta) nomes += nome to !incompleto }
+        item("Falha de ignição", b[1] and 0x01 != 0, b[1] and 0x10 != 0)
+        item("Sistema de combustível", b[1] and 0x02 != 0, b[1] and 0x20 != 0)
+        item("Componentes", b[1] and 0x04 != 0, b[1] and 0x40 != 0)
+        val c = listOf("Catalisador", "Catalisador aquecido", "Evaporativo (EVAP)", "Ar secundário", "Ar-condicionado", "Sonda de oxigênio", "Aquecedor da sonda", "EGR")
+        c.forEachIndexed { i, n -> item(n, b[2] and (1 shl i) != 0, b[3] and (1 shl i) != 0) }
+        return d.copy(monitoresProntos = nomes.count { it.second }, monitoresTotal = nomes.size, monitoresPendentes = nomes.filter { !it.second }.map { it.first })
+    }
+
+    /** O carro informa o nível do tanque (PID 012F)? Null = ainda não consultado. */
+    val nivelTanqueSuportado: Boolean? get() = suportados?.contains(0x2F)
+    /** O carro informa a vazão de ar (MAF 0110)? Sem ela, o consumo é estimado pelo MAP. */
+    val mafSuportado: Boolean? get() = suportados?.contains(0x10)
+
     // ---------- combustível ----------
 
     private fun suporta(pid: Int) = suportados?.contains(pid) ?: true
@@ -520,7 +541,11 @@ class ObdMonitor private constructor(private val ctx: Context) {
 
     private fun lerFalhas(d: DadosObd): DadosObd {
         var novo = d
-        consultar("0101")?.firstOrNull()?.let { novo = novo.copy(luzMotor = it and 0x80 != 0, falhas = it and 0x7F) }
+        consultar("0101")?.let { b ->
+            val a = b.firstOrNull() ?: return@let
+            novo = novo.copy(luzMotor = a and 0x80 != 0, falhas = a and 0x7F)
+            if (b.size >= 4) novo = lerMonitores(novo, b)
+        }
         val confirmados = if ((novo.falhas ?: 0) > 0) lerCodigos("03", "43") else emptyList()
         val pendentes = lerCodigos("07", "47")
         return novo.copy(codigos = confirmados ?: novo.codigos, codigosPendentes = pendentes ?: novo.codigosPendentes)

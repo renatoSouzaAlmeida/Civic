@@ -14,7 +14,9 @@ import java.util.Locale
  */
 class Voz private constructor(private val ctx: Context) {
     private val audio = ctx.getSystemService(AudioManager::class.java)
-    private var pronto = false
+    /** A síntese de voz do Android está pronta (precisa de uma voz em português instalada). */
+    var pronto = false
+        private set
     private val fila = ArrayDeque<String>()
     private var foco: AudioFocusRequest? = null
     private val tts: TextToSpeech = TextToSpeech(ctx) { status ->

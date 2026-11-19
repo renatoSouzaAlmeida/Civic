@@ -48,7 +48,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] **Movimento suspeito** — partida do motor em horário em que o carro nunca é usado (aprende com as últimas 60 partidas) e "Vigia total" opcional (toda partida avisa).
 
 ### OBD (engenharia do motor)
-- [ ] **Monitores de prontidão** (modo 01, PID 01) — "pronto para vistoria" e aviso de códigos apagados há pouco tempo.
+- [x] **Monitores de prontidão** (modo 01, PID 01) — mostra quantos monitores de emissões estão prontos e quais faltam (aparece em Config. > Status do app). Falta ainda o aviso ativo de "códigos apagados há pouco tempo".
 - [ ] **Freeze frame** (modo 02) — guarda rpm, temperatura, carga e velocidade quando surge um código de falha.
 - [ ] **Saúde do termostato** — tempo para chegar a 80 °C comparado ao histórico (termostato preso aberto).
 - [ ] **Sondas lambda e catalisador** (PIDs 0114/0115) — frequência de oscilação para explicar o P0420.
@@ -65,7 +65,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [ ] **Revisão com um toque** — quando a manutenção vence, o Telegram oferece botão para avisar a oficina.
 
 ### Interface e usabilidade
-- [ ] **Tela "Status do app"** — checklist: OBD, GPS, Telegram, nuvem, permissões e última atualização.
+- [x] **Tela "Status do app"** — em Config., no topo: OBD, nível do tanque e MAF suportados, monitores de emissões, GPS, localização o tempo todo, nuvem, Telegram, Vigia, painel, Spotify, Bluetooth e voz, com botão para corrigir cada permissão.
 - [ ] **Modo HUD** — velocidade espelhada em tela cheia para refletir no para-brisa à noite.
 - [ ] **Comando de voz curto** — "onde parei", "quanto de combustível", "ir para casa".
 

@@ -44,6 +44,7 @@ fun TelaConfig() {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val duasColunas = maxWidth >= 860.dp
         val esquerda: @Composable ColumnScope.() -> Unit = {
+            SecaoStatusApp()
             Secao("Identidade") {
                 Campo("Nome do app (aparece no topo)", config.nomeApp) { config.salvarNomeApp(it) }
                 Campo("Nome do carro", config.nomeCarro) { config.salvarNomeCarro(it) }

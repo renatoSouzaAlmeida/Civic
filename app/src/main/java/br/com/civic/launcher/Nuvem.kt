@@ -42,6 +42,9 @@ class Nuvem private constructor(ctx: Context) {
         private set
     var nomeBot by mutableStateOf(prefs.getString("bot", null))
         private set
+    /** Quando a nuvem respondeu com sucesso pela última vez (ms; 0 = nunca nesta abertura). */
+    var ultimaConexao by mutableStateOf(0L)
+        private set
     /** Texto curto do último resultado (para mostrar em Config.). */
     var situacao by mutableStateOf("")
         private set
@@ -253,6 +256,7 @@ class Nuvem private constructor(ctx: Context) {
             extras.forEach { (k, v) -> c.setRequestProperty(k, v) }
             if (corpo != null) { c.doOutput = true; c.outputStream.use { it.write(corpo.toByteArray()) } }
             val status = c.responseCode
+            if (status in 200..299) principal.post { ultimaConexao = System.currentTimeMillis() }
             val texto = runCatching { (if (status >= 400) c.errorStream else c.inputStream)?.bufferedReader()?.readText() }.getOrNull() ?: ""
             c.disconnect()
             status to texto
