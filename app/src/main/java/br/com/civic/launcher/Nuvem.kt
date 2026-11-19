@@ -126,6 +126,18 @@ class Nuvem private constructor(ctx: Context) {
         }
     }
 
+    /** Envia o resumo do último estado do carro (uma linha em civic_estados). Devolve o resultado em [aoTerminar]. */
+    fun enviarEstado(estado: JSONObject, aoTerminar: (Boolean) -> Unit) {
+        fila.execute {
+            val ok = garantirCadastro() && http(
+                "POST", "/rest/v1/civic_estados?on_conflict=dispositivo,registrado_em",
+                estado.put("dispositivo", token).toString(),
+                mapOf("Prefer" to "resolution=ignore-duplicates,return=minimal"),
+            ).first in 200..299
+            principal.post { aoTerminar(ok) }
+        }
+    }
+
     fun removerAbastecimento(id: Long) {
         fila.execute {
             if (garantirCadastro()) http("DELETE", "/rest/v1/civic_abastecimentos?id=eq.$id", null)

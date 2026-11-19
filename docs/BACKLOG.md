@@ -61,7 +61,9 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
     - **Estacionamento:** a função da nuvem que já manda o Telegram (`civic-notificar`) também **grava a linha no
       histórico de estacionamentos** na mesma chamada. Um envio só serve aos dois; o app não precisa mandar duas vezes.
     - Se estiver sem internet na hora, o dado fica guardado e sai no próximo envio.
-  - A definir: quais campos entram no resumo enviado ao ligar, retenção do histórico e o desenho das telas do dashboard.
+  - **Feito:** envio do último estado ao ligar o carro (tabela `civic_estados`: motor, bateria, combustível, falhas, viagem e
+    última posição). Falta: posição ao vivo e trajeto, status online, eventos de ignição.
+  - A definir: retenção do histórico e o desenho das telas do dashboard.
 
 ## Navegação / mapa
 - [ ] **Adiado — só fazer se realmente impactar o uso.** Waze fora de cogitação para embutir (não há SDK).

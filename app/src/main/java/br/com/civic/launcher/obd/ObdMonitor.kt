@@ -83,6 +83,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             EcoConducao.obter().amostra(novo)
             br.com.civic.launcher.LocalEstacionamento.obter(ctx).amostra(novo.rpm, demonstracao = demo)
             br.com.civic.launcher.RetomarMusica.obter(ctx).amostra(novo.rpm, demonstracao = demo)
+            br.com.civic.launcher.EstadoCarro.obter(ctx).amostra(novo, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())

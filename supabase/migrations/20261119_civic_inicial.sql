@@ -161,3 +161,25 @@ revoke all on public.civic_veiculos from anon;
 
 -- ===== Aplicada em 19/11/2026 como "civic_estacionamentos_sem_duplicata" =====
 create unique index civic_estacionamentos_unico on public.civic_estacionamentos(dispositivo, data);
+
+-- ===== Aplicada em 19/11/2026 como "civic_estados" =====
+-- Resumo do último uso do carro, enviado pelo app quando o carro liga de novo.
+create table public.civic_estados (
+  id bigserial primary key,
+  dispositivo text not null references public.civic_dispositivos(token) on delete cascade,
+  registrado_em timestamptz not null,
+  enviado_em timestamptz not null default now(),
+  versao_app text,
+  tensao numeric, temp_motor integer, temp_admissao integer, nivel_combustivel integer,
+  consumo_medio numeric, stft numeric, ltft numeric,
+  luz_motor boolean, dtc jsonb, dtc_pendentes jsonb,
+  vel_max integer, rpm_max integer,
+  viagem_km numeric, viagem_duracao_s integer, viagem_vel_media numeric,
+  lat double precision, lon double precision, gps_em timestamptz,
+  bateria_repouso numeric, bateria_minima numeric, bateria_avaliacao text
+);
+create unique index civic_estados_unico on public.civic_estados(dispositivo, registrado_em);
+create index civic_estados_idx on public.civic_estados(dispositivo, registrado_em desc);
+alter table public.civic_estados enable row level security;
+create policy civic_estado_inserir on public.civic_estados for insert to anon with check (dispositivo = public.civic_token());
+create policy civic_dash_estados on public.civic_estados for select to authenticated using (dispositivo in (select public.civic_meus_dispositivos()));

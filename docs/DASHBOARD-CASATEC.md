@@ -15,6 +15,7 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | `civic_eventos` | Alertas e avisos gerados pelo app (motor, bateria, falhas, manutenção, estacionamento) | `tipo`, `mensagem`, `enviado` (foi ao Telegram), `criado_em` | Linha do tempo de alertas; contagem por tipo; filtro por período |
 | `civic_manutencao` | Plano de manutenção e situação de cada item | `id`, `nome`, `intervalo_km`, `intervalo_meses`, `ultimo_km`, `ultima_data`, `situacao` (vencido/próximo/ok), `atualizado_em` | Cartões de manutenção com semáforo; itens vencidos no topo |
 | `civic_abastecimentos` | Registro de abastecimentos | `data`, `km`, `litros`, `preco_litro`, `combustivel`, `tanque_cheio` | Consumo km/l (tanque cheio a tanque cheio), gasto por mês, custo por km, preço do litro ao longo do tempo |
+| `civic_estados` | **Resumo do último uso do carro**, enviado quando o carro liga de novo (um registro por uso) | `registrado_em` (quando foi o último uso), `enviado_em`, `versao_app`; motor: `tensao`, `temp_motor`, `temp_admissao`, `vel_max`, `rpm_max`, `stft`, `ltft`; combustível: `nivel_combustivel`, `consumo_medio`; falhas: `luz_motor`, `dtc`, `dtc_pendentes` (listas de códigos); viagem: `viagem_km`, `viagem_duracao_s`, `viagem_vel_media`; posição: `lat`, `lon`, `gps_em`; bateria: `bateria_repouso`, `bateria_minima`, `bateria_avaliacao` (Boa/Atencao/Fraca) | Cartão "Estado atual" com o último registro; gráficos de tensão, temperatura, consumo e bateria ao longo do tempo; lista de falhas (DTC) por data; mapa da última posição. Campos podem vir vazios (o carro nem sempre informa tudo) |
 | `civic_acessos` | Quais aparelhos cada usuário do dashboard pode ver | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
@@ -53,7 +54,11 @@ const { data: manut } = await supabase.from('civic_manutencao')
   .select('*').eq('dispositivo', dispositivo).in('situacao', ['Vencido','Proximo'])
 ```
 
+## Como o estado do carro é gravado
+Durante o uso o app guarda o resumo no aparelho (a cada 30 s e quando o motor desliga). **Quando o carro liga de novo**, envia
+o último resumo ao Supabase (uma linha em `civic_estados`). Sem internet, fica pendente e tenta de novo a cada 5 min com o
+motor ligado. Então o dash mostra o estado **do último uso**, não ao vivo: `registrado_em` diz de quando é. Reenvio não duplica.
+
 ## O que ainda vai entrar (backlog)
-Posição ao vivo e trajeto das viagens, status online do carro, tensão da bateria, temperatura, rpm, velocidade,
-fuel trims, histórico de falhas (DTC) e eventos de ignição. O app grava localmente e envia o último estado ao ligar o
-carro. Quando chegar, ganha tabelas próprias e este documento é atualizado.
+Posição ao vivo e trajeto das viagens, status online do carro e eventos de ignição. Quando chegarem, ganham tabelas
+próprias e este documento é atualizado.

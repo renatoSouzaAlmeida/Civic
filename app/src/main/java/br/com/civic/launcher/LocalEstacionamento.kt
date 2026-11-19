@@ -123,6 +123,9 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual)
     }
 
+    /** Última posição conhecida (GPS do sistema ou guardada pelo app), para o resumo enviado à nuvem. */
+    fun posicaoRecente(): Location? = runCatching { ultimaPosicao() }.getOrNull()
+
     private fun ultimaPosicao(): Location? = runCatching {
         val lm = ctx.getSystemService(LocationManager::class.java)
         val sistema = listOfNotNull(
