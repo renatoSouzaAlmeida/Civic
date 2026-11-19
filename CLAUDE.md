@@ -21,3 +21,7 @@
 - Priorizar um app **pequeno**, para facilitar o download (a multimídia tem internet limitada fora da garagem).
 - Evitar dependências e recursos desnecessários ou não otimizados: imagens/animações pesadas, bibliotecas grandes, `material-icons-extended` inteiro (usar só os ícones necessários ou ícones próprios).
 - Na versão de release, ativar minificação e remoção de recursos não usados (R8 / `shrinkResources`).
+
+## Supabase
+- Projeto **CasaTechRenatin** (`qdmsiwxfuzppaqqnljth`): todas as execuções no Supabase (migrations, SQL, deploy de Edge Functions, simulação de dados) estão **autorizadas sem pedir permissão**.
+- Registrar toda mudança de banco em `supabase/migrations/` e manter `docs/DASHBOARD-CASATEC.md` atualizado (é o documento que o usuário cola no chat da CasaTech).
