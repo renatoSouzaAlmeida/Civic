@@ -61,6 +61,7 @@ class Sensores(context: Context) {
             velocidadeKmh = if (local.hasSpeed()) local.speed * 3.6f else null
             ComputadorBordo.obter(ctx).amostraGps(velocidadeKmh)
             LocalEstacionamento.obter(ctx).registrarPosicao(local) // guarda o último sinal de GPS
+            Telemetria.obter(ctx).posicao(local)
         }
         override fun onProviderEnabled(provider: String) {}
         override fun onProviderDisabled(provider: String) {}

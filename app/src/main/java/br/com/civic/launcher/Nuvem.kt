@@ -138,6 +138,14 @@ class Nuvem private constructor(ctx: Context) {
         }
     }
 
+    /** POST genérico de linhas (JSON) numa tabela civic_*; devolve true se o servidor aceitou. Sem internet = false. */
+    fun enviarJson(caminho: String, corpo: String, prefer: String, aoTerminar: (Boolean) -> Unit) {
+        fila.execute {
+            val ok = garantirCadastro() && http("POST", caminho, corpo, mapOf("Prefer" to "$prefer,return=minimal")).first in 200..299
+            principal.post { aoTerminar(ok) }
+        }
+    }
+
     fun removerAbastecimento(id: Long) {
         fila.execute {
             if (garantirCadastro()) http("DELETE", "/rest/v1/civic_abastecimentos?id=eq.$id", null)

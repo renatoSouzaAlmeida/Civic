@@ -62,7 +62,8 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
       histórico de estacionamentos** na mesma chamada. Um envio só serve aos dois; o app não precisa mandar duas vezes.
     - Se estiver sem internet na hora, o dado fica guardado e sai no próximo envio.
   - **Feito:** envio do último estado ao ligar o carro (tabela `civic_estados`: motor, bateria, combustível, falhas, viagem e
-    última posição). Falta: posição ao vivo e trajeto, status online, eventos de ignição.
+    última posição). Também feito: posição ao vivo e trajeto (`civic_posicoes`), status online (`civic_status_atual`) e eventos de ignição (`civic_ignicao`),
+    com dados simulados para validar o dash.
   - A definir: retenção do histórico e o desenho das telas do dashboard.
 
 ## Navegação / mapa

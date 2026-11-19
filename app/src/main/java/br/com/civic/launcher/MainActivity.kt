@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
         atualizador = Atualizador(this)
         sensores = Sensores(this)
         obd = ObdMonitor.obter(this)
+        Telemetria.obter(this) // eventos de ignição, trajeto e status online para o dashboard
         modoTema = ModoTema.ler(this)
         setContent {
             // Reavalia a cada minuto para o modo automático trocar sozinho ao amanhecer/anoitecer.

@@ -16,6 +16,9 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | `civic_manutencao` | Plano de manutenção e situação de cada item | `id`, `nome`, `intervalo_km`, `intervalo_meses`, `ultimo_km`, `ultima_data`, `situacao` (vencido/próximo/ok), `atualizado_em` | Cartões de manutenção com semáforo; itens vencidos no topo |
 | `civic_abastecimentos` | Registro de abastecimentos | `data`, `km`, `litros`, `preco_litro`, `combustivel`, `tanque_cheio` | Consumo km/l (tanque cheio a tanque cheio), gasto por mês, custo por km, preço do litro ao longo do tempo |
 | `civic_estados` | **Resumo do último uso do carro**, enviado quando o carro liga de novo (um registro por uso) | `registrado_em` (quando foi o último uso), `enviado_em`, `versao_app`; motor: `tensao`, `temp_motor`, `temp_admissao`, `vel_max`, `rpm_max`, `stft`, `ltft`; combustível: `nivel_combustivel`, `consumo_medio`; falhas: `luz_motor`, `dtc`, `dtc_pendentes` (listas de códigos); viagem: `viagem_km`, `viagem_duracao_s`, `viagem_vel_media`; posição: `lat`, `lon`, `gps_em`; bateria: `bateria_repouso`, `bateria_minima`, `bateria_avaliacao` (Boa/Atencao/Fraca) | Cartão "Estado atual" com o último registro; gráficos de tensão, temperatura, consumo e bateria ao longo do tempo; lista de falhas (DTC) por data; mapa da última posição. Campos podem vir vazios (o carro nem sempre informa tudo) |
+| `civic_status_atual` (view) | **Status online do carro**: uma linha por veículo, atualizada a cada 60 s com o motor ligado (5 min desligado) | `atualizado_em`, `online` (true se avisou há menos de 2,5 batidas), `motor_ligado`, `lat`, `lon`, `vel` (km/h), `tensao`, `viagem`, `versao_app`, `heartbeat_s` | Selo "Online / Offline há X min"; mapa com a posição ao vivo; assine por Realtime em `civic_status` para atualizar sem recarregar |
+| `civic_posicoes` | **Trajeto**: um ponto a cada 15 s com o motor ligado ou andando | `em`, `lat`, `lon`, `vel` (km/h), `viagem` (id da viagem = hora em que o motor ligou, em ms; agrupa os pontos) | Desenhar a linha da viagem no mapa (filtre por `viagem`, ordene por `em`); velocidade ao longo do trajeto; replay da viagem. Realtime em `civic_posicoes` acompanha a viagem em curso |
+| `civic_ignicao` | **Eventos de ignição**: linha do tempo de liga/desliga | `tipo` (`motor_ligou`, `motor_desligou`, `multimidia_ligou`, `multimidia_desligou`), `em`, `lat`, `lon`, `tensao`, `viagem` | Linha do tempo do dia; duração do uso (`motor_ligou` até `motor_desligou` da mesma `viagem`); horários típicos de saída e chegada |
 | `civic_acessos` | Quais aparelhos cada usuário do dashboard pode ver | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
@@ -59,6 +62,19 @@ Durante o uso o app guarda o resumo no aparelho (a cada 30 s e quando o motor de
 o último resumo ao Supabase (uma linha em `civic_estados`). Sem internet, fica pendente e tenta de novo a cada 5 min com o
 motor ligado. Então o dash mostra o estado **do último uso**, não ao vivo: `registrado_em` diz de quando é. Reenvio não duplica.
 
-## O que ainda vai entrar (backlog)
-Posição ao vivo e trajeto das viagens, status online do carro e eventos de ignição. Quando chegarem, ganham tabelas
-próprias e este documento é atualizado.
+## Como a telemetria é enviada
+Posição, ignição e status ficam primeiro no aparelho e saem em pacotes pequenos a cada 30 s (sem internet, ficam na fila e saem
+depois). Cada ponto é gravado uma única vez (chave única). "Online" não é um campo gravado: é calculado na view
+`civic_status_atual` pelo horário do último aviso.
+
+## Dados simulados para validar o dash
+O banco tem um veículo fictício **"Civic (simulado)"** com 7 dias de uso (13 viagens, ~1.700 pontos de trajeto, ignição, estacionamentos,
+estados, alertas, abastecimentos e manutenção). Para vê-lo no dash, vincule o seu usuário a ele:
+
+```sql
+insert into public.civic_acessos (user_id, dispositivo)
+select '<ID_DO_USUARIO>', token from public.civic_dispositivos where nome = 'Civic (simulado)';
+```
+
+Regerar (dados sempre recentes): `select public.civic_simular(7);` — apagar: `delete from public.civic_dispositivos where nome = 'Civic (simulado)';`.
+O script está em `supabase/simulacao.sql`. O veículo simulado aparece em `civic_veiculos` com o nome "Civic (simulado)", separado do carro real.
