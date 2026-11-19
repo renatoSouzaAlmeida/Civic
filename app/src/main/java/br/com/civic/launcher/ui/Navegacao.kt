@@ -58,13 +58,13 @@ private fun abrirFixado(ctx: Context, chave: String, nome: String, reserva: (() 
 private val itens = listOf(
     Item("Início", Icons.Filled.Home, Tela.Inicio),
     Item("Direção", Icons.Filled.Navigation, null) { it.abrirNavegacaoComPainel() },
+    Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
     Item("Telefone", Icons.Filled.Phone, null) { c ->
         abrirFixado(c, Atalhos.TELEFONE, "Telefone") {
             c.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     },
     Item("Spotify", Icons.Filled.MusicNote, null, R.drawable.ic_spotify) { it.abrirSpotify() },
-    Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
     Item("Veículo", Icons.Filled.LocalGasStation, Tela.Veiculo),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),
     Item("Config.", Icons.Filled.Settings, Tela.Config),

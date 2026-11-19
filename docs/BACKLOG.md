@@ -25,8 +25,8 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 2. [ ] **Tela de falhas (DTC)** — ver item acima, em OBD.
 3. [x] **Registro de abastecimentos** — consumo real (tanque cheio a tanque cheio), gasto no mês, custo por km.
 4. [x] **Etanol ou gasolina?** — com a proporção do consumo real deste carro (ou 70%).
-5. [ ] **Computador de bordo** — viagem atual (distância, tempo, média, máxima, consumo e custo) e histórico de viagens.
-6. [ ] **Odômetro do app** — km informado + distância somada pela velocidade (o Civic 2012 não informa o odômetro no OBD).
+5. [x] **Computador de bordo** — viagem atual (distância, tempo, média, máxima, consumo e custo) e histórico de viagens.
+6. [x] **Odômetro do app** — km informado + distância somada pela velocidade (o Civic 2012 não informa o odômetro no OBD).
    Hoje o km vem do último abastecimento ou do valor digitado na tela de manutenção.
 7. [x] **Lembretes de manutenção** — plano padrão do Civic G9 1.8 (óleo, filtros, rodízio, alinhamento, fluido de freio,
    pastilhas, arrefecimento, velas, ATF), vence pelo que chegar primeiro (km ou tempo); histórico do último feito.

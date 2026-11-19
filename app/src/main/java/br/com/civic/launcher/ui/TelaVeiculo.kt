@@ -38,17 +38,85 @@ private val formatoData = SimpleDateFormat("dd/MM/yyyy", BR)
 /** Data digitada só com números (ddMMaaaa), sem aceitar datas impossíveis como 31/02. */
 private val formatoDataEstrito = SimpleDateFormat("ddMMyyyy", BR).apply { isLenient = false }
 
-/** Veículo: abastecimentos (consumo real, gastos, etanol × gasolina) e manutenção (lembretes por km e tempo). */
+/** Veículo: computador de bordo (viagem), abastecimentos (consumo real, gastos, etanol × gasolina) e manutenção. */
 @Composable
 fun TelaVeiculo() {
     var aba by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.widthIn(max = 520.dp)) {
-            Opcao("Abastecimentos", aba == 0, Modifier.weight(1f)) { aba = 0 }
-            Opcao("Manutenção", aba == 1, Modifier.weight(1f)) { aba = 1 }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.widthIn(max = 760.dp)) {
+            Opcao("Viagem", aba == 0, Modifier.weight(1f)) { aba = 0 }
+            Opcao("Abastecimentos", aba == 1, Modifier.weight(1f)) { aba = 1 }
+            Opcao("Manutenção", aba == 2, Modifier.weight(1f)) { aba = 2 }
         }
-        if (aba == 0) AbaAbastecimentos() else AbaManutencao()
+        when (aba) {
+            0 -> AbaViagem()
+            1 -> AbaAbastecimentos()
+            else -> AbaManutencao()
+        }
     }
+}
+
+// ---------------- Computador de bordo ----------------
+
+@Composable
+private fun AbaViagem() {
+    val cb = br.com.civic.launcher.ComputadorBordo.obter(LocalContext.current)
+    val v = Veiculo.obter(LocalContext.current)
+    var limpar by remember { mutableStateOf(false) }
+    // Atualiza a duração mesmo parado (a viagem só recebe amostras quando há leitura).
+    var agora by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { agora = System.currentTimeMillis(); kotlinx.coroutines.delay(1_000) } }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        val atual = cb.atual
+        Secao(if (atual == null) "Viagem atual" else if (atual.demonstracao) "Viagem atual (demonstração)" else "Viagem atual") {
+            if (atual == null) {
+                Text("Nenhuma viagem em andamento. Ela começa sozinha quando o carro anda (ou o motor liga) e termina após 5 min parado.", color = Cores.TextoSuave, fontSize = 15.sp)
+            } else {
+                val est = cb.estimativa(atual)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Numero("Distância", "%.1f km".format(BR, atual.distanciaKm), Modifier.weight(1f))
+                    Numero("Tempo", br.com.civic.launcher.ComputadorBordo.duracao(maxOf(atual.duracaoMs, agora - atual.inicio)), Modifier.weight(1f))
+                    Numero("Velocidade média", "%.0f km/h".format(BR, atual.velMedia), Modifier.weight(1f))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Numero("Velocidade máxima", "${atual.velMaxima} km/h", Modifier.weight(1f))
+                    Numero("Combustível (est.)", est?.let { "%.1f l".format(BR, it.first) } ?: "—", Modifier.weight(1f))
+                    Numero("Custo (est.)", est?.second?.takeIf { it > 0f }?.let { reais(it) } ?: "—", Modifier.weight(1f))
+                }
+                if (est == null) Text("Combustível e custo aparecem quando houver consumo médio (2 abastecimentos com tanque cheio).", color = Cores.TextoSuave, fontSize = 13.sp)
+                BotaoPilula("Encerrar viagem", Icons.Filled.Flag, Modifier.fillMaxWidth()) { cb.finalizar() }
+            }
+        }
+        Secao("Odômetro do app") {
+            Text(
+                if (v.kmAtual > 0) "%,d km".format(BR, v.kmAtual) else "Informe o km atual na aba Manutenção para começar.",
+                color = Cores.Texto, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold,
+            )
+            Text("Km do painel informado (ou do último abastecimento) + %.1f km medidos pelo app desde então.".format(BR, v.distanciaDesdeBase), color = Cores.TextoSuave, fontSize = 13.sp)
+        }
+        Secao("Últimas viagens (${cb.historico.size})") {
+            if (cb.historico.isEmpty()) Text("As viagens encerradas aparecem aqui.", color = Cores.TextoSuave, fontSize = 15.sp)
+            val fmt = remember { SimpleDateFormat("dd/MM HH:mm", BR) }
+            cb.historico.forEach { h ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Chip).padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(fmt.format(Date(h.inicio)) + if (h.demonstracao) " · demonstração" else "", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(cb.resumo(h), color = Cores.TextoSuave, fontSize = 13.sp)
+                    }
+                }
+            }
+            if (cb.historico.isNotEmpty()) TextButton(onClick = { limpar = true }) { Text("Limpar histórico", fontSize = 15.sp) }
+        }
+    }
+    if (limpar) AlertDialog(
+        onDismissRequest = { limpar = false },
+        title = { Text("Limpar o histórico de viagens?") },
+        confirmButton = { TextButton(onClick = { cb.limparHistorico(); limpar = false }) { Text("Limpar", fontSize = 18.sp) } },
+        dismissButton = { TextButton(onClick = { limpar = false }) { Text("Cancelar", fontSize = 18.sp) } },
+    )
 }
 
 // ---------------- Abastecimentos ----------------

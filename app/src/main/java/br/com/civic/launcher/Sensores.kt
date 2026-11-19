@@ -59,6 +59,7 @@ class Sensores(context: Context) {
         override fun onLocationChanged(local: Location) {
             ultimaLocalizacao = local
             velocidadeKmh = if (local.hasSpeed()) local.speed * 3.6f else null
+            ComputadorBordo.obter(ctx).amostraGps(velocidadeKmh)
         }
         override fun onProviderEnabled(provider: String) {}
         override fun onProviderDisabled(provider: String) {}

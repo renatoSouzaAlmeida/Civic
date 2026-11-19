@@ -53,14 +53,32 @@ class Veiculo private constructor(ctx: Context) {
         carregar()
     }
 
-    /** Km atual: o maior entre o informado à mão e o do último abastecimento. */
-    val kmAtual: Int get() = maxOf(kmManual, abastecimentos.maxOfOrNull { it.km } ?: 0)
+    /** Km rodados (medidos pelo computador de bordo) desde o último km conhecido. */
+    var distanciaDesdeBase by mutableStateOf(prefs.getFloat("dist_base", 0f).toDouble())
+        private set
 
-    fun salvarKmManual(km: Int) { kmManual = km; prefs.edit().putInt("km_manual", km).apply(); aposMudanca() }
+    /**
+     * Odômetro do app: o maior entre o km digitado e o do último abastecimento, mais o que o
+     * computador de bordo mediu desde então (o Civic 2012 não informa o odômetro pelo OBD).
+     */
+    val kmAtual: Int get() {
+        val base = maxOf(kmManual, abastecimentos.maxOfOrNull { it.km } ?: 0)
+        return if (base > 0) base + distanciaDesdeBase.toInt() else 0
+    }
+
+    fun somarDistancia(km: Double) {
+        distanciaDesdeBase += km
+        prefs.edit().putFloat("dist_base", distanciaDesdeBase.toFloat()).apply()
+    }
+
+    private fun zerarDistancia() { distanciaDesdeBase = 0.0; prefs.edit().putFloat("dist_base", 0f).apply() }
+
+    fun salvarKmManual(km: Int) { kmManual = km; prefs.edit().putInt("km_manual", km).apply(); zerarDistancia(); aposMudanca() }
 
     fun adicionar(a: Abastecimento) {
         abastecimentos.add(a)
         abastecimentos.sortBy { it.km }
+        if (a.km >= (abastecimentos.maxOfOrNull { it.km } ?: 0)) zerarDistancia() // km do painel vira a nova base
         gravarAbastecimentos()
         val br = java.util.Locale("pt", "BR")
         val consumo = consumos()[a.id]?.let { " · %.1f km/l".format(br, it) } ?: ""

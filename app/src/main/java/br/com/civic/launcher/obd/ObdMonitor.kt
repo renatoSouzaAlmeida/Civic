@@ -68,6 +68,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
         private set(novo) {
             dadosAtuais = novo
             alertas.avaliar(novo, demonstracao = demo)
+            br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
