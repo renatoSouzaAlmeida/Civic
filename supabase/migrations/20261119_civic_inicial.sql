@@ -83,3 +83,26 @@ end;
 $$;
 create trigger civic_manutencao_preserva before update on public.civic_manutencao
 for each row execute function public.civic_manutencao_preserva();
+
+-- ===== Aplicada em 19/11/2026 como "civic_novo_aparelho_herda_manutencao" =====
+-- Todo aparelho novo (ex.: a multimídia na primeira instalação) herda a manutenção já lançada,
+-- copiando os registros do aparelho que tem mais itens preenchidos (os dados são de um só dono).
+create or replace function public.civic_herdar_manutencao()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare modelo text;
+begin
+  select dispositivo into modelo from public.civic_manutencao
+  where ultima_data is not null and dispositivo <> new.token
+  group by dispositivo order by count(*) desc, max(atualizado_em) desc limit 1;
+  if modelo is not null then
+    insert into public.civic_manutencao (dispositivo, id, nome, intervalo_km, intervalo_meses, ultimo_km, ultima_data, situacao, atualizado_em)
+    select new.token, id, nome, intervalo_km, intervalo_meses, ultimo_km, ultima_data, situacao, now()
+    from public.civic_manutencao where dispositivo = modelo
+    on conflict (dispositivo, id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.civic_herdar_manutencao() from public, anon, authenticated;
+create trigger civic_herdar_manutencao after insert on public.civic_dispositivos
+for each row execute function public.civic_herdar_manutencao();
