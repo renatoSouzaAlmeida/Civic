@@ -32,7 +32,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Diagnóstico do OBD: abas Falhas (DTC) e Bateria (saúde na partida). */
+/** Diagnóstico do OBD: abas Falhas (DTC), Bateria (saúde na partida) e Mistura (correção de combustível). */
 @Composable
 fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
     var aba by remember { mutableIntStateOf(0) }
@@ -41,9 +41,14 @@ fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
             BotaoPilula("Voltar", Icons.Filled.ArrowBack) { aoVoltar() }
             Opcao("Falhas (DTC)", aba == 0, Modifier.width(200.dp)) { aba = 0 }
             Opcao("Bateria", aba == 1, Modifier.width(200.dp)) { aba = 1 }
+            Opcao("Mistura", aba == 2, Modifier.width(200.dp)) { aba = 2 }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (aba == 0) TelaFalhas(obd) else TelaBateria(obd)
+            when (aba) {
+                0 -> TelaFalhas(obd)
+                1 -> TelaBateria(obd)
+                else -> TelaMistura(obd)
+            }
         }
     }
 }

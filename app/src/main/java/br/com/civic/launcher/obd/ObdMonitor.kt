@@ -39,6 +39,11 @@ data class DadosObd(
     val codigos: List<String> = emptyList(),
     /** Códigos pendentes (modo 07): o carro detectou, mas ainda não confirmou nem acendeu a luz. */
     val codigosPendentes: List<String> = emptyList(),
+    /** Correção de combustível curta e longa (%), banco 1. Positiva = injeção enriquecendo (mistura pobre). */
+    val stft: Float? = null,
+    val ltft: Float? = null,
+    /** Injeção em malha fechada (corrigindo pela sonda). Null = o carro não informou. */
+    val malhaFechada: Boolean? = null,
     // Combustível (previsto; ver docs/BACKLOG.md). Nulo = ainda não lido.
     val nivelCombustivel: Int? = null,      // % do tanque (PID 012F, se o carro informar)
     val consumoMedio: Float? = null,        // km/l desde que o app começou a medir
@@ -73,6 +78,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo)
             if (!demo) HistoricoFalhas.obter(ctx).registrar(novo.codigos, novo.codigosPendentes)
             SaudeBateria.obter(ctx).amostra(novo.tensao, novo.rpm, demonstracao = demo)
+            CorrecaoCombustivel.obter(ctx).amostra(novo, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
@@ -360,6 +366,10 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 consultar("0104")?.firstOrNull()?.let { d = d.copy(carga = it * 100 / 255) }
                 consultar("0111")?.firstOrNull()?.let { d = d.copy(acelerador = it * 100 / 255) }
                 consultar("010F")?.firstOrNull()?.let { d = d.copy(tempAdmissao = it - 40) }
+                // Correção de combustível (fuel trims) e estado da malha da injeção.
+                consultar("0106")?.firstOrNull()?.let { d = d.copy(stft = (it - 128) * 100f / 128f) }
+                consultar("0107")?.firstOrNull()?.let { d = d.copy(ltft = (it - 128) * 100f / 128f) }
+                consultar("0103")?.firstOrNull()?.let { d = d.copy(malhaFechada = it and 0x02 != 0) }
                 lerTensao()?.let { d = d.copy(tensao = it) }
             }
             if (ciclo % 60 == 0) d = lerFalhas(d)
@@ -469,6 +479,10 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 velocidade = if (partida) 0 else (onda * 90).toInt(),
                 tempMotor = temperatura,
                 tensao = tensaoDemo,
+                // Demonstração: mistura pobre só em marcha lenta (caso clássico de entrada falsa de ar).
+                stft = (3.0 * sin(t * 1.7)).toFloat() + if (rpmDemo in 401..1099) 4f else 0f,
+                ltft = if (rpmDemo in 401..1099) 8f else 2.5f,
+                malhaFechada = temperatura >= 70,
                 carga = (20 + onda * 45).toInt(),
                 tempAdmissao = 34,
                 acelerador = (8 + onda * 30).toInt(),
