@@ -173,6 +173,33 @@ class Veiculo private constructor(ctx: Context) {
         if (i >= 0) { manutencao[i] = item.copy(ultimoKm = kmAtual, ultimaData = System.currentTimeMillis()); gravarManutencao(); aposMudanca() }
     }
 
+    /**
+     * Junta o que veio da nuvem: fica com o registro mais recente de cada item e, se a nuvem tiver
+     * um km maior que o atual (ex.: revisão lançada direto no Supabase), atualiza o km do painel.
+     * Devolve true se algo mudou.
+     */
+    fun aplicarDaNuvem(remotos: List<Triple<String, Int?, Long?>>): Boolean {
+        var mudou = false
+        remotos.forEach { (id, km, data) ->
+            val i = manutencao.indexOfFirst { it.id == id }
+            if (i < 0 || data == null) return@forEach
+            val local = manutencao[i]
+            if (local.ultimaData == null || data > local.ultimaData) {
+                manutencao[i] = local.copy(ultimoKm = km, ultimaData = data)
+                mudou = true
+            }
+        }
+        val maiorKm = remotos.mapNotNull { it.second }.maxOrNull()
+        if (maiorKm != null && maiorKm > kmAtual) {
+            kmManual = maiorKm
+            prefs.edit().putInt("km_manual", maiorKm).apply()
+            zerarDistancia()
+            mudou = true
+        }
+        if (mudou) gravarManutencao()
+        return mudou
+    }
+
     /** Informa quando foi feito pela última vez (km e data), para começar o controle. */
     fun informarUltimo(item: ItemManutencao, km: Int?, data: Long?) {
         val i = manutencao.indexOfFirst { it.id == item.id }
@@ -244,6 +271,10 @@ class Veiculo private constructor(ctx: Context) {
             ItemManutencao("arrefecimento", "Líquido de arrefecimento", 100_000, 60),
             ItemManutencao("velas", "Velas de ignição", 100_000, null),
             ItemManutencao("atf", "Fluido do câmbio automático", 40_000, null),
+            ItemManutencao("filtro_combustivel", "Filtro de combustível", 20_000, 24),
+            ItemManutencao("bicos", "Limpeza dos bicos injetores", 40_000, null),
+            ItemManutencao("bateria", "Bateria (troca)", null, 48),
+            ItemManutencao("amortecedores", "Amortecedores (revisar)", 40_000, null),
         )
 
         @Volatile private var instancia: Veiculo? = null

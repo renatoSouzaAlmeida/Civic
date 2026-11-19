@@ -66,3 +66,20 @@ create policy civic_manut_tudo on public.civic_manutencao for all to anon
   using (dispositivo = public.civic_token()) with check (dispositivo = public.civic_token());
 create policy civic_evento_inserir on public.civic_eventos for insert to anon with check (dispositivo = public.civic_token());
 create policy civic_evento_ler on public.civic_eventos for select to anon using (dispositivo = public.civic_token());
+
+-- ===== Aplicada em 19/11/2026 como "civic_manutencao_preserva_mais_recente" =====
+-- Um registro de manutenção nunca é trocado por um mais antigo ou vazio.
+create or replace function public.civic_manutencao_preserva()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if old.ultima_data is not null and (new.ultima_data is null or new.ultima_data < old.ultima_data) then
+    new.ultima_data := old.ultima_data;
+    new.ultimo_km := old.ultimo_km;
+  elsif old.ultimo_km is not null and new.ultimo_km is null and new.ultima_data is not distinct from old.ultima_data then
+    new.ultimo_km := old.ultimo_km;
+  end if;
+  return new;
+end;
+$$;
+create trigger civic_manutencao_preserva before update on public.civic_manutencao
+for each row execute function public.civic_manutencao_preserva();

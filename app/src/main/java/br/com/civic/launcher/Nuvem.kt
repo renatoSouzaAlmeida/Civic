@@ -99,6 +99,33 @@ class Nuvem private constructor(ctx: Context) {
         }
     }
 
+    /**
+     * Baixa a manutenção guardada na nuvem (ex.: revisão lançada direto no Supabase), junta com a do
+     * aparelho ficando com o mais recente e, depois, envia tudo de volta e confere os avisos.
+     */
+    fun baixarESincronizar(v: Veiculo) {
+        fila.execute {
+            val remotos = if (!garantirCadastro()) emptyList() else {
+                val (status, texto) = http("GET", "/rest/v1/civic_manutencao?select=id,ultimo_km,ultima_data", null)
+                if (status != 200) emptyList() else runCatching {
+                    val arr = JSONArray(texto)
+                    (0 until arr.length()).map { i ->
+                        val o = arr.getJSONObject(i)
+                        Triple(
+                            o.getString("id"),
+                            if (o.isNull("ultimo_km")) null else o.getInt("ultimo_km"),
+                            if (o.isNull("ultima_data")) null else lerIso(o.getString("ultima_data")),
+                        )
+                    }
+                }.getOrDefault(emptyList())
+            }
+            principal.post {
+                v.aplicarDaNuvem(remotos)
+                v.aposMudanca()
+            }
+        }
+    }
+
     fun removerAbastecimento(id: Long) {
         fila.execute {
             if (garantirCadastro()) http("DELETE", "/rest/v1/civic_abastecimentos?id=eq.$id", null)
@@ -211,6 +238,11 @@ class Nuvem private constructor(ctx: Context) {
             val r = SecureRandom()
             return "CIVIC-" + (1..5).map { letras[r.nextInt(letras.length)] }.joinToString("")
         }
+
+        /** Lê datas do Supabase (ex.: 2026-11-16T15:00:00+00:00). */
+        private fun lerIso(texto: String): Long? = runCatching {
+            java.time.OffsetDateTime.parse(texto.replace(" ", "T")).toInstant().toEpochMilli()
+        }.getOrNull()
 
         private fun iso(ms: Long): String =
             SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(ms))
