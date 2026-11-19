@@ -96,6 +96,7 @@ class Atualizador(private val ctx: Context) {
         }
         arquivoPronto = destino
         publicar(EstadoAtualizacao.Pronta(versao))
+        CentralNotificacoes.obter(ctx).registrarUmaVez("versao_$versao", "versao", "⬆️ Nova versão $versao pronta para instalar. Toque na versão no topo para atualizar.")
     }
 
     private fun abrir(endereco: String): HttpURLConnection =

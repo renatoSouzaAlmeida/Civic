@@ -30,6 +30,7 @@ class Nuvem private constructor(ctx: Context) {
     private val prefs = ctx.getSharedPreferences("nuvem", Context.MODE_PRIVATE)
     private val fila = Executors.newSingleThreadExecutor()
     private val principal = Handler(Looper.getMainLooper())
+    private val central = CentralNotificacoes.obter(ctx)
 
     val token: String = prefs.getString("token", null) ?: gerarToken().also { prefs.edit().putString("token", it).apply() }
     var codigo: String = prefs.getString("codigo", null) ?: gerarCodigo().also { prefs.edit().putString("codigo", it).apply() }
@@ -126,8 +127,12 @@ class Nuvem private constructor(ctx: Context) {
 
     fun enviarTeste() = avisar("teste", "🚗 Teste do Civic Renatin: as notificações estão funcionando.", forcar = true)
 
-    /** Envia um aviso ao celular (se ligado). Fica registrado em civic_eventos. */
-    fun avisar(tipo: String, mensagem: String, forcar: Boolean = false) {
+    /**
+     * Envia um aviso ao celular (se ligado). Fica registrado em civic_eventos e, por padrão,
+     * também no sininho do topo do app.
+     */
+    fun avisar(tipo: String, mensagem: String, forcar: Boolean = false, registrarNoSino: Boolean = true) {
+        if (registrarNoSino && tipo != "teste") central.registrar(tipo, mensagem)
         if (!avisosLigados && !forcar) return
         funcao(JSONObject().put("acao", "enviar").put("tipo", tipo).put("mensagem", mensagem)) { r ->
             if (forcar) situacao = when {

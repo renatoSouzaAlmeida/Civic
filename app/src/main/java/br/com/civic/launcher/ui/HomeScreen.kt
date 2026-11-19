@@ -13,6 +13,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -141,17 +143,15 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                     Icon(Icons.Filled.Bluetooth, null, tint = if (sensores.bluetoothLigado) Cores.Destaque else Cores.TextoSuave, modifier = Modifier.size(26.dp))
                     Icon(Icons.Filled.Wifi, null, tint = if (sensores.wifiLigado) Cores.Destaque else Cores.TextoSuave, modifier = Modifier.size(26.dp))
                 }
-                Column(Modifier.toqueSuave(aoAlternarTema).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        when (modoTema) {
-                            ModoTema.Automatico -> Icons.Filled.BrightnessAuto
-                            ModoTema.Claro -> Icons.Filled.LightMode
-                            ModoTema.Escuro -> Icons.Filled.DarkMode
-                        },
-                        "Tema: ${modoTema.rotulo}", tint = Cores.Texto, modifier = Modifier.size(28.dp),
-                    )
-                    Text(modoTema.rotulo, color = Cores.TextoSuave, fontSize = 11.sp)
-                }
+                Icon(
+                    when (modoTema) {
+                        ModoTema.Automatico -> Icons.Filled.BrightnessAuto
+                        ModoTema.Claro -> Icons.Filled.LightMode
+                        ModoTema.Escuro -> Icons.Filled.DarkMode
+                    },
+                    "Tema: ${modoTema.rotulo}", tint = Cores.Texto, modifier = Modifier.toqueSuave(aoAlternarTema).size(26.dp),
+                )
+                Sininho()
             }
         }
     }
@@ -224,6 +224,52 @@ private fun ModalNovaVersao(atualizador: Atualizador) {
             },
             dismissButton = {
                 TextButton(onClick = { dispensada = e.versao }) { Text("Depois", fontSize = 20.sp) }
+            },
+        )
+    }
+}
+
+/** Sininho do topo: contador vermelho de não lidas; ao tocar, abre a lista de notificações. */
+@Composable
+private fun Sininho() {
+    val ctx = LocalContext.current
+    val central = remember { br.com.civic.launcher.CentralNotificacoes.obter(ctx) }
+    var aberto by remember { mutableStateOf(false) }
+    val naoLidas = central.naoLidas
+    Box(Modifier.toqueSuave { aberto = true }) {
+        Icon(
+            if (naoLidas > 0) Icons.Filled.NotificationsActive else Icons.Filled.Notifications,
+            "Notificações", tint = if (naoLidas > 0) Cores.Destaque else Cores.Texto, modifier = Modifier.size(26.dp),
+        )
+        if (naoLidas > 0) {
+            Box(
+                Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp).size(18.dp).clip(CircleShape).background(Cores.Vermelho),
+                contentAlignment = Alignment.Center,
+            ) { Text(if (naoLidas > 9) "9+" else "$naoLidas", color = androidx.compose.ui.graphics.Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+        }
+    }
+    if (aberto) {
+        val formato = remember { java.text.SimpleDateFormat("dd/MM HH:mm", java.util.Locale("pt", "BR")) }
+        AlertDialog(
+            onDismissRequest = { aberto = false; central.marcarTodasLidas() },
+            title = { Text("Notificações") },
+            text = {
+                if (central.itens.isEmpty()) Text("Nenhuma notificação por enquanto.", fontSize = 16.sp)
+                else Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    central.itens.forEach { n ->
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(Modifier.padding(top = 6.dp).size(8.dp).clip(CircleShape).background(if (n.lida) androidx.compose.ui.graphics.Color.Transparent else Cores.Destaque))
+                            Column(Modifier.weight(1f)) {
+                                Text(n.mensagem, fontSize = 15.sp, fontWeight = if (n.lida) FontWeight.Normal else FontWeight.Bold)
+                                Text(formato.format(java.util.Date(n.data)), fontSize = 12.sp, color = Cores.TextoSuave)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { aberto = false; central.marcarTodasLidas() }) { Text("Fechar", fontSize = 18.sp) } },
+            dismissButton = {
+                if (central.itens.isNotEmpty()) TextButton(onClick = { central.limpar(); aberto = false }) { Text("Limpar tudo", fontSize = 18.sp) }
             },
         )
     }

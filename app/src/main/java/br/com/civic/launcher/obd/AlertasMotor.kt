@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import br.com.civic.launcher.CentralNotificacoes
 import br.com.civic.launcher.Nuvem
 import java.util.Locale
 
@@ -74,13 +75,20 @@ class AlertasMotor private constructor(private val ctx: Context) {
         if (!demonstracao) confirmados.forEach { (t, msg) ->
             if (t.intervaloCelularMs > 0 && agora - prefs.getLong("cel_${t.name}", 0L) >= t.intervaloCelularMs) {
                 prefs.edit().putLong("cel_${t.name}", agora).apply()
-                Nuvem.obter(ctx).avisar("alerta_motor", "${if (t.gravidade == Gravidade.Critico) "🚨" else "⚠️"} ${t.titulo}: $msg")
+                Nuvem.obter(ctx).avisar("alerta_motor", "${if (t.gravidade == Gravidade.Critico) "🚨" else "⚠️"} ${t.titulo}: $msg", registrarNoSino = false)
             }
         }
 
         val visivel = confirmados.filterKeys { t -> agora >= (silenciadoAte[t] ?: 0L) }
             .entries.sortedBy { it.key.ordinal }.firstOrNull()
         val novo = visivel?.let { Alerta(it.key, it.value) }
+        // Cada alerta que aparece na tela também entra no sininho (uma vez por ocorrência).
+        if (novo != null && novo.tipo != atual?.tipo) {
+            CentralNotificacoes.obter(ctx).registrar(
+                "alerta_motor",
+                "${if (demonstracao) "(Demonstração) " else ""}${if (novo.tipo.gravidade == Gravidade.Critico) "🚨" else "⚠️"} ${novo.tipo.titulo}: ${novo.mensagem}",
+            )
+        }
         if (novo != atual) atual = novo
     }
 
