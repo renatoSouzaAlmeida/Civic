@@ -32,12 +32,28 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Diagnóstico do OBD: abas Falhas (DTC) e Bateria (saúde na partida). */
+@Composable
+fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
+    var aba by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BotaoPilula("Voltar", Icons.Filled.ArrowBack) { aoVoltar() }
+            Opcao("Falhas (DTC)", aba == 0, Modifier.width(200.dp)) { aba = 0 }
+            Opcao("Bateria", aba == 1, Modifier.width(200.dp)) { aba = 1 }
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (aba == 0) TelaFalhas(obd) else TelaBateria(obd)
+        }
+    }
+}
+
 /**
  * Tela de falhas (DTC): luz de injeção, códigos confirmados e pendentes com descrição em português
  * e gravidade, histórico de quando cada código apareceu, e botões para ler de novo e apagar.
  */
 @Composable
-fun TelaFalhas(obd: ObdMonitor, aoVoltar: () -> Unit) {
+fun TelaFalhas(obd: ObdMonitor, aoVoltar: (() -> Unit)? = null) {
     val d = obd.dados
     val ctx = LocalContext.current
     val historico = remember { HistoricoFalhas.obter(ctx.applicationContext) }
@@ -47,7 +63,7 @@ fun TelaFalhas(obd: ObdMonitor, aoVoltar: () -> Unit) {
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BotaoPilula("Voltar", Icons.Filled.ArrowBack) { aoVoltar() }
+            aoVoltar?.let { voltar -> BotaoPilula("Voltar", Icons.Filled.ArrowBack) { voltar() } }
             Text("Falhas do motor (DTC)", color = Cores.Texto, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             BotaoPilula(if (obd.ocupadoFalhas) "Lendo…" else "Ler agora", Icons.Filled.Refresh) { if (!obd.ocupadoFalhas) obd.lerFalhasAgora() }
             BotaoPilula("Apagar códigos", Icons.Filled.DeleteSweep) { if (!obd.ocupadoFalhas) confirmarApagar = true }

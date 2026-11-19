@@ -32,7 +32,7 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
    pastilhas, arrefecimento, velas, ATF), vence pelo que chegar primeiro (km ou tempo); histórico do último feito.
 8. [ ] **Notificações no celular + Supabase** — sincronizar abastecimentos, manutenção e alertas numa base Supabase e
    avisar no celular (manutenção vencendo, alertas do motor, falhas DTC).
-9. [ ] **Saúde da bateria na partida** — queda de tensão ao dar partida (< 9,6 V = bateria no fim).
+9. [x] **Saúde da bateria na partida** — queda de tensão ao dar partida (< 9,6 V = bateria no fim).
 10. [ ] **Correção de combustível (fuel trims)** — STFT/LTFT altos e persistentes indicam entrada falsa de ar, sonda ou bico.
 11. [ ] **Volume automático pela velocidade** — compensa o ruído da estrada.
 12. [ ] **Rotina de partida** — retoma o Spotify e sugere Trabalho de manhã / Casa no fim do dia.

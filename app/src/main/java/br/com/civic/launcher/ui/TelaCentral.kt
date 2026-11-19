@@ -65,7 +65,7 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
 
     var vendoFalhas by remember { mutableStateOf(false) }
     if (vendoFalhas) {
-        TelaFalhas(obd) { vendoFalhas = false }
+        TelaDiagnostico(obd) { vendoFalhas = false }
         return
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -216,7 +216,7 @@ private fun PainelEsportivo(
                 EstadoObd.Desconectado -> "OBD não conectado"
                 EstadoObd.Procurando -> "Procurando OBD…"
                 EstadoObd.Conectando -> "Conectando…"
-                EstadoObd.Conectado -> if (d.rpm == null) "Ligue o motor" else "OBD conectado"
+                EstadoObd.Conectado -> if ((d.rpm ?: 0) == 0) "Motor desligado" else "OBD conectado"
                 EstadoObd.Demonstracao -> "Demonstração"
             },
             color = p.suave, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(start = 18.dp, top = 10.dp),

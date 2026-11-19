@@ -72,6 +72,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             alertas.avaliar(novo, demonstracao = demo)
             br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo)
             if (!demo) HistoricoFalhas.obter(ctx).registrar(novo.codigos, novo.codigosPendentes)
+            SaudeBateria.obter(ctx).amostra(novo.tensao, novo.rpm, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
@@ -103,6 +104,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
     private var sessao: Thread? = null
     private var buscando = false
     private val falhasPorPid = HashMap<String, Int>()
+    private val pausaAte = HashMap<String, Long>()
 
     private val adaptador: BluetoothAdapter? get() = ctx.getSystemService(BluetoothManager::class.java)?.adapter
 
@@ -306,13 +308,16 @@ class ObdMonitor private constructor(private val ctx: Context) {
 
     /** Pergunta um PID (ex.: "010C") e devolve os bytes de dados, ou null se o carro não respondeu. */
     private fun consultar(pid: String): IntArray? {
-        if ((falhasPorPid[pid] ?: 0) >= 3) return null
+        // PID que falhou 3 vezes seguidas fica 30 s sem ser perguntado (ex.: ignição desligada); o rpm nunca para,
+        // porque é ele que mostra quando o motor liga.
+        if (pid != "010C" && (falhasPorPid[pid] ?: 0) >= 3 && SystemClock.elapsedRealtime() < (pausaAte[pid] ?: 0L)) return null
         val bruto = enviar(pid, 2_500)
             ?.uppercase()?.replace("\\s".toRegex(), "")?.replace(">", "").orEmpty()
         val prefixo = "41" + pid.substring(2)
         val i = bruto.indexOf(prefixo)
         if (i < 0 || bruto.contains("NODATA")) {
             falhasPorPid[pid] = (falhasPorPid[pid] ?: 0) + 1
+            if ((falhasPorPid[pid] ?: 0) >= 3) pausaAte[pid] = SystemClock.elapsedRealtime() + 30_000
             return null
         }
         falhasPorPid[pid] = 0
@@ -337,7 +342,18 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 val qtd = d.codigos.size + d.codigosPendentes.size
                 principal.post { ocupadoFalhas = false; situacaoFalhas = if (qtd == 0) "Nenhum código de falha no carro." else "Leitura concluída: $qtd código(s)." }
             }
-            consultar("010C")?.takeIf { it.size >= 2 }?.let { d = d.copy(rpm = (it[0] * 256 + it[1]) / 4) }
+            if ((d.rpm ?: 0) < 400) {
+                // Motor desligado: só tensão e rpm, o mais rápido possível, para registrar a queda de tensão da partida.
+                lerTensao()?.let { d = d.copy(tensao = it) }
+                val rpm = consultar("010C")?.takeIf { it.size >= 2 }?.let { (it[0] * 256 + it[1]) / 4 }
+                d = d.copy(rpm = rpm ?: 0)
+                val parado = d
+                principal.post { if (!demo) dados = parado }
+                continue
+            }
+            val rpmLido = consultar("010C")?.takeIf { it.size >= 2 }?.let { (it[0] * 256 + it[1]) / 4 }
+            // Sem resposta do rpm = provavelmente o motor/ignição desligou: volta para o modo de motor desligado.
+            d = d.copy(rpm = rpmLido ?: 0)
             consultar("010D")?.firstOrNull()?.let { d = d.copy(velocidade = it) }
             if (ciclo % 4 == 0) {
                 consultar("0105")?.firstOrNull()?.let { d = d.copy(tempMotor = it - 40) }
@@ -435,12 +451,24 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 ciclo in 45.0..59.9 -> 107
                 else -> 90 + (sin(t / 30) * 2).toInt()
             }
-            val rpmDemo = if (frio && desde in 15.0..25.0) 3400 else (900 + onda * 2600 + abs(sin(t * 3)) * 150).toInt()
+            // Partida simulada: 3 s parado (12,6 V), 1 s de arranque (cai para ~10,3 V) e o motor pega.
+            val partida = desde < 4.0
+            val rpmDemo = when {
+                desde < 3.0 -> 0
+                partida -> 220
+                frio && desde in 15.0..25.0 -> 3400
+                else -> (900 + onda * 2600 + abs(sin(t * 3)) * 150).toInt()
+            }
+            val tensaoDemo = when {
+                desde < 3.0 -> 12.6f
+                partida -> 10.3f + ((desde - 3.0) * 0.4).toFloat()
+                else -> 14.1f + (sin(t) * 0.1f).toFloat()
+            }
             dados = DadosObd(
                 rpm = rpmDemo,
-                velocidade = (onda * 90).toInt(),
+                velocidade = if (partida) 0 else (onda * 90).toInt(),
                 tempMotor = temperatura,
-                tensao = 14.1f + (sin(t) * 0.1f).toFloat(),
+                tensao = tensaoDemo,
                 carga = (20 + onda * 45).toInt(),
                 tempAdmissao = 34,
                 acelerador = (8 + onda * 30).toInt(),
