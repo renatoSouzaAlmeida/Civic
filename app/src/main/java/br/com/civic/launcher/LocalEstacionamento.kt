@@ -1,6 +1,9 @@
 package br.com.civic.launcher
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
@@ -18,7 +21,7 @@ data class Estacionamento(val lat: Double, val lon: Double, val data: Long, val 
 
 /**
  * "Onde parei o carro": quando o motor desliga (ou o adaptador OBD perde a energia com a ignição)
- * e continua assim por 10 s, o app entende que você estacionou, guarda a posição, registra no sininho e
+ * e continua assim por 3 s; também avisa na hora quando a multimídia desliga (ignição) depois de dirigir, o app entende que você estacionou, guarda a posição, registra no sininho e
  * manda para o Telegram o endereço e o pino do mapa.
  *
  * A posição vem do último sinal de GPS. Com o Waze na frente o GPS está ativo; se o último sinal for antigo
@@ -31,6 +34,28 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
 
     var atual by mutableStateOf<Estacionamento?>(lerSalvo())
         private set
+
+    /** Dirigiu desde o último aviso (guardado no aparelho: sobrevive se o app morrer junto com a ignição). */
+    private var viajando: Boolean
+        get() = prefs.getBoolean("viajando", false)
+        set(v) { prefs.edit().putBoolean("viajando", v).apply() }
+
+    /** Desligar a ignição derruba a multimídia: estes avisos do sistema chegam nesse instante. */
+    private val aoDesligar = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            if (viajando) estacionar(manual = false, rapido = true)
+        }
+    }
+
+    init {
+        val filtro = IntentFilter().apply {
+            addAction(Intent.ACTION_SHUTDOWN); addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_POWER_DISCONNECTED); addAction("android.intent.action.QUICKBOOT_POWEROFF")
+        }
+        runCatching { ctx.registerReceiver(aoDesligar, filtro) }
+        // O app morreu antes de avisar (ignição desligou de vez): avisa agora com a última posição guardada.
+        if (viajando) principal.postDelayed({ if (viajando) estacionar(manual = false, rapido = true) }, 15_000)
+    }
 
     private var ligado = false
     private var ligadoDesde = 0L
@@ -50,24 +75,26 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         } else {
             ligado = false
             // Só vira "estacionou" se o motor rodou por pelo menos 1 minuto (uma calada no semáforo não conta).
-            if (ligadoDesde != 0L && agora - ligadoDesde >= 60_000 && !pendente) {
+            if (ligadoDesde != 0L && agora - ligadoDesde >= 20_000 && !pendente) {
                 pendente = true
-                principal.postDelayed(confirmar, 10_000)
+                principal.postDelayed(confirmar, 3_000)
             }
         }
     }
 
     /** Guarda a posição de agora (a última conhecida) e avisa. Devolve false se não houver posição. */
-    fun estacionar(manual: Boolean): Boolean {
+    fun estacionar(manual: Boolean, rapido: Boolean = false): Boolean {
         val local = ultimaPosicao() ?: return false
         val agora = System.currentTimeMillis()
         val idade = (agora - local.time).coerceAtLeast(0)
         val anterior = atual
         // Mesma vaga de antes (menos de 100 m e menos de 30 min): não repete o aviso automático.
-        if (!manual && anterior != null && agora - anterior.data < 30 * 60_000 && distancia(anterior.lat, anterior.lon, local.latitude, local.longitude) < 100f) return true
+        if (!manual && anterior != null && agora - anterior.data < 10 * 60_000 && distancia(anterior.lat, anterior.lon, local.latitude, local.longitude) < 100f) return true
         val novo = Estacionamento(local.latitude, local.longitude, agora, idade, null)
         atual = novo
         gravar(novo)
+        viajando = false
+        if (rapido) { avisar(novo); return true } // ignição caindo: manda já, só com as coordenadas
         fila.execute {
             val endereco = endereco(local.latitude, local.longitude)
             val completo = novo.copy(endereco = endereco)
@@ -101,10 +128,11 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         (sistema + listOfNotNull(propria)).maxByOrNull { it.time }
     }.getOrNull()
 
-    /** Chamado pelo Sensores a cada posição de GPS (no máximo uma vez por minuto) para termos o último sinal. */
+    /** Chamado pelo Sensores a cada posição de GPS (guarda a cada 5 s) para termos o último sinal. */
     fun registrarPosicao(local: Location) {
         val agora = System.currentTimeMillis()
-        if (agora - ultimoGravado < 60_000) return
+        if (local.hasSpeed() && local.speed * 3.6f > 8f) viajando = true
+        if (agora - ultimoGravado < 5_000) return
         ultimoGravado = agora
         prefs.edit().putString("ultimo_gps", JSONObject().put("lat", local.latitude).put("lon", local.longitude).put("t", agora).toString()).apply()
     }
