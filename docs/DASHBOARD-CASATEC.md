@@ -19,6 +19,8 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | `civic_status_atual` (view) | **Status online do carro**: uma linha por veículo, atualizada a cada 60 s com o motor ligado (5 min desligado) | `atualizado_em`, `online` (true se avisou há menos de 2,5 batidas), `motor_ligado`, `lat`, `lon`, `vel` (km/h), `tensao`, `viagem`, `versao_app`, `heartbeat_s` | Selo "Online / Offline há X min"; mapa com a posição ao vivo; assine por Realtime em `civic_status` para atualizar sem recarregar |
 | `civic_posicoes` | **Trajeto**: um ponto a cada 15 s com o motor ligado ou andando | `em`, `lat`, `lon`, `vel` (km/h), `viagem` (id da viagem = hora em que o motor ligou, em ms; agrupa os pontos) | Desenhar a linha da viagem no mapa (filtre por `viagem`, ordene por `em`); velocidade ao longo do trajeto; replay da viagem. Realtime em `civic_posicoes` acompanha a viagem em curso |
 | `civic_ignicao` | **Eventos de ignição**: linha do tempo de liga/desliga | `tipo` (`motor_ligou`, `motor_desligou`, `multimidia_ligou`, `multimidia_desligou`), `em`, `lat`, `lon`, `tensao`, `viagem` | Linha do tempo do dia; duração do uso (`motor_ligou` até `motor_desligou` da mesma `viagem`); horários típicos de saída e chegada |
+| `civic_abastecimentos_analise` (view) | **Histórico de abastecimentos com análise pronta** (use esta view em vez da tabela). Um abastecimento é criado **automaticamente** quando o nível do tanque sobe; o valor pago entra depois | `data`, `km`, `litros`, `combustivel`, `aditivada`, `tanque_cheio`, `automatico`, `nivel_antes`, `nivel_depois`; valores: `total_pago`, `preco_litro` (pode ser calculado do total), `aguardando_valor` (true = o app ainda não recebeu o valor pago); análise: `km_rodados`, `dias_desde_anterior`, `consumo_km_l`, `custo_por_km` | Nº de abastecimentos; consumo médio e por abastecimento; custo por km; preço pago por litro ao longo do tempo; gasto por mês; km por tanque; dias entre abastecimentos; nível do tanque ao abastecer; comparar aditivada x comum; selo "Aguardando valor" |
+| `civic_abastecimentos` | Tabela base (as mesmas linhas, sem a análise). Prefira a view acima | `preco_litro` e `valor_total` podem ser nulos (o dono informa só um dos dois, ou nenhum ainda) | Só se precisar de algum campo cru |
 | `civic_acessos` | Quais aparelhos cada usuário do dashboard pode ver | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
@@ -62,13 +64,21 @@ Durante o uso o app guarda o resumo no aparelho (a cada 30 s e quando o motor de
 o último resumo ao Supabase (uma linha em `civic_estados`). Sem internet, fica pendente e tenta de novo a cada 5 min com o
 motor ligado. Então o dash mostra o estado **do último uso**, não ao vivo: `registrado_em` diz de quando é. Reenvio não duplica.
 
+## Como o abastecimento é registrado
+O app lê o nível do tanque pelo OBD (se o carro informar). O nível só desce com o uso: uma **subida firme (10 pontos ou mais,
+medida pela mediana de 5 leituras)** significa abastecimento. O app cadastra na hora: gasolina, tanque cheio, litros estimados
+(`(nível depois − antes) × capacidade do tanque`, capacidade ajustável em Config.) e km do odômetro do app, e avisa no Telegram.
+Depois o dono informa o **valor total pago** OU o **preço por litro** (basta um) e marca se foi **aditivada**. Enquanto isso,
+`aguardando_valor = true` e `total_pago`/`preco_litro` vêm nulos: o dash deve mostrar o selo "Aguardando valor" e não somar o item
+nos gastos. O consumo usa o método tanque cheio a tanque cheio: `km_rodados ÷ litros`.
+
 ## Como a telemetria é enviada
 Posição, ignição e status ficam primeiro no aparelho e saem em pacotes pequenos a cada 30 s (sem internet, ficam na fila e saem
 depois). Cada ponto é gravado uma única vez (chave única). "Online" não é um campo gravado: é calculado na view
 `civic_status_atual` pelo horário do último aviso.
 
 ## Dados simulados para validar o dash
-O banco tem um veículo fictício **"Civic (simulado)"** com 7 dias de uso (13 viagens, ~1.700 pontos de trajeto, ignição, estacionamentos,
+O banco tem um veículo fictício **"Civic (simulado)"** com 30 dias de uso (59 viagens, ~7.600 pontos de trajeto, 3 abastecimentos, ignição, estacionamentos,
 estados, alertas, abastecimentos e manutenção). Para vê-lo no dash, vincule o seu usuário a ele:
 
 ```sql
@@ -76,5 +86,5 @@ insert into public.civic_acessos (user_id, dispositivo)
 select '<ID_DO_USUARIO>', token from public.civic_dispositivos where nome = 'Civic (simulado)';
 ```
 
-Regerar (dados sempre recentes): `select public.civic_simular(7);` — apagar: `delete from public.civic_dispositivos where nome = 'Civic (simulado)';`.
+Regerar (dados sempre recentes): `select public.civic_simular(30);` — apagar: `delete from public.civic_dispositivos where nome = 'Civic (simulado)';`.
 O script está em `supabase/simulacao.sql`. O veículo simulado aparece em `civic_veiculos` com o nome "Civic (simulado)", separado do carro real.

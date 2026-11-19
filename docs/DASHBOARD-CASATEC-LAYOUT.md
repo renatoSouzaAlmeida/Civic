@@ -12,7 +12,7 @@ As tabelas e colunas estão em `DASHBOARD-CASATEC.md`.
 
 ## Estrutura
 **Cabeçalho:** nome do carro, modelo · ano · placa, selo **Online/Offline** (`civic_status_atual.online`, com "há X min" quando offline) e seletor de veículo.
-**Abas:** Visão geral · Viagens · Estacionamento · **Manutenção** (a manutenção sai da visão geral).
+**Abas:** Visão geral · Viagens · Estacionamento · **Abastecimentos** · **Manutenção** (a manutenção sai da visão geral).
 
 ### Visão geral
 1. **Faixa de 4 indicadores:** Estado agora (motor ligado/desligado + há quanto tempo, selo de falhas) · Bateria (tensão + selo Boa/Atenção/Fraca) · Combustível (% com barra, média km/l) · Últimos 7 dias (km, nº de viagens, tempo, variação vs. semana anterior).
@@ -25,6 +25,12 @@ Filtro 7/14/30 dias, gráfico de km por dia e **tabela completa**: data, trajeto
 
 ### Estacionamento
 Mapa com as vagas dos últimos 14 dias, ranking de **locais mais frequentes** (contagem + barra) e tabela: quando, endereço, **precisão do GPS** (Exata / há N s / Defasada), origem (automática/manual), link "Abrir no mapa".
+
+### Abastecimentos
+- **Quatro indicadores:** nº de abastecimentos (90 dias, intervalo médio em dias, selo "N aguardando valor") · consumo médio km/l (faixa mín–máx) · custo por km (com preço médio do litro) · gasto no mês (com km por tanque).
+- **Três gráficos:** consumo por abastecimento (barras, o mais recente em destaque) · preço pago por litro (linha) · gasto por mês (barras).
+- **Insights em texto:** nível médio do tanque ao abastecer (reserva), aditivada x comum (km/l e custo por km, com aviso de poucas amostras), abastecimentos aguardando valor, autonomia estimada por tanque. Gráfico do nível do tanque antes de cada abastecimento.
+- **Tabela:** data, km, litros, tanque antes → depois, preço/l, total pago (ou selo **Aguardando valor**), km rodados, dias, consumo, tipo (Comum/Aditivada), registro (Automático/Manual). Fonte: view `civic_abastecimentos_analise`.
 
 ### Manutenção
 Tabela do plano: item, intervalo, última vez (data · km), situação (Em dia / Próximo / Vencido / Sem registro) e **barra de uso do intervalo**. Itens vencidos e sem registro no topo.
@@ -39,7 +45,8 @@ Tabela do plano: item, intervalo, última vez (data · km), situação (Em dia /
 | Viagens (lista) | `civic_ignicao` (`motor_ligou` → `motor_desligou` da mesma `viagem`) combinado com `civic_estados` por horário |
 | Vagas e precisão do GPS | `civic_estacionamentos` (`idade_gps_s`: < 10 s exata; < 120 s ok; maior = defasada) |
 | Atenção: alertas e falhas | `civic_eventos` (30 dias) e `dtc`/`dtc_pendentes` de `civic_estados` |
+| Aba Abastecimentos | `civic_abastecimentos_analise` (view com consumo, custo por km e dias entre abastecimentos) |
 | Atenção e aba Manutenção | `civic_manutencao` (`situacao`, `ultimo_km`, `ultima_data`, intervalos) |
 
 ## Dados para validar
-Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASATEC.md`): 7 dias de viagens, vagas, estados e alertas. Regerar: `select public.civic_simular(7);`.
+Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASATEC.md`): 7 dias de viagens, vagas, estados e alertas. Regerar: `select public.civic_simular(30);`.

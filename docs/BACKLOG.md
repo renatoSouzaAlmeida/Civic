@@ -37,6 +37,12 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
     Também retoma o Spotify de onde parou quando o motor liga (Config. > Música ao ligar o carro).
 13. [x] **"Onde parei o carro"** — salva o ponto de GPS ao desligar.
 
+## Abastecimento automático
+- [x] **Pelo nível do tanque** — pronto, falta validar no carro: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais
+  (gasolina, tanque cheio, litros pela capacidade do tanque em Config.), avisa no Telegram, e o valor pago (total OU preço por litro)
+  e a opção aditivada são informados depois no histórico. Depende de o Civic informar o nível pelo OBD (PID 012F); se não informar,
+  o lançamento continua manual.
+
 ## Integração com a Casatec (painel fora do carro)
 - [ ] **Dashboard do veículo dentro da Casatec** — uma tela dedicada, isolada do resto da Casatec, para consultar
   de fora do carro tudo que o launcher captura. Acesso próprio (login/senha ou autorização separada da conta
