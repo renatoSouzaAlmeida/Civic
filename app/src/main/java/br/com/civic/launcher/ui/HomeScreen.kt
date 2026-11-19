@@ -211,7 +211,9 @@ private fun ModalNovaVersao(atualizador: Atualizador) {
             title = { Text("Nova versão disponível", fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "A versão ${e.versao} do Civic Renatin já foi baixada e está pronta para instalar.\n\n" +
+                    "Versão instalada: ${atualizador.versaoAtual}\n" +
+                        "Versão nova: ${e.numero}\n\n" +
+                        "A versão ${e.versao} do Civic Renatin já foi baixada e está pronta para instalar.\n\n" +
                         "O Android vai pedir uma confirmação, e o app reabre sozinho ao final.",
                     fontSize = 18.sp,
                 )

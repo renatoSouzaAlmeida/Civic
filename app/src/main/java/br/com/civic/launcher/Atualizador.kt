@@ -23,7 +23,8 @@ enum class SituacaoVersao { Verificando, Atualizado, Indisponivel }
 sealed interface EstadoAtualizacao {
     data object Nenhuma : EstadoAtualizacao
     data class Baixando(val versao: String) : EstadoAtualizacao
-    data class Pronta(val versao: String) : EstadoAtualizacao
+    /** [numero] = número da versão nova (ex.: 0.3.57), para comparar com a instalada. */
+    data class Pronta(val versao: String, val numero: String) : EstadoAtualizacao
 }
 
 /**
@@ -95,7 +96,7 @@ class Atualizador(private val ctx: Context) {
             temp.renameTo(destino)
         }
         arquivoPronto = destino
-        publicar(EstadoAtualizacao.Pronta(versao))
+        publicar(EstadoAtualizacao.Pronta(versao, versaoAtual.substringBeforeLast('.', "0.3") + ".$codigo"))
         CentralNotificacoes.obter(ctx).registrarUmaVez("versao_$versao", "versao", "⬆️ Nova versão $versao pronta para instalar. Toque na versão no topo para atualizar.")
     }
 
