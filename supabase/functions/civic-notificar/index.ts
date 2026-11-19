@@ -6,6 +6,7 @@
 //   { acao: "info" }                    -> nome do bot e se o aparelho já está vinculado
 //   { acao: "vincular" }                -> procura o código do aparelho nas mensagens do bot e grava o chat
 //   { acao: "enviar", tipo, mensagem }  -> registra o evento e envia ao Telegram (se vinculado)
+//   { acao: "localizacao", tipo, mensagem, lat, lon } -> envia o texto e o pino do mapa (onde parei o carro)
 
 const URL_BASE = Deno.env.get("SUPABASE_URL")!;
 const CHAVE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -70,6 +71,26 @@ Deno.serve(async (req) => {
     let enviado = false;
     if (disp.telegram_chat_id) {
       const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: mensagem });
+      enviado = !!r?.ok;
+    }
+    await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {
+      method: "POST", headers: cabecalhosDb, body: JSON.stringify({ dispositivo: token, tipo, mensagem, enviado }),
+    });
+    return resposta({ enviado, vinculado: !!disp.telegram_chat_id });
+  }
+
+  if (acao === "localizacao") {
+    const lat = Number(corpo.lat);
+    const lon = Number(corpo.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      return resposta({ erro: "coordenadas inválidas" }, 400);
+    }
+    const tipo = String(corpo.tipo ?? "estacionamento").slice(0, 40);
+    const mensagem = String(corpo.mensagem ?? "").slice(0, 1000);
+    let enviado = false;
+    if (disp.telegram_chat_id) {
+      const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: mensagem, disable_web_page_preview: true });
+      await telegram("sendLocation", { chat_id: disp.telegram_chat_id, latitude: lat, longitude: lon });
       enviado = !!r?.ok;
     }
     await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {

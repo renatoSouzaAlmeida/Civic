@@ -171,6 +171,13 @@ class Nuvem private constructor(ctx: Context) {
         }
     }
 
+    /** Avisa onde o carro foi estacionado: registra no sininho e manda o texto e o pino do mapa ao Telegram. */
+    fun avisarLocalizacao(lat: Double, lon: Double, mensagem: String) {
+        central.registrar("estacionamento", mensagem.lineSequence().firstOrNull() ?: mensagem)
+        if (!avisosLigados) return
+        funcao(JSONObject().put("acao", "localizacao").put("tipo", "estacionamento").put("mensagem", mensagem).put("lat", lat).put("lon", lon)) { }
+    }
+
     /**
      * Avisa manutenção próxima ou vencida. Cada item avisa uma vez por situação e, se continuar
      * vencido, repete a cada 7 dias (para não virar spam).

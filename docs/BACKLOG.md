@@ -30,13 +30,13 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
    Hoje o km vem do último abastecimento ou do valor digitado na tela de manutenção.
 7. [x] **Lembretes de manutenção** — plano padrão do Civic G9 1.8 (óleo, filtros, rodízio, alinhamento, fluido de freio,
    pastilhas, arrefecimento, velas, ATF), vence pelo que chegar primeiro (km ou tempo); histórico do último feito.
-8. [ ] **Notificações no celular + Supabase** — sincronizar abastecimentos, manutenção e alertas numa base Supabase e
+8. [x] **Notificações no celular + Supabase** — sincronizar abastecimentos, manutenção e alertas numa base Supabase e
    avisar no celular (manutenção vencendo, alertas do motor, falhas DTC).
 9. [x] **Saúde da bateria na partida** — queda de tensão ao dar partida (< 9,6 V = bateria no fim).
 10. [x] **Correção de combustível (fuel trims)** — STFT/LTFT altos e persistentes indicam entrada falsa de ar, sonda ou bico.
 11. [x] **Volume automático pela velocidade** — compensa o ruído da estrada.
 12. [ ] **Rotina de partida** — retoma o Spotify e sugere Trabalho de manhã / Casa no fim do dia.
-13. [ ] **"Onde parei o carro"** — salva o ponto de GPS ao desligar.
+13. [x] **"Onde parei o carro"** — salva o ponto de GPS ao desligar.
 14. [ ] **Brilho da tela** — mais baixo à noite ou com farol ligado.
 15. [ ] **Calibragem dos pneus (TPMS)** — sensores Bluetooth de tampinha de válvula (hardware extra).
 

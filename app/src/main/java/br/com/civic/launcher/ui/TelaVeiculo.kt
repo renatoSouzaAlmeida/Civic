@@ -86,6 +86,7 @@ private fun AbaViagem() {
                 BotaoPilula("Encerrar viagem", Icons.Filled.Flag, Modifier.fillMaxWidth()) { cb.finalizar() }
             }
         }
+        OndeParei()
         Secao("Odômetro do app") {
             Text(
                 if (v.kmAtual > 0) "%,d km".format(BR, v.kmAtual) else "Informe o km atual na aba Manutenção para começar.",
@@ -359,4 +360,45 @@ private fun DialogoUltimo(v: Veiculo, item: ItemManutencao, aoFechar: () -> Unit
         },
         dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar", fontSize = 18.sp) } },
     )
+}
+
+/** "Onde parei o carro": última posição guardada, com atalhos para abrir no mapa, reenviar e salvar a posição agora. */
+@Composable
+private fun OndeParei() {
+    val ctx = LocalContext.current
+    val estacionamento = remember { br.com.civic.launcher.LocalEstacionamento.obter(ctx) }
+    val e = estacionamento.atual
+    var aviso by remember { mutableStateOf<String?>(null) }
+    val fmt = remember { SimpleDateFormat("dd/MM 'às' HH:mm", BR) }
+    Secao("Onde parei o carro") {
+        if (e == null) {
+            Text("Ainda não há posição guardada. Ela é salva sozinha quando o motor desliga, ou toque em \"Salvar posição agora\".", color = Cores.TextoSuave, fontSize = 15.sp)
+        } else {
+            Text(e.endereco ?: "%.5f, %.5f".format(Locale.US, e.lat, e.lon), color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+            Text(
+                "Estacionado em ${fmt.format(Date(e.data))}" + if (e.idadePosicaoMs >= 10 * 60_000) " · posição do GPS de ${e.idadePosicaoMs / 60_000} min antes" else "",
+                color = Cores.TextoSuave, fontSize = 14.sp,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BotaoPilula("Abrir no mapa", Icons.Filled.Map, Modifier.weight(1f)) {
+                e?.let {
+                    val uri = android.net.Uri.parse("geo:${it.lat},${it.lon}?q=${it.lat},${it.lon}(Meu carro)")
+                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        .onFailure { aviso = "Nenhum app de mapa encontrado." }
+                } ?: run { aviso = "Ainda não há posição guardada." }
+            }
+            BotaoPilula("Enviar ao Telegram", Icons.Filled.Send, Modifier.weight(1f)) {
+                if (e == null) aviso = "Ainda não há posição guardada." else { estacionamento.reenviar(); aviso = "Enviado (se o Telegram estiver vinculado)." }
+            }
+            BotaoPilula("Salvar posição agora", Icons.Filled.MyLocation, Modifier.weight(1f)) {
+                aviso = if (estacionamento.estacionar(manual = true)) "Posição salva e enviada." else "Sem sinal de GPS no momento."
+            }
+        }
+        aviso?.let { Text(it, color = Cores.Destaque, fontSize = 14.sp) }
+        Text(
+            "Para o GPS funcionar com o Waze na frente, em Config. permita a localização \"o tempo todo\" para o Civic Renatin.",
+            color = Cores.TextoSuave, fontSize = 13.sp,
+        )
+    }
 }

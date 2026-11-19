@@ -106,6 +106,11 @@ fun TelaConfig() {
                 BotaoPilula("Acesso às notificações (capa do Spotify)", Icons.Filled.Notifications, Modifier.fillMaxWidth()) {
                     runCatching { ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
+                BotaoPilula("Localização o tempo todo (onde parei o carro)", Icons.Filled.MyLocation, Modifier.fillMaxWidth()) {
+                    runCatching {
+                        ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
                 BotaoPilula("Sobrepor a outros apps (painel de direção)", Icons.Filled.Layers, Modifier.fillMaxWidth()) {
                     runCatching { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
