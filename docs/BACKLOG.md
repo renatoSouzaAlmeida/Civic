@@ -3,7 +3,7 @@
 Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marque como feito).
 
 ## OBD
-- [ ] **Tela de falhas (DTC) no OBD** — listar os códigos de falha lidos pelo adaptador (modo 03),
+- [x] **Tela de falhas (DTC) no OBD** — listar os códigos de falha lidos pelo adaptador (modo 03),
   com descrição em português, luz de injeção (MIL) acesa ou não e opção de apagar os códigos (modo 04),
   com confirmação. Acessível a partir da tela do OBD.
 
@@ -22,7 +22,7 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 ## Funcionalidades de especialista (ordem de prioridade)
 1. [x] **Alertas inteligentes** (sobre qualquer tela): motor frio (< 70 °C) com giro alto (> 3.000 rpm);
    superaquecimento (> 105 °C); alternador sem carga (< 13,2 V com motor ligado); bateria fraca (< 12,2 V desligado).
-2. [ ] **Tela de falhas (DTC)** — ver item acima, em OBD.
+2. [x] **Tela de falhas (DTC)** — ver item acima, em OBD.
 3. [x] **Registro de abastecimentos** — consumo real (tanque cheio a tanque cheio), gasto no mês, custo por km.
 4. [x] **Etanol ou gasolina?** — com a proporção do consumo real deste carro (ou 70%).
 5. [x] **Computador de bordo** — viagem atual (distância, tempo, média, máxima, consumo e custo) e histórico de viagens.

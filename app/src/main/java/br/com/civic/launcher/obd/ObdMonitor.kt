@@ -37,6 +37,8 @@ data class DadosObd(
     val falhas: Int? = null,
     val luzMotor: Boolean = false,
     val codigos: List<String> = emptyList(),
+    /** Códigos pendentes (modo 07): o carro detectou, mas ainda não confirmou nem acendeu a luz. */
+    val codigosPendentes: List<String> = emptyList(),
     // Combustível (previsto; ver docs/BACKLOG.md). Nulo = ainda não lido.
     val nivelCombustivel: Int? = null,      // % do tanque (PID 012F, se o carro informar)
     val consumoMedio: Float? = null,        // km/l desde que o app começou a medir
@@ -69,6 +71,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             dadosAtuais = novo
             alertas.avaliar(novo, demonstracao = demo)
             br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo)
+            if (!demo) HistoricoFalhas.obter(ctx).registrar(novo.codigos, novo.codigosPendentes)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
@@ -84,6 +87,15 @@ class ObdMonitor private constructor(private val ctx: Context) {
 
     private var iniciado = false
     private var demo = false
+    private var demoCodigos = listOf("P0420")
+    private var demoPendentes = listOf("P0171")
+    @Volatile private var pedidoApagar = false
+    @Volatile private var pedidoLer = false
+    /** Mensagem do último pedido de leitura/apagamento de falhas (para a tela de falhas). */
+    var situacaoFalhas by mutableStateOf<String?>(null)
+        private set
+    var ocupadoFalhas by mutableStateOf(false)
+        private set
     private var inicioDemo = 0L
     private var estadoReal = EstadoObd.Desconectado
     private var gatt: BluetoothGatt? = null
@@ -311,6 +323,20 @@ class ObdMonitor private constructor(private val ctx: Context) {
         var ciclo = 0
         while (!Thread.currentThread().isInterrupted) {
             var d = dados
+            if (pedidoApagar) {
+                pedidoApagar = false
+                val r = enviar("04", 5_000)?.uppercase().orEmpty()
+                val ok = r.contains("44")
+                d = lerFalhas(d.copy(codigos = emptyList(), codigosPendentes = emptyList()))
+                val msg = if (ok) "Códigos apagados. Se o defeito continuar, eles voltam." else "O carro não confirmou o apagamento. Tente com a ignição ligada e o motor desligado."
+                principal.post { ocupadoFalhas = false; situacaoFalhas = msg }
+            }
+            if (pedidoLer) {
+                pedidoLer = false
+                d = lerFalhas(d)
+                val qtd = d.codigos.size + d.codigosPendentes.size
+                principal.post { ocupadoFalhas = false; situacaoFalhas = if (qtd == 0) "Nenhum código de falha no carro." else "Leitura concluída: $qtd código(s)." }
+            }
             consultar("010C")?.takeIf { it.size >= 2 }?.let { d = d.copy(rpm = (it[0] * 256 + it[1]) / 4) }
             consultar("010D")?.firstOrNull()?.let { d = d.copy(velocidade = it) }
             if (ciclo % 4 == 0) {
@@ -333,16 +359,43 @@ class ObdMonitor private constructor(private val ctx: Context) {
     private fun lerFalhas(d: DadosObd): DadosObd {
         var novo = d
         consultar("0101")?.firstOrNull()?.let { novo = novo.copy(luzMotor = it and 0x80 != 0, falhas = it and 0x7F) }
-        if ((novo.falhas ?: 0) > 0) {
-            val bruto = enviar("03", 3_000)?.uppercase()?.replace("\\s".toRegex(), "")?.replace(">", "").orEmpty()
-            val i = bruto.indexOf("43")
-            if (i >= 0) {
-                val bytes = bruto.substring(i + 2).chunked(2).mapNotNull { it.toIntOrNull(16) }
-                // Resposta: [quantidade] + pares de bytes por código
-                novo = novo.copy(codigos = bytes.drop(1).chunked(2).filter { it.size == 2 && (it[0] != 0 || it[1] != 0) }.map { codigoDtc(it[0], it[1]) })
-            }
+        val confirmados = if ((novo.falhas ?: 0) > 0) lerCodigos("03", "43") else emptyList()
+        val pendentes = lerCodigos("07", "47")
+        return novo.copy(codigos = confirmados ?: novo.codigos, codigosPendentes = pendentes ?: novo.codigosPendentes)
+    }
+
+    /**
+     * Lê uma lista de códigos (03 = confirmados, 07 = pendentes). Aceita respostas em várias linhas
+     * ("0: 43 02 …"); em CAN o primeiro byte depois do marcador é a quantidade. Null = sem resposta.
+     */
+    private fun lerCodigos(modo: String, marcador: String): List<String>? {
+        val bruto = enviar(modo, 3_000)?.uppercase() ?: return null
+        if (bruto.contains("NO DATA")) return emptyList()
+        val hex = bruto.split('\r', '\n')
+            .map { it.trim().replace(">", "").replace(Regex("^[0-9A-F]:"), "").replace(" ", "") }
+            .filter { it.isNotEmpty() && it.length != 3 } // descarta a linha só com o tamanho (ex.: "00A")
+            .joinToString("")
+        val i = hex.indexOf(marcador)
+        if (i < 0) return null
+        val bytes = hex.substring(i + 2).chunked(2).mapNotNull { it.toIntOrNull(16) }
+        return bytes.drop(1).chunked(2).filter { it.size == 2 && (it[0] != 0 || it[1] != 0) }.map { codigoDtc(it[0], it[1]) }.distinct()
+    }
+
+    /** Pede uma leitura das falhas agora (na próxima volta do laço de leitura). */
+    fun lerFalhasAgora() {
+        if (demo) { situacaoFalhas = "Leitura concluída (demonstração)."; return }
+        if (estado != EstadoObd.Conectado) { situacaoFalhas = "Conecte o adaptador OBD para ler as falhas."; return }
+        ocupadoFalhas = true; situacaoFalhas = "Lendo os códigos…"; pedidoLer = true
+    }
+
+    /** Apaga os códigos de falha (modo 04). Também zera os monitores de emissões do carro. */
+    fun apagarFalhas() {
+        if (demo) {
+            demoCodigos = emptyList(); demoPendentes = emptyList()
+            situacaoFalhas = "Códigos apagados (demonstração)."; return
         }
-        return novo
+        if (estado != EstadoObd.Conectado) { situacaoFalhas = "Conecte o adaptador OBD para apagar as falhas."; return }
+        ocupadoFalhas = true; situacaoFalhas = "Apagando…"; pedidoApagar = true
     }
 
     private fun codigoDtc(a: Int, b: Int): String {
@@ -361,6 +414,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
         } else {
             demo = true
             inicioDemo = SystemClock.elapsedRealtime()
+            demoCodigos = listOf("P0420"); demoPendentes = listOf("P0171")
             estado = EstadoObd.Demonstracao
             tique.run()
         }
@@ -390,7 +444,9 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 carga = (20 + onda * 45).toInt(),
                 tempAdmissao = 34,
                 acelerador = (8 + onda * 30).toInt(),
-                falhas = 0,
+                falhas = demoCodigos.size,
+                codigos = demoCodigos,
+                codigosPendentes = demoPendentes,
                 nivelCombustivel = 62,
                 consumoMedio = 11.8f + (sin(t / 15) * 0.4f).toFloat(),
                 // Ciclo de 60 s para mostrar as luzes-espia: farol, setas, piloto e alerta.

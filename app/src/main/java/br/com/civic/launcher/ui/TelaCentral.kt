@@ -63,13 +63,18 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
     val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     var escolhendo by remember { mutableStateOf(false) }
 
+    var vendoFalhas by remember { mutableStateOf(false) }
+    if (vendoFalhas) {
+        TelaFalhas(obd) { vendoFalhas = false }
+        return
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
         if (maxWidth >= maxHeight) {
-            PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true) { escolhendo = true }
+            PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxWidth().height(largura * 0.46f), comInfos = false) { escolhendo = true }
+                PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxWidth().height(largura * 0.46f), comInfos = false, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }
                 InfoPainel("Temp. Motor", Icons.Filled.Thermostat, d.tempMotor?.toString(), "°C")
                 InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V")
                 InfoPainel("Temp. Admissão", Icons.Filled.AcUnit, d.tempAdmissao?.toString(), "°C")
@@ -148,7 +153,8 @@ internal fun coresPainel(): CoresPainel = if (LocalPaleta.current.escuro) Painel
 
 @Composable
 private fun PainelEsportivo(
-    obd: ObdMonitor, d: DadosObd, vel: Float, monitor: MediaMonitor, modifier: Modifier, comInfos: Boolean, aoEscolherAdaptador: () -> Unit,
+    obd: ObdMonitor, d: DadosObd, vel: Float, monitor: MediaMonitor, modifier: Modifier, comInfos: Boolean,
+    aoVerFalhas: () -> Unit, aoEscolherAdaptador: () -> Unit,
 ) {
     val p = coresPainel()
     val forma = RoundedCornerShape(28.dp)
@@ -218,6 +224,15 @@ private fun PainelEsportivo(
         Row(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BotaoRedondoPainel(if (obd.estado == EstadoObd.Demonstracao) Icons.Filled.Stop else Icons.Filled.PlayArrow) { obd.alternarDemonstracao() }
             BotaoRedondoPainel(Icons.Filled.Bluetooth) { aoEscolherAdaptador() }
+            // Falhas (DTC): com contador quando há códigos.
+            Box {
+                BotaoRedondoPainel(painterResource(R.drawable.ic_motor)) { aoVerFalhas() }
+                val qtd = d.codigos.size + d.codigosPendentes.size
+                if (qtd > 0) Box(
+                    Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(18.dp).clip(CircleShape).background(p.Vermelho),
+                    contentAlignment = Alignment.Center,
+                ) { Text("$qtd", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            }
         }
 
         // Setas entre os mostradores: esquerda entre rpm e km/h, direita entre km/h e km/l.
@@ -443,7 +458,11 @@ private fun InfoPainel(rotulo: String, icone: ImageVector, valor: String?, unida
 }
 
 @Composable
-private fun BotaoRedondoPainel(icone: ImageVector, aoClicar: () -> Unit) {
+private fun BotaoRedondoPainel(icone: ImageVector, aoClicar: () -> Unit) =
+    BotaoRedondoPainel(androidx.compose.ui.graphics.vector.rememberVectorPainter(icone), aoClicar)
+
+@Composable
+private fun BotaoRedondoPainel(icone: androidx.compose.ui.graphics.painter.Painter, aoClicar: () -> Unit) {
     val p = coresPainel()
     Box(
         Modifier.size(38.dp).clip(CircleShape).background(p.botao).border(1.dp, p.borda, CircleShape).clickable { aoClicar() },
