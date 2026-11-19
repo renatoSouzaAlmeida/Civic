@@ -1,0 +1,218 @@
+package br.com.civic.launcher
+
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.security.SecureRandom
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.concurrent.Executors
+
+/**
+ * Nuvem do carro (Supabase, projeto CasaTechRenatin) + avisos no celular pelo Telegram.
+ *
+ * - Cada aparelho gera um token secreto aleatório na primeira vez e se cadastra; as regras do banco (RLS)
+ *   só deixam esse token ver e alterar os próprios dados.
+ * - A chave usada aqui é a "publishable" do Supabase, feita para ficar em apps (é pública).
+ *   O token do bot do Telegram NÃO fica no app: está guardado como segredo na função civic-notificar.
+ * - Tudo roda em segundo plano; sem internet, nada trava — os dados continuam salvos no aparelho.
+ */
+class Nuvem private constructor(ctx: Context) {
+    private val prefs = ctx.getSharedPreferences("nuvem", Context.MODE_PRIVATE)
+    private val fila = Executors.newSingleThreadExecutor()
+    private val principal = Handler(Looper.getMainLooper())
+
+    val token: String = prefs.getString("token", null) ?: gerarToken().also { prefs.edit().putString("token", it).apply() }
+    var codigo: String = prefs.getString("codigo", null) ?: gerarCodigo().also { prefs.edit().putString("codigo", it).apply() }
+        private set
+
+    var avisosLigados by mutableStateOf(prefs.getBoolean("avisos", true))
+        private set
+    var vinculado by mutableStateOf(prefs.getBoolean("vinculado", false))
+        private set
+    var nomeBot by mutableStateOf(prefs.getString("bot", null))
+        private set
+    /** Texto curto do último resultado (para mostrar em Config.). */
+    var situacao by mutableStateOf("")
+        private set
+
+    fun ligarAvisos(ligar: Boolean) { avisosLigados = ligar; prefs.edit().putBoolean("avisos", ligar).apply() }
+
+    // ---------- Cadastro ----------
+
+    private fun garantirCadastro(): Boolean {
+        if (prefs.getBoolean("cadastrado", false)) return true
+        repeat(3) {
+            val corpo = JSONObject().put("token", token).put("nome", "Civic Renatin").put("codigo_vinculo", codigo)
+            val (status, _) = http("POST", "/rest/v1/civic_dispositivos", corpo.toString(), mapOf("Prefer" to "return=minimal"))
+            when (status) {
+                201, 204 -> { prefs.edit().putBoolean("cadastrado", true).apply(); return true }
+                409 -> {
+                    // Já cadastrado com este token, ou o código colidiu com o de outro aparelho: troca o código.
+                    val (s2, r2) = http("GET", "/rest/v1/civic_dispositivos?select=codigo_vinculo", null)
+                    val atual = runCatching { JSONArray(r2).getJSONObject(0).getString("codigo_vinculo") }.getOrNull()
+                    if (s2 == 200 && atual != null) {
+                        codigo = atual; prefs.edit().putString("codigo", atual).putBoolean("cadastrado", true).apply(); return true
+                    }
+                    codigo = gerarCodigo(); prefs.edit().putString("codigo", codigo).apply()
+                }
+                else -> return false
+            }
+        }
+        return false
+    }
+
+    // ---------- Sincronização ----------
+
+    fun sincronizar(v: Veiculo) {
+        val abast = v.abastecimentos.toList()
+        val manut = v.manutencao.map { it to v.situacao(it) }
+        fila.execute {
+            if (!garantirCadastro()) return@execute
+            if (abast.isNotEmpty()) {
+                val arr = JSONArray()
+                abast.forEach {
+                    arr.put(JSONObject().put("dispositivo", token).put("id", it.id).put("data", iso(it.data)).put("km", it.km)
+                        .put("litros", it.litros.toDouble()).put("preco_litro", it.precoLitro.toDouble())
+                        .put("combustivel", it.combustivel.name).put("tanque_cheio", it.tanqueCheio))
+                }
+                http("POST", "/rest/v1/civic_abastecimentos", arr.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"))
+            }
+            val arr = JSONArray()
+            manut.forEach { (m, s) ->
+                arr.put(JSONObject().put("dispositivo", token).put("id", m.id).put("nome", m.nome)
+                    .put("intervalo_km", m.intervaloKm ?: JSONObject.NULL).put("intervalo_meses", m.intervaloMeses ?: JSONObject.NULL)
+                    .put("ultimo_km", m.ultimoKm ?: JSONObject.NULL).put("ultima_data", m.ultimaData?.let { iso(it) } ?: JSONObject.NULL)
+                    .put("situacao", s.name).put("atualizado_em", iso(System.currentTimeMillis())))
+            }
+            http("POST", "/rest/v1/civic_manutencao", arr.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"))
+        }
+    }
+
+    fun removerAbastecimento(id: Long) {
+        fila.execute {
+            if (garantirCadastro()) http("DELETE", "/rest/v1/civic_abastecimentos?id=eq.$id", null)
+        }
+    }
+
+    // ---------- Telegram ----------
+
+    /** Consulta o bot e se este aparelho já está vinculado. */
+    fun atualizarInfo() = funcao(JSONObject().put("acao", "info")) { r ->
+        if (r == null) { situacao = "Sem conexão com a nuvem."; return@funcao }
+        if (!r.optBoolean("configurado", true)) { situacao = "O bot do Telegram ainda não foi configurado no Supabase."; return@funcao }
+        nomeBot = r.optString("bot").ifEmpty { null }
+        definirVinculado(r.optBoolean("vinculado"))
+        situacao = if (vinculado) "Vinculado ao Telegram." else "Ainda não vinculado."
+    }
+
+    fun vincular() = funcao(JSONObject().put("acao", "vincular")) { r ->
+        when {
+            r == null -> situacao = "Sem conexão com a nuvem."
+            !r.optBoolean("configurado", true) -> situacao = "O bot do Telegram ainda não foi configurado no Supabase."
+            r.optBoolean("vinculado") -> { definirVinculado(true); situacao = "Vinculado! Você recebeu uma mensagem no Telegram." }
+            else -> situacao = "Código não encontrado. Envie $codigo para o bot e toque em Vincular de novo."
+        }
+    }
+
+    fun enviarTeste() = avisar("teste", "🚗 Teste do Civic Renatin: as notificações estão funcionando.", forcar = true)
+
+    /** Envia um aviso ao celular (se ligado). Fica registrado em civic_eventos. */
+    fun avisar(tipo: String, mensagem: String, forcar: Boolean = false) {
+        if (!avisosLigados && !forcar) return
+        funcao(JSONObject().put("acao", "enviar").put("tipo", tipo).put("mensagem", mensagem)) { r ->
+            if (forcar) situacao = when {
+                r == null -> "Sem conexão com a nuvem."
+                r.optBoolean("enviado") -> "Mensagem de teste enviada."
+                !r.optBoolean("vinculado") -> "Vincule o Telegram primeiro."
+                else -> "Não foi possível enviar."
+            }
+        }
+    }
+
+    /**
+     * Avisa manutenção próxima ou vencida. Cada item avisa uma vez por situação e, se continuar
+     * vencido, repete a cada 7 dias (para não virar spam).
+     */
+    fun verificarManutencao(v: Veiculo) {
+        val agora = System.currentTimeMillis()
+        v.manutencao.forEach { m ->
+            val s = v.situacao(m)
+            if (s != SituacaoManutencao.Vencido && s != SituacaoManutencao.Proximo) return@forEach
+            val chave = "aviso_${m.id}_${s.name}"
+            val ultimo = prefs.getLong(chave, 0L)
+            if (ultimo != 0L && (s == SituacaoManutencao.Proximo || agora - ultimo < 7 * 86_400_000L)) return@forEach
+            val detalhes = listOfNotNull(
+                v.kmRestante(m)?.let { if (it >= 0) "faltam %,d km".format(Locale("pt", "BR"), it) else "passou %,d km".format(Locale("pt", "BR"), -it) },
+                v.diasRestantes(m)?.let { if (it >= 0) "faltam $it dias" else "venceu há ${-it} dias" },
+            ).joinToString(" · ")
+            val titulo = if (s == SituacaoManutencao.Vencido) "🔴 Manutenção vencida" else "🟡 Manutenção próxima"
+            avisar("manutencao", "$titulo: ${m.nome}${if (detalhes.isNotEmpty()) " ($detalhes)" else ""}")
+            prefs.edit().putLong(chave, agora).apply()
+        }
+    }
+
+    private fun definirVinculado(sim: Boolean) { vinculado = sim; prefs.edit().putBoolean("vinculado", sim).apply() }
+
+    private fun funcao(corpo: JSONObject, aoTerminar: (JSONObject?) -> Unit) {
+        fila.execute {
+            val r = if (!garantirCadastro()) null else {
+                val (status, texto) = http("POST", "/functions/v1/civic-notificar", corpo.toString())
+                if (status in 200..299) runCatching { JSONObject(texto) }.getOrNull() else null
+            }
+            principal.post { aoTerminar(r) }
+        }
+    }
+
+    // ---------- HTTP ----------
+
+    private fun http(metodo: String, caminho: String, corpo: String?, extras: Map<String, String> = emptyMap()): Pair<Int, String> =
+        runCatching {
+            val c = URL(URL_SUPABASE + caminho).openConnection() as HttpURLConnection
+            c.requestMethod = metodo
+            c.connectTimeout = 10_000
+            c.readTimeout = 15_000
+            c.setRequestProperty("apikey", CHAVE_PUBLICA)
+            c.setRequestProperty("x-civic-token", token)
+            c.setRequestProperty("Content-Type", "application/json")
+            extras.forEach { (k, v) -> c.setRequestProperty(k, v) }
+            if (corpo != null) { c.doOutput = true; c.outputStream.use { it.write(corpo.toByteArray()) } }
+            val status = c.responseCode
+            val texto = runCatching { (if (status >= 400) c.errorStream else c.inputStream)?.bufferedReader()?.readText() }.getOrNull() ?: ""
+            c.disconnect()
+            status to texto
+        }.getOrDefault(-1 to "")
+
+    companion object {
+        private const val URL_SUPABASE = "https://qdmsiwxfuzppaqqnljth.supabase.co"
+        private const val CHAVE_PUBLICA = "sb_publishable_ltZaPMAa7lm4dNbB5xZvLw_2NUhvVDE"
+
+        private fun gerarToken(): String {
+            val b = ByteArray(32); SecureRandom().nextBytes(b)
+            return b.joinToString("") { "%02x".format(it) }
+        }
+
+        private fun gerarCodigo(): String {
+            val letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // sem 0/O/1/I para não confundir
+            val r = SecureRandom()
+            return "CIVIC-" + (1..5).map { letras[r.nextInt(letras.length)] }.joinToString("")
+        }
+
+        private fun iso(ms: Long): String =
+            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(ms))
+
+        @Volatile private var instancia: Nuvem? = null
+        fun obter(ctx: Context): Nuvem = instancia ?: synchronized(this) {
+            instancia ?: Nuvem(ctx.applicationContext).also { instancia = it }
+        }
+    }
+}

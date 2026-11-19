@@ -41,6 +41,7 @@ enum class SituacaoManutencao(val rotulo: String) { SemRegistro("Sem registro"),
  */
 class Veiculo private constructor(ctx: Context) {
     private val prefs = ctx.getSharedPreferences("veiculo", Context.MODE_PRIVATE)
+    private val nuvem = Nuvem.obter(ctx)
 
     val abastecimentos = mutableStateListOf<Abastecimento>()
     val manutencao = mutableStateListOf<ItemManutencao>()
@@ -55,15 +56,28 @@ class Veiculo private constructor(ctx: Context) {
     /** Km atual: o maior entre o informado à mão e o do último abastecimento. */
     val kmAtual: Int get() = maxOf(kmManual, abastecimentos.maxOfOrNull { it.km } ?: 0)
 
-    fun salvarKmManual(km: Int) { kmManual = km; prefs.edit().putInt("km_manual", km).apply() }
+    fun salvarKmManual(km: Int) { kmManual = km; prefs.edit().putInt("km_manual", km).apply(); aposMudanca() }
 
     fun adicionar(a: Abastecimento) {
         abastecimentos.add(a)
         abastecimentos.sortBy { it.km }
         gravarAbastecimentos()
+        val br = java.util.Locale("pt", "BR")
+        val consumo = consumos()[a.id]?.let { " · %.1f km/l".format(br, it) } ?: ""
+        nuvem.avisar(
+            "abastecimento",
+            "⛽ Abastecimento: %.1f l de %s · R$ %,.2f · %,d km%s".format(br, a.litros, a.combustivel.rotulo.lowercase(), a.total, a.km, consumo),
+        )
+        aposMudanca()
     }
 
-    fun remover(a: Abastecimento) { abastecimentos.remove(a); gravarAbastecimentos() }
+    /** Depois de qualquer mudança: envia para a nuvem e confere se alguma manutenção precisa de aviso. */
+    fun aposMudanca() {
+        nuvem.sincronizar(this)
+        nuvem.verificarManutencao(this)
+    }
+
+    fun remover(a: Abastecimento) { abastecimentos.remove(a); gravarAbastecimentos(); nuvem.removerAbastecimento(a.id) }
 
     /**
      * Consumo de cada abastecimento de tanque cheio: km rodados desde o tanque cheio anterior ÷
@@ -138,13 +152,13 @@ class Veiculo private constructor(ctx: Context) {
     /** Marca como feito agora, no km atual. */
     fun registrarFeito(item: ItemManutencao) {
         val i = manutencao.indexOfFirst { it.id == item.id }
-        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = kmAtual, ultimaData = System.currentTimeMillis()); gravarManutencao() }
+        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = kmAtual, ultimaData = System.currentTimeMillis()); gravarManutencao(); aposMudanca() }
     }
 
     /** Informa quando foi feito pela última vez (km e data), para começar o controle. */
     fun informarUltimo(item: ItemManutencao, km: Int?, data: Long?) {
         val i = manutencao.indexOfFirst { it.id == item.id }
-        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = km, ultimaData = data); gravarManutencao() }
+        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = km, ultimaData = data); gravarManutencao(); aposMudanca() }
     }
 
     // ---- Persistência ----

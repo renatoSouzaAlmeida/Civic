@@ -96,6 +96,7 @@ fun TelaConfig() {
                     }
                 }
             }
+            AvisosCelular()
             Secao("Sistema") {
                 BotaoPilula("Configurações do Android", Icons.Filled.Settings, Modifier.fillMaxWidth()) {
                     ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -178,5 +179,33 @@ private fun CartaoOpcaoImagem(rotulo: String, recurso: Int, selecionada: Boolean
             modifier = Modifier.fillMaxWidth().background(Cores.Chip).padding(vertical = 10.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
+    }
+}
+
+/**
+ * Avisos no celular pelo Telegram: o app mostra um código; você envia esse código para o bot
+ * do Telegram e toca em Vincular. Depois disso chegam no celular os avisos de manutenção e de abastecimento.
+ */
+@Composable
+private fun AvisosCelular() {
+    val ctx = LocalContext.current
+    val nuvem = remember { br.com.civic.launcher.Nuvem.obter(ctx) }
+    LaunchedEffect(Unit) { nuvem.atualizarInfo() }
+    Secao("Avisos no celular (Telegram)") {
+        Text(
+            if (nuvem.vinculado) "✅ Vinculado. Você recebe no Telegram os avisos de manutenção e de abastecimento."
+            else "1. No Telegram, abra o bot ${nuvem.nomeBot?.let { "@$it" } ?: "do Civic Renatin"}.\n" +
+                "2. Envie para ele o código: ${nuvem.codigo}\n3. Volte aqui e toque em Vincular.",
+            color = Cores.Texto, fontSize = 16.sp,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BotaoPilula(if (nuvem.vinculado) "Vincular de novo" else "Vincular", Icons.Filled.Link, Modifier.weight(1f)) { nuvem.vincular() }
+            BotaoPilula("Enviar teste", Icons.Filled.Send, Modifier.weight(1f)) { nuvem.enviarTeste() }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Opcao("Avisos ligados", nuvem.avisosLigados, Modifier.weight(1f)) { nuvem.ligarAvisos(true) }
+            Opcao("Avisos desligados", !nuvem.avisosLigados, Modifier.weight(1f)) { nuvem.ligarAvisos(false) }
+        }
+        if (nuvem.situacao.isNotEmpty()) Text(nuvem.situacao, color = Cores.TextoSuave, fontSize = 14.sp)
     }
 }

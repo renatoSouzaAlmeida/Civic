@@ -83,6 +83,8 @@ class MainActivity : ComponentActivity() {
         sensores.iniciar()
         obd.iniciar()
         atualizador.verificar()
+        // Sincroniza abastecimentos/manutenção com a nuvem e avisa no celular o que estiver vencendo.
+        Veiculo.obter(this).aposMudanca()
     }
 
     override fun onStop() {
