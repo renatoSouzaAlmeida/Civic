@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import br.com.civic.launcher.CondicaoClima
@@ -59,7 +60,14 @@ private fun DuasCaixas(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) 
                     CondicaoClima.Chuva -> Icons.Filled.WaterDrop to Cores.Waze
                     CondicaoClima.Tempestade -> Icons.Filled.Bolt to Cores.Amarelo
                 }
-                MiniCartao(clima.local, icone, cor, "${clima.temperatura}", "°C", "${clima.condicao.texto} · ${clima.maxima}° / ${clima.minima}°", Modifier.weight(1f).fillMaxWidth())
+                val hora = remember(clima.atualizadoEm) { java.text.SimpleDateFormat("HH:mm", java.util.Locale("pt", "BR")).format(java.util.Date(clima.atualizadoEm)) }
+                MiniCartao(
+                    clima.local, icone, cor, "${clima.temperatura}", "°C",
+                    "${clima.condicao.texto} · ${clima.maxima}° / ${clima.minima}° · atualizado ${hora}",
+                    Modifier.weight(1f).fillMaxWidth(),
+                    apoio2 = clima.chuva.ifEmpty { null },
+                    corApoio2 = if (clima.chovendo || clima.chuva.startsWith("Chuva")) Cores.Waze else Cores.Ok,
+                )
             } else {
                 MiniCartao("Clima", Icons.Filled.WbSunny, Cores.TextoSuave, "—", "", "Precisa de internet", Modifier.weight(1f).fillMaxWidth())
             }

@@ -81,6 +81,9 @@ fun MiniCartao(
     unidade: String,
     apoio: String,
     modifier: Modifier = Modifier,
+    /** Segunda linha opcional (ex.: previsão de chuva), em destaque. */
+    apoio2: String? = null,
+    corApoio2: Color = Color.Unspecified,
 ) {
     Cartao(modifier) {
         BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp)) {
@@ -101,6 +104,7 @@ fun MiniCartao(
                     }
                 }
                 Text(apoio, color = Cores.TextoSuave, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (!apoio2.isNullOrEmpty()) Text(apoio2, color = if (corApoio2 == Color.Unspecified) Cores.TextoSuave else corApoio2, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
