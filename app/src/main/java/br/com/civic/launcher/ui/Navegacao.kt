@@ -1,7 +1,6 @@
 package br.com.civic.launcher.ui
 
 import android.content.Context
-import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.Image
@@ -59,11 +58,7 @@ private val itens = listOf(
     Item("Início", Icons.Filled.Home, Tela.Inicio),
     Item("Direção", Icons.Filled.Navigation, null) { it.abrirNavegacaoComPainel() },
     Item("OBD", Icons.Filled.DirectionsCar, Tela.Central),
-    Item("Telefone", Icons.Filled.Phone, null) { c ->
-        abrirFixado(c, Atalhos.TELEFONE, "Telefone") {
-            c.startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
-    },
+    Item("Favorito", Icons.Filled.Star, null) { abrirFixado(it, Atalhos.FAVORITO, "favorito") },
     Item("Spotify", Icons.Filled.MusicNote, null, R.drawable.ic_spotify) { it.abrirSpotify() },
     Item("Veículo", Icons.Filled.CarRepair, Tela.Veiculo),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),

@@ -4,7 +4,7 @@ import android.content.Context
 
 /** Apps fixados pelo usuário (ex.: o app de Rádio ou de Câmera da multimídia). */
 object Atalhos {
-    const val TELEFONE = "telefone"
+    const val FAVORITO = "favorito"
     const val RADIO = "radio"
     const val CAMERA = "camera"
 
