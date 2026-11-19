@@ -71,8 +71,13 @@ fun GaugeLateral(fracao: Float, valor: String, unidade: String, icone: ImageVect
  * arco de progresso e o valor grande em itálico no centro. Usado como velocímetro (0–200 km/h).
  */
 @Composable
-fun MostradorCentral(fracao: Float, valor: String, rotulo: String, marcas: List<String>, inicioVermelho: Float, modifier: Modifier = Modifier) {
+fun MostradorCentral(
+    fracao: Float, valor: String, rotulo: String, marcas: List<String>, inicioVermelho: Float, modifier: Modifier = Modifier,
+    /** Cor do anel ECO (verde, azul claro, azul escuro), como o painel do Civic. Null = sem anel. */
+    corAmbiente: Color? = null,
+) {
     val Painel = coresPainel()
+    val anel by androidx.compose.animation.animateColorAsState(corAmbiente ?: Color.Transparent, androidx.compose.animation.core.tween(600), label = "anelEco")
     val f = fracao.coerceIn(0f, 1f)
     val divisoes = (marcas.size - 1) * 2
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
@@ -81,8 +86,14 @@ fun MostradorCentral(fracao: Float, valor: String, rotulo: String, marcas: List<
             Canvas(Modifier.fillMaxSize()) {
                 val c = Offset(size.width / 2, size.height / 2)
                 val raio = size.minDimension / 2
-                drawCircle(Painel.face, raio * 0.99f, c)
-                drawCircle(Brush.sweepGradient(listOf(Painel.borda, Color(0xFF6B7A90), Painel.borda), c), raio * 0.99f, c, style = Stroke(raio * 0.025f))
+                // Anel ECO: brilho e aro na cor do modo de condução.
+                if (anel.alpha > 0f) drawCircle(
+                    Brush.radialGradient(0.80f to anel.copy(alpha = 0.55f * anel.alpha), 1f to Color.Transparent, center = c, radius = raio),
+                    raio, c,
+                )
+                drawCircle(Painel.face, raio * 0.93f, c)
+                if (anel.alpha > 0f) drawCircle(anel, raio * 0.94f, c, style = Stroke(raio * 0.05f))
+                else drawCircle(Brush.sweepGradient(listOf(Painel.borda, Color(0xFF6B7A90), Painel.borda), c), raio * 0.94f, c, style = Stroke(raio * 0.025f))
                 // Faixa vermelha externa no fim da escala.
                 val rFaixa = raio * 0.90f
                 drawArc(

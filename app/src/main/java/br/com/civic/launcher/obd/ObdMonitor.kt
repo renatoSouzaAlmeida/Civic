@@ -79,6 +79,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             if (!demo) HistoricoFalhas.obter(ctx).registrar(novo.codigos, novo.codigosPendentes)
             SaudeBateria.obter(ctx).amostra(novo.tensao, novo.rpm, demonstracao = demo)
             CorrecaoCombustivel.obter(ctx).amostra(novo, demonstracao = demo)
+            EcoConducao.obter().amostra(novo)
         }
     private val alertas = AlertasMotor.obter(ctx)
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())

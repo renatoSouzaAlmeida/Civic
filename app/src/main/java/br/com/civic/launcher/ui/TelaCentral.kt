@@ -197,6 +197,7 @@ private fun PainelEsportivo(
         MostradorCentral(
             vel / 200f, "${vel.toInt()}", "km/h", (0..10).map { "${it * 20}" }, 0.8f,
             Modifier.offset(dp(g.cx - g.rT), dp(g.cy - g.rT)).size(dp(g.rT * 2)),
+            corAmbiente = br.com.civic.launcher.obd.EcoConducao.obter().nivel?.cor,
         )
 
         // Carro (traseira) sobre a estrada, com uma vibração bem leve quando está andando.

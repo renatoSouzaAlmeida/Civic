@@ -155,7 +155,7 @@ private fun BarraFina(
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BotaoPequeno(Icons.Filled.Home, "Início", aoVoltarInicio)
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = 30.sp, lineHeight = 32.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text("${vel.toInt()}", color = br.com.civic.launcher.obd.EcoConducao.obter().nivel?.cor ?: Cores.Texto, fontSize = 30.sp, lineHeight = 32.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
                 Text(" km/h", color = Cores.TextoSuave, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
             }
             IndicadoresVeiculo(obd)
@@ -217,7 +217,7 @@ private fun BarraSuperior(sensores: Sensores, obd: ObdMonitor, mostrarIndicadore
 private fun Velocidade(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     val vel = obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     Row(modifier, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
-        Text("${vel.toInt()}", color = Cores.Texto, fontSize = 38.sp, lineHeight = 40.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text("${vel.toInt()}", color = br.com.civic.launcher.obd.EcoConducao.obter().nivel?.cor ?: Cores.Texto, fontSize = 38.sp, lineHeight = 40.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
         Text(" km/h", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 5.dp))
     }
 }
@@ -226,9 +226,9 @@ private fun Velocidade(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) 
 private fun VelocimetroGrande(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     val vel = obd.dados.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     Box(modifier, contentAlignment = Alignment.Center) {
-        Medidor(vel / 220f, Cores.Destaque, Modifier.aspectRatio(1f), espessura = 14.dp) { dm ->
+        Medidor(vel / 220f, br.com.civic.launcher.obd.EcoConducao.obter().nivel?.cor ?: Cores.Destaque, Modifier.aspectRatio(1f), espessura = 14.dp) { dm ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (dm.value * 0.30f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                Text("${vel.toInt()}", color = br.com.civic.launcher.obd.EcoConducao.obter().nivel?.cor ?: Cores.Texto, fontSize = (dm.value * 0.30f).sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
                 Text("km/h", color = Cores.TextoSuave, fontSize = (dm.value * 0.09f).sp, fontWeight = FontWeight.SemiBold)
             }
         }

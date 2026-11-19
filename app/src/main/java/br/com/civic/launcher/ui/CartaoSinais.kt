@@ -33,7 +33,8 @@ fun CartaoSinais(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) {
     Cartao(modifier) {
         Column(Modifier.fillMaxSize().padding(10.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth()) {
-                Celula("$vel", "km/h", Modifier.weight(1f))
+                val eco = br.com.civic.launcher.obd.EcoConducao.obter().nivel
+                Celula("$vel", eco?.let { "km/h · ${it.rotulo}" } ?: "km/h", Modifier.weight(1f), eco?.cor)
                 Divisor()
                 Celula((d.consumoMedio ?: br.com.civic.launcher.Veiculo.obter(androidx.compose.ui.platform.LocalContext.current).consumoMedio())?.let { "%.1f".format(it) } ?: "—", "km/l", Modifier.weight(1f))
                 Divisor()
@@ -58,12 +59,12 @@ private fun Divisor() {
 
 /** Valor grande (acompanha a altura da célula) com a unidade embaixo. */
 @Composable
-private fun Celula(valor: String, unidade: String, modifier: Modifier) {
+private fun Celula(valor: String, unidade: String, modifier: Modifier, cor: Color? = null) {
     BoxWithConstraints(modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
         val tamanho = minOf(maxHeight.value * 0.36f, maxWidth.value * 0.30f).coerceIn(16f, 40f).sp
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(valor, color = Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-            Text(unidade, color = Cores.TextoSuave, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(valor, color = cor ?: Cores.Texto, fontSize = tamanho, lineHeight = tamanho, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Text(unidade, color = cor ?: Cores.TextoSuave, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
     }
 }
