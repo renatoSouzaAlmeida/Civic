@@ -61,8 +61,6 @@ fun TelaConfig() {
                     }
                 }
             }
-        }
-        val direita: @Composable ColumnScope.() -> Unit = {
             Secao("Modelo do menu") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     EstiloMenu.entries.forEach { e ->
@@ -90,9 +88,6 @@ fun TelaConfig() {
                     color = Cores.TextoSuave, fontSize = 13.sp,
                 )
             }
-            RotinaDiariaConfig()
-            MusicaAoLigar()
-            VolumeAuto()
             Secao("Painel de direção") {
                 Text("Posição", color = Cores.TextoSuave, fontSize = 15.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,8 +102,6 @@ fun TelaConfig() {
                     }
                 }
             }
-            AvisosCelular()
-            SecaoLuzesCan()
             Secao("Sistema") {
                 BotaoPilula("Configurações do Android", Icons.Filled.Settings, Modifier.fillMaxWidth()) {
                     ctx.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -125,6 +118,13 @@ fun TelaConfig() {
                     runCatching { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
             }
+        }
+        val direita: @Composable ColumnScope.() -> Unit = {
+            RotinaDiariaConfig()
+            MusicaAoLigar()
+            VolumeAuto()
+            AvisosCelular()
+            SecaoLuzesCan()
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             if (duasColunas) {
