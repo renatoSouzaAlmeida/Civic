@@ -112,7 +112,7 @@ fun PainelDirecao(
         if (larga && alto < 140.dp) {
             BarraFina(sensores, monitor, obd, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
         } else Column(Modifier.fillMaxSize()) {
-            BarraSuperior(sensores, obd, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
+            BarraSuperior(sensores, obd, mostrarIndicadores = larga, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
             if (larga) {
                 // Faixa larga (tela em retrato): velocidade à esquerda, música ocupa o resto.
                 Row(Modifier.weight(1f).fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -125,6 +125,8 @@ fun PainelDirecao(
                     // Com espaço de sobra (tablet), o velocímetro cresce e a música desce.
                     if (alto > 460.dp) VelocimetroGrande(sensores, obd, Modifier.weight(0.85f).fillMaxWidth())
                     else Velocidade(sensores, obd, Modifier.fillMaxWidth())
+                    // Setas e farol entre a velocidade e o Spotify.
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { IndicadoresVeiculo(obd, tamanho = 34.dp) }
                     Musica(monitor, Modifier.weight(1f).fillMaxWidth())
                 }
             }
@@ -175,7 +177,7 @@ private fun BarraFina(
 }
 
 @Composable
-private fun BarraSuperior(sensores: Sensores, obd: ObdMonitor, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoAlternarPosicao: () -> Unit, aoFechar: () -> Unit) {
+private fun BarraSuperior(sensores: Sensores, obd: ObdMonitor, mostrarIndicadores: Boolean, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoAlternarPosicao: () -> Unit, aoFechar: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -199,7 +201,7 @@ private fun BarraSuperior(sensores: Sensores, obd: ObdMonitor, aoVoltarInicio: (
                 }
                 Text(hora, color = Cores.Texto, fontSize = 15.sp, fontFamily = FonteTitulo, maxLines = 1)
             }
-            if (cabeIndicadores) IndicadoresVeiculo(obd)
+            if (mostrarIndicadores && cabeIndicadores) IndicadoresVeiculo(obd)
             BotaoPequeno(Icons.Filled.OpenWith, "Mudar posição do painel", aoAlternarPosicao)
             BotaoPequeno(Icons.Filled.OpenInFull, "Tamanho do painel", aoAlternarTamanho)
             BotaoPequeno(Icons.Filled.Close, "Fechar", aoFechar)
@@ -290,17 +292,17 @@ private fun iconeClima(c: CondicaoClima): Pair<ImageVector, Color> = when (c) {
  * Acesos em verde (setas piscam); apagados em cinza; bem esmaecidos se o carro ainda não informa o sinal.
  */
 @Composable
-private fun IndicadoresVeiculo(obd: ObdMonitor) {
+private fun IndicadoresVeiculo(obd: ObdMonitor, tamanho: androidx.compose.ui.unit.Dp = 26.dp) {
     val d = obd.dados
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        IndicadorBarra(R.drawable.ic_seta, d.setaEsquerda, piscar = true)
-        IndicadorBarra(R.drawable.ic_farol, d.farol)
-        IndicadorBarra(R.drawable.ic_seta, d.setaDireita, piscar = true, espelhar = true)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(tamanho * 0.4f)) {
+        IndicadorBarra(R.drawable.ic_seta, d.setaEsquerda, tamanho, piscar = true)
+        IndicadorBarra(R.drawable.ic_farol, d.farol, tamanho)
+        IndicadorBarra(R.drawable.ic_seta, d.setaDireita, tamanho, piscar = true, espelhar = true)
     }
 }
 
 @Composable
-private fun IndicadorBarra(icone: Int, ativo: Boolean?, piscar: Boolean = false, espelhar: Boolean = false) {
+private fun IndicadorBarra(icone: Int, ativo: Boolean?, tamanho: androidx.compose.ui.unit.Dp, piscar: Boolean = false, espelhar: Boolean = false) {
     val cor = when (ativo) {
         true -> Color(0xFF22C55E)
         false -> Cores.TextoSuave.copy(alpha = 0.45f)
@@ -315,7 +317,7 @@ private fun IndicadorBarra(icone: Int, ativo: Boolean?, piscar: Boolean = false,
     } else null
     Icon(
         androidx.compose.ui.res.painterResource(icone), null, tint = cor,
-        modifier = Modifier.size(26.dp).graphicsLayer {
+        modifier = Modifier.size(tamanho).graphicsLayer {
             alpha = pisca?.value ?: 1f
             if (espelhar) scaleX = -1f
         },
