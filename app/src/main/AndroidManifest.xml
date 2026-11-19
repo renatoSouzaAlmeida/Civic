@@ -18,6 +18,10 @@
     <!-- Painel de direção sobre o Waze. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Vigia: serviço fixo que mantém o app vivo com o carro e avisa onde parou mesmo se o app for fechado. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Permite descobrir/abrir Waze e Spotify (Android 11+). -->
     <queries>
@@ -63,6 +67,10 @@
 
         <!-- Resultado da instalação de atualizações (ver Atualizador). -->
         <service android:name=".PainelService" android:exported="false" />
+
+        <service android:name=".VigiaService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Monitorar o carro (OBD/GPS) e avisar onde estacionou" />
+        </service>
 
         <receiver android:name=".InstalacaoReceiver" android:exported="false" />
     </application>

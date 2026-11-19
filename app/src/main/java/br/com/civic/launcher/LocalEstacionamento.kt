@@ -57,6 +57,11 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         if (viajando) principal.postDelayed({ if (viajando) estacionar(manual = false, rapido = true) }, 15_000)
     }
 
+    /** O app foi fechado (arrastado da lista de recentes): se o carro estava em uso, avisa onde parou na hora. */
+    fun aoFecharApp() {
+        if (ligado || viajando) estacionar(manual = false, rapido = true)
+    }
+
     private var ligado = false
     private var ligadoDesde = 0L
     private var pendente = false

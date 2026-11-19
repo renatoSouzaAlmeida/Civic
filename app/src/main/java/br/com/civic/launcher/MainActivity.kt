@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
         atualizador = Atualizador(this)
         sensores = Sensores(this)
         obd = ObdMonitor.obter(this)
+        runCatching { androidx.core.content.ContextCompat.startForegroundService(this, Intent(this, VigiaService::class.java)) }
         Telemetria.obter(this) // eventos de ignição, trajeto e status online para o dashboard
         modoTema = ModoTema.ler(this)
         setContent {

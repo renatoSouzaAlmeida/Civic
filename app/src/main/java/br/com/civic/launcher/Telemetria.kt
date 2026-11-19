@@ -60,6 +60,12 @@ class Telemetria private constructor(private val ctx: Context) {
         principal.postDelayed(ciclo, 15_000)
     }
 
+    /** O app foi fechado com o motor ligado: registra o desligamento e envia já. */
+    fun aoFecharApp() {
+        if (motorLigado) { motorLigado = false; registrar("motor_desligou") }
+        enviar(forcarStatus = true)
+    }
+
     /** A cada leitura do OBD: detecta motor ligando/desligando. */
     fun amostra(rpm: Int?, tensaoAgora: Float?, demonstracao: Boolean) {
         if (demonstracao) return
