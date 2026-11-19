@@ -569,6 +569,9 @@ class ObdMonitor private constructor(private val ctx: Context) {
         if (demo) {
             demo = false
             principal.removeCallbacks(tique)
+            // Parar a simulação = simular o desligamento do carro: manda o fim da viagem e onde estacionou para o Telegram.
+            br.com.civic.launcher.ComputadorBordo.obter(ctx).finalizar(simulacao = true)
+            br.com.civic.launcher.LocalEstacionamento.obter(ctx).estacionar(manual = false, simulado = true)
             dados = DadosObd()
             estado = estadoReal
         } else {

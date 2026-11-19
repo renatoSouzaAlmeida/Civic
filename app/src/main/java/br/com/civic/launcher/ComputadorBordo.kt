@@ -98,15 +98,17 @@ class ComputadorBordo private constructor(private val ctx: Context) {
     }
 
     /** Encerra a viagem atual (automático após 5 min parado/desligado, ou pelo botão). */
-    fun finalizar() {
+    fun finalizar(simulacao: Boolean = false) {
         val v = atual ?: return
         atual = null
         prefs.edit().remove("atual").apply()
-        if (v.distanciaKm < 0.1) return // manobra na garagem não vira viagem
+        if (v.distanciaKm < 0.1 && !simulacao) return // manobra na garagem não vira viagem
         historico.add(0, v)
         while (historico.size > 30) historico.removeAt(historico.lastIndex)
         gravarHistorico()
         if (!v.demonstracao) Nuvem.obter(ctx).avisar("viagem", "🏁 Viagem: ${resumo(v)}")
+        // Simulação (botão de demonstração do OBD): manda a mesma mensagem, marcada, para conferir o aviso no Telegram.
+        else if (simulacao) Nuvem.obter(ctx).avisar("simulacao", "🧪 SIMULAÇÃO\n🏁 Viagem: ${resumo(v)}")
     }
 
     fun limparHistorico() { historico.clear(); gravarHistorico() }

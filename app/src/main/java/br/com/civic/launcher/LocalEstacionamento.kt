@@ -88,18 +88,27 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     }
 
     /** Guarda a posição de agora (a última conhecida) e avisa. Devolve false se não houver posição. */
-    fun estacionar(manual: Boolean, rapido: Boolean = false): Boolean {
+    fun estacionar(manual: Boolean, rapido: Boolean = false, simulado: Boolean = false): Boolean {
         val local = runCatching { ultimaPosicao() }.getOrNull()
         if (local == null) {
             // Sem posição: avisa mesmo assim (só a hora), para o aviso nunca se perder.
             if (manual) return false
-            viajando = false
+            if (!simulado) viajando = false
             val hora = java.text.SimpleDateFormat("HH:mm", Locale("pt", "BR")).format(java.util.Date())
-            Nuvem.obter(ctx).avisar("estacionamento", "🅿️ Carro estacionado às $hora\n⚠️ Não consegui obter a localização (sem sinal de GPS).")
+            Nuvem.obter(ctx).avisar(if (simulado) "simulacao" else "estacionamento", (if (simulado) "🧪 SIMULAÇÃO\n" else "") + "🅿️ Carro estacionado às $hora\n⚠️ Não consegui obter a localização (sem sinal de GPS).")
             return true
         }
         val agora = System.currentTimeMillis()
         val idade = (agora - local.time).coerceAtLeast(0)
+        if (simulado) {
+            // Simulação: manda a mensagem real, mas não guarda como vaga do carro nem entra no histórico do dashboard.
+            val sim = Estacionamento(local.latitude, local.longitude, agora, idade, null)
+            fila.execute {
+                val completo = sim.copy(endereco = endereco(local.latitude, local.longitude))
+                principal.post { avisar(completo, manual = false, simulado = true) }
+            }
+            return true
+        }
         val anterior = atual
         // Mesma vaga de antes (menos de 100 m e menos de 30 min): não repete o aviso automático.
         if (!manual && anterior != null && agora - anterior.data < 10 * 60_000 && distancia(anterior.lat, anterior.lon, local.latitude, local.longitude) < 100f) return true
@@ -119,13 +128,13 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     /** Reenvia a localização salva para o Telegram. */
     fun reenviar() { atual?.let { avisar(it) } }
 
-    private fun avisar(e: Estacionamento, manual: Boolean = false) {
+    private fun avisar(e: Estacionamento, manual: Boolean = false, simulado: Boolean = false) {
         val minutos = e.idadePosicaoMs / 60_000
         val idade = if (minutos >= 10) "\n⚠️ Último sinal de GPS há $minutos min: a posição pode estar um pouco defasada." else ""
-        val texto = "🅿️ Carro estacionado" + (e.endereco?.let { " em $it" } ?: "") +
+        val texto = (if (simulado) "🧪 SIMULAÇÃO\n" else "") + "🅿️ Carro estacionado" + (e.endereco?.let { " em $it" } ?: "") +
             "\n📍 %.5f, %.5f".format(Locale.US, e.lat, e.lon) +
             "\n🗺️ https://maps.google.com/?q=%.6f,%.6f".format(Locale.US, e.lat, e.lon) + idade
-        Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual)
+        Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual, simulado)
     }
 
     /** Última posição conhecida (GPS do sistema ou guardada pelo app), para o resumo enviado à nuvem. */

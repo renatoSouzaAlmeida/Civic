@@ -192,11 +192,11 @@ class Nuvem private constructor(ctx: Context) {
     }
 
     /** Avisa onde o carro foi estacionado: registra no sininho e manda o texto e o pino do mapa ao Telegram. */
-    fun avisarLocalizacao(lat: Double, lon: Double, mensagem: String, data: Long = System.currentTimeMillis(), endereco: String? = null, idadeGpsS: Long = 0, manual: Boolean = false) {
+    fun avisarLocalizacao(lat: Double, lon: Double, mensagem: String, data: Long = System.currentTimeMillis(), endereco: String? = null, idadeGpsS: Long = 0, manual: Boolean = false, simulado: Boolean = false) {
         central.registrar("estacionamento", mensagem.lineSequence().firstOrNull() ?: mensagem)
         if (!avisosLigados) return
-        funcao(JSONObject().put("acao", "localizacao").put("tipo", "estacionamento").put("mensagem", mensagem).put("lat", lat).put("lon", lon)
-            .put("data", data).put("idade_gps_s", idadeGpsS).put("origem", if (manual) "manual" else "auto").also { o -> endereco?.let { o.put("endereco", it) } }) { }
+        funcao(JSONObject().put("acao", "localizacao").put("tipo", if (simulado) "simulacao" else "estacionamento").put("mensagem", mensagem).put("lat", lat).put("lon", lon)
+            .put("data", data).put("idade_gps_s", idadeGpsS).put("origem", if (simulado) "simulado" else if (manual) "manual" else "auto").also { o -> endereco?.let { o.put("endereco", it) } }) { }
     }
 
     /**
