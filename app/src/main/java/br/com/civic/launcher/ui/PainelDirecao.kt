@@ -13,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import br.com.civic.launcher.R
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -109,7 +112,7 @@ fun PainelDirecao(
         if (larga && alto < 140.dp) {
             BarraFina(sensores, monitor, obd, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
         } else Column(Modifier.fillMaxSize()) {
-            BarraSuperior(sensores, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
+            BarraSuperior(sensores, obd, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
             if (larga) {
                 // Faixa larga (tela em retrato): velocidade à esquerda, música ocupa o resto.
                 Row(Modifier.weight(1f).fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -152,6 +155,7 @@ private fun BarraFina(
                 Text("${vel.toInt()}", color = Cores.Texto, fontSize = 30.sp, lineHeight = 32.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
                 Text(" km/h", color = Cores.TextoSuave, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
             }
+            IndicadoresVeiculo(obd)
             if (m.capa != null) {
                 Image(m.capa.asImageBitmap(), null, Modifier.fillMaxHeight().aspectRatio(1f).clip(RoundedCornerShape(10.dp)), contentScale = ContentScale.Crop)
             }
@@ -171,7 +175,7 @@ private fun BarraFina(
 }
 
 @Composable
-private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoAlternarPosicao: () -> Unit, aoFechar: () -> Unit) {
+private fun BarraSuperior(sensores: Sensores, obd: ObdMonitor, aoVoltarInicio: () -> Unit, aoAlternarTamanho: () -> Unit, aoAlternarPosicao: () -> Unit, aoFechar: () -> Unit) {
     val ctx = LocalContext.current
     var agora by remember { mutableStateOf(Date()) }
     LaunchedEffect(Unit) { while (true) { agora = Date(); delay(1_000) } }
@@ -180,6 +184,7 @@ private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlte
 
     BoxWithConstraints(Modifier.fillMaxWidth().background(Cores.CartaoSolido).padding(horizontal = 6.dp, vertical = 5.dp)) {
         val estreita = maxWidth < 270.dp
+        val cabeIndicadores = maxWidth >= 360.dp
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BotaoPequeno(Icons.Filled.Home, "Início", aoVoltarInicio)
             Row(
@@ -194,6 +199,7 @@ private fun BarraSuperior(sensores: Sensores, aoVoltarInicio: () -> Unit, aoAlte
                 }
                 Text(hora, color = Cores.Texto, fontSize = 15.sp, fontFamily = FonteTitulo, maxLines = 1)
             }
+            if (cabeIndicadores) IndicadoresVeiculo(obd)
             BotaoPequeno(Icons.Filled.OpenWith, "Mudar posição do painel", aoAlternarPosicao)
             BotaoPequeno(Icons.Filled.OpenInFull, "Tamanho do painel", aoAlternarTamanho)
             BotaoPequeno(Icons.Filled.Close, "Fechar", aoFechar)
@@ -277,4 +283,41 @@ private fun iconeClima(c: CondicaoClima): Pair<ImageVector, Color> = when (c) {
     CondicaoClima.Nublado -> Icons.Filled.Cloud to Cores.TextoSuave
     CondicaoClima.Chuva -> Icons.Filled.WaterDrop to Cores.Waze
     CondicaoClima.Tempestade -> Icons.Filled.Bolt to Cores.Amarelo
+}
+
+/**
+ * Indicadores do veículo na barra: seta esquerda, farol e seta direita.
+ * Acesos em verde (setas piscam); apagados em cinza; bem esmaecidos se o carro ainda não informa o sinal.
+ */
+@Composable
+private fun IndicadoresVeiculo(obd: ObdMonitor) {
+    val d = obd.dados
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        IndicadorBarra(R.drawable.ic_seta, d.setaEsquerda, piscar = true)
+        IndicadorBarra(R.drawable.ic_farol, d.farol)
+        IndicadorBarra(R.drawable.ic_seta, d.setaDireita, piscar = true, espelhar = true)
+    }
+}
+
+@Composable
+private fun IndicadorBarra(icone: Int, ativo: Boolean?, piscar: Boolean = false, espelhar: Boolean = false) {
+    val cor = when (ativo) {
+        true -> Color(0xFF22C55E)
+        false -> Cores.TextoSuave.copy(alpha = 0.45f)
+        null -> Cores.TextoSuave.copy(alpha = 0.2f)
+    }
+    val pisca = if (ativo == true && piscar) {
+        androidx.compose.animation.core.rememberInfiniteTransition(label = "pisca").animateFloat(
+            1f, 0.15f,
+            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(420), androidx.compose.animation.core.RepeatMode.Reverse),
+            label = "alfa",
+        )
+    } else null
+    Icon(
+        androidx.compose.ui.res.painterResource(icone), null, tint = cor,
+        modifier = Modifier.size(26.dp).graphicsLayer {
+            alpha = pisca?.value ?: 1f
+            if (espelhar) scaleX = -1f
+        },
+    )
 }
