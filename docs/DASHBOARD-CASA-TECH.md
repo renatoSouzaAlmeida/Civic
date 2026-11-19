@@ -1,4 +1,4 @@
-# Civic Renatin — tabelas para o dashboard da CasaTech
+# Civic Renatin — tabelas para o dashboard da Casa Tech
 
 Banco: projeto Supabase **CasaTechRenatin**, schema `public`. Todas as tabelas do carro têm o prefixo `civic_`.
 O dashboard lê com o login OAuth do Supabase (papel `authenticated`) e **só enxerga os aparelhos vinculados ao usuário**
@@ -32,7 +32,7 @@ manda o Telegram e **grava a linha em `civic_estacionamentos` na mesma chamada**
 gravado em `civic_estacionamentos`, pois lat/lon são obrigatórios.
 
 ## Liberar o acesso ao dashboard (uma vez)
-Entre na CasaTech com o login OAuth, pegue o `id` do usuário em `auth.users` e vincule ao aparelho:
+Entre na Casa Tech com o login OAuth, pegue o `id` do usuário em `auth.users` e vincule ao aparelho:
 
 ```sql
 insert into public.civic_acessos (user_id, dispositivo)

@@ -43,17 +43,17 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   e a opção aditivada são informados depois no histórico. Depende de o Civic informar o nível pelo OBD (PID 012F); se não informar,
   o lançamento continua manual.
 
-## Integração com a Casatec (painel fora do carro)
-- [ ] **Dashboard do veículo dentro da Casatec** — uma tela dedicada, isolada do resto da Casatec, para consultar
+## Integração com a Casa Tech (painel fora do carro)
+- [ ] **Dashboard do veículo dentro da Casa Tech** — uma tela dedicada, isolada do resto da Casa Tech, para consultar
   de fora do carro tudo que o launcher captura. Acesso próprio (login/senha ou autorização separada da conta
-  principal) e **somente leitura**, sem acesso aos demais módulos da Casatec.
+  principal) e **somente leitura**, sem acesso aos demais módulos da Casa Tech.
   - Dados a mostrar: dados do veículo (nome, modelo, ano, placa, odômetro do app); manutenção (plano, vencidos e
     próximos, histórico); alertas gerados (motor, bateria, falhas DTC); pontos onde o carro ficou estacionado
     (mapa e histórico, hoje só o último fica guardado); abastecimentos e consumo; viagens (computador de bordo);
     saúde da bateria e correção de combustível.
-  - Possível caminho: o launcher já sincroniza com o Supabase (`supabase/`); a Casatec lê dessa base por uma
+  - Possível caminho: o launcher já sincroniza com o Supabase (`supabase/`); a Casa Tech lê dessa base por uma
     função/API própria com chave de leitura restrita (RLS), sem expor as tabelas diretamente.
-  - **Decidido:** autenticação da Casatec via OAuth do Supabase (login dedicado, só leitura, políticas RLS por usuário).
+  - **Decidido:** autenticação da Casa Tech via OAuth do Supabase (login dedicado, só leitura, políticas RLS por usuário).
   - **Decidido:** guardar na nuvem o **histórico completo de estacionamentos** (hoje só o último fica no aparelho):
     data, posição, endereço, idade do sinal de GPS.
   - **Decidido:** capturar e salvar **todo indicador possível** — quanto mais dados, melhor. Além do que já existe:

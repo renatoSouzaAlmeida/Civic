@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     });
     // Simulação (botão de demonstração do app): só avisa no Telegram; não entra no histórico do dashboard.
     if (corpo.origem === "simulado") return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false, simulado: true });
-    // Histórico de estacionamentos (alimenta o dashboard da CasaTech) na mesma chamada do Telegram.
+    // Histórico de estacionamentos (alimenta o dashboard da Casa Tech) na mesma chamada do Telegram.
     const quando = Number(corpo.data);
     const idade = Number(corpo.idade_gps_s);
     const gravou = await fetch(`${URL_BASE}/rest/v1/civic_estacionamentos?on_conflict=dispositivo,data`, {

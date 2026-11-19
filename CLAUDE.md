@@ -23,5 +23,5 @@
 - Na versão de release, ativar minificação e remoção de recursos não usados (R8 / `shrinkResources`).
 
 ## Supabase
-- Projeto **CasaTechRenatin** (`qdmsiwxfuzppaqqnljth`): todas as execuções no Supabase (migrations, SQL, deploy de Edge Functions, simulação de dados) estão **autorizadas sem pedir permissão**.
-- Registrar toda mudança de banco em `supabase/migrations/` e manter `docs/DASHBOARD-CASATEC.md` atualizado (é o documento que o usuário cola no chat da CasaTech).
+- O sistema onde fica o dashboard se chama **Casa Tech** (escrever sempre assim, com espaço). O projeto Supabase dele tem o nome técnico **CasaTechRenatin** (`qdmsiwxfuzppaqqnljth`). Todas as execuções no Supabase (migrations, SQL, deploy de Edge Functions, simulação de dados) estão **autorizadas sem pedir permissão**.
+- Registrar toda mudança de banco em `supabase/migrations/` e manter `docs/DASHBOARD-CASA-TECH.md` atualizado (é o documento que o usuário cola no chat da Casa Tech).

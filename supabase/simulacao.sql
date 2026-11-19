@@ -3,7 +3,7 @@
 -- estados do carro, alertas, abastecimentos e status online. Não mexe nos dados do carro real.
 --   Gerar:   select public.civic_simular(30);
 --   Apagar:  delete from public.civic_dispositivos where nome = 'Civic (simulado)';
--- Para ver no dash, vincule o seu usuário a ele (ver docs/DASHBOARD-CASATEC.md).
+-- Para ver no dash, vincule o seu usuário a ele (ver docs/DASHBOARD-CASA-TECH.md).
 create or replace function public.civic_simular(p_dias integer default 30) returns text
 language plpgsql security definer set search_path = '' as $$
 declare

@@ -15,7 +15,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Telemetria para o dashboard da CasaTech (Supabase):
+ * Telemetria para o dashboard da Casa Tech (Supabase):
  *  - **Eventos de ignição** (civic_ignicao): motor ligou/desligou e multimídia ligou/desligou, com hora e posição.
  *  - **Posição e trajeto** (civic_posicoes): um ponto a cada 15 s com o motor ligado ou andando.
  *  - **Status online** (civic_status): o carro "bate o ponto" a cada 60 s com o motor ligado (5 min desligado).

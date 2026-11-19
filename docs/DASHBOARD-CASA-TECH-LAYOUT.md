@@ -1,7 +1,7 @@
-# Dashboard do veículo na CasaTech — proposta de layout
+# Dashboard do veículo na Casa Tech — proposta de layout
 
 Referência visual: protótipo com dados de exemplo (link no chat). Este documento descreve o layout e de onde vem cada dado.
-As tabelas e colunas estão em `DASHBOARD-CASATEC.md`.
+As tabelas e colunas estão em `DASHBOARD-CASA-TECH.md`.
 
 ## Princípios
 - **Leitura rápida primeiro:** a aba inicial mostra só o que importa numa olhada (estado, alertas, última viagem, vagas, tendências).
@@ -49,4 +49,4 @@ Tabela do plano: item, intervalo, última vez (data · km), situação (Em dia /
 | Atenção e aba Manutenção | `civic_manutencao` (`situacao`, `ultimo_km`, `ultima_data`, intervalos) |
 
 ## Dados para validar
-Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASATEC.md`): 7 dias de viagens, vagas, estados e alertas. Regerar: `select public.civic_simular(30);`.
+Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASA-TECH.md`): 7 dias de viagens, vagas, estados e alertas. Regerar: `select public.civic_simular(30);`.

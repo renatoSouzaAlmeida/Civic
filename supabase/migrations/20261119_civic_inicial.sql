@@ -1,5 +1,5 @@
 -- Aplicada no projeto CasaTechRenatin (Supabase) em 19/11/2026 como "civic_inicial".
--- Civic Renatin (launcher do carro). Tabelas com prefixo civic_ para não misturar com a CasaTech.
+-- Civic Renatin (launcher do carro). Tabelas com prefixo civic_ para não misturar com a Casa Tech.
 -- Cada aparelho tem um token secreto aleatório (gerado no próprio aparelho) e enviado no cabeçalho
 -- x-civic-token; as políticas de RLS só deixam o aparelho ver/alterar as próprias linhas.
 
@@ -124,7 +124,7 @@ create table public.civic_estacionamentos (
 create index civic_estacionamentos_idx on public.civic_estacionamentos(dispositivo, data desc);
 alter table public.civic_estacionamentos enable row level security;
 
--- Acesso do dashboard (CasaTech, login OAuth do Supabase): quais aparelhos cada usuário pode ver.
+-- Acesso do dashboard (Casa Tech, login OAuth do Supabase): quais aparelhos cada usuário pode ver.
 -- O vínculo é criado por quem administra (insert manual); o usuário só lê o próprio.
 create table public.civic_acessos (
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -248,7 +248,7 @@ alter publication supabase_realtime add table public.civic_status, public.civic_
 -- estados do carro, alertas, abastecimentos e status online. Não mexe nos dados do carro real.
 --   Gerar:   select public.civic_simular(7);
 --   Apagar:  delete from public.civic_dispositivos where nome = 'Civic (simulado)';
--- Para ver no dash, vincule o seu usuário a ele (ver docs/DASHBOARD-CASATEC.md).
+-- Para ver no dash, vincule o seu usuário a ele (ver docs/DASHBOARD-CASA-TECH.md).
 create or replace function public.civic_simular(p_dias integer default 7) returns text
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -356,7 +356,7 @@ revoke all on public.civic_abastecimentos_analise from anon;
 -- estados do carro, alertas, abastecimentos e status online. Não mexe nos dados do carro real.
 --   Gerar:   select public.civic_simular(30);
 --   Apagar:  delete from public.civic_dispositivos where nome = 'Civic (simulado)';
--- Para ver no dash, vincule o seu usuário a ele (ver docs/DASHBOARD-CASATEC.md).
+-- Para ver no dash, vincule o seu usuário a ele (ver docs/DASHBOARD-CASA-TECH.md).
 create or replace function public.civic_simular(p_dias integer default 30) returns text
 language plpgsql security definer set search_path = '' as $$
 declare
