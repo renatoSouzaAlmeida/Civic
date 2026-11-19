@@ -65,7 +65,7 @@ private val itens = listOf(
         }
     },
     Item("Spotify", Icons.Filled.MusicNote, null, R.drawable.ic_spotify) { it.abrirSpotify() },
-    Item("Veículo", Icons.Filled.LocalGasStation, Tela.Veiculo),
+    Item("Veículo", Icons.Filled.CarRepair, Tela.Veiculo),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),
     Item("Config.", Icons.Filled.Settings, Tela.Config),
 )
