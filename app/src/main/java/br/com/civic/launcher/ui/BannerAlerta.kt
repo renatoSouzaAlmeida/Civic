@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,7 +57,7 @@ fun BannerAlerta(modifier: Modifier = Modifier, compacto: Boolean = false) {
         TipoAlerta.Alternador, TipoAlerta.BateriaFraca -> rememberVectorPainter(Icons.Filled.BatteryAlert)
         TipoAlerta.FarolDesligado -> painterResource(R.drawable.ic_farol)
         TipoAlerta.MotorFrio -> rememberVectorPainter(Icons.Filled.AcUnit)
-        TipoAlerta.Fadiga -> rememberVectorPainter(Icons.Filled.Bedtime)
+        TipoAlerta.Fadiga -> rememberVectorPainter(Icons.Filled.Warning)
     }
     val pulso = if (a.tipo.gravidade == Gravidade.Critico) {
         pulsar(1f, 0.35f, 500)
