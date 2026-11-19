@@ -41,6 +41,19 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 14. [ ] **Brilho da tela** — mais baixo à noite ou com farol ligado.
 15. [ ] **Calibragem dos pneus (TPMS)** — sensores Bluetooth de tampinha de válvula (hardware extra).
 
+## Integração com a Casatec (painel fora do carro)
+- [ ] **Dashboard do veículo dentro da Casatec** — uma tela dedicada, isolada do resto da Casatec, para consultar
+  de fora do carro tudo que o launcher captura. Acesso próprio (login/senha ou autorização separada da conta
+  principal) e **somente leitura**, sem acesso aos demais módulos da Casatec.
+  - Dados a mostrar: dados do veículo (nome, modelo, ano, placa, odômetro do app); manutenção (plano, vencidos e
+    próximos, histórico); alertas gerados (motor, bateria, falhas DTC); pontos onde o carro ficou estacionado
+    (mapa e histórico, hoje só o último fica guardado); abastecimentos e consumo; viagens (computador de bordo);
+    saúde da bateria e correção de combustível.
+  - Possível caminho: o launcher já sincroniza com o Supabase (`supabase/`); a Casatec lê dessa base por uma
+    função/API própria com chave de leitura restrita (RLS), sem expor as tabelas diretamente.
+  - A definir: como a Casatec autentica (usuário dedicado ou token), se vale guardar histórico de estacionamentos
+    na nuvem, e **mais indicadores a capturar** (ex.: última posição ao vivo, status online do carro, tensão da bateria).
+
 ## Navegação / mapa
 - [ ] Decidir o mapa dentro do launcher: A) Google Maps embutido (Maps SDK, precisa de chave e Play Services),
   B) OpenStreetMap embutido, ou C) manter Waze/Maps em tela cheia com o painel de direção por cima.
