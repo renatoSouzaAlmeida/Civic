@@ -6,11 +6,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
-/** Cores do "ECO Assist" do Civic: verde econômico, azul claro normal, azul escuro alto consumo. */
+/** Cores do modo de condução (inspirado no ECO Assist do Civic): verde econômico, azul claro normal, laranja alto consumo. */
 enum class NivelEco(val rotulo: String, val cor: Color) {
     Economico("econômico", Color(0xFF22C55E)),
     Normal("normal", Color(0xFF38BDF8)),
-    AltoConsumo("alto consumo", Color(0xFF1D4ED8)),
+    AltoConsumo("alto consumo", Color(0xFFF97316)),
 }
 
 /**
