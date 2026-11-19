@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import br.com.civic.launcher.CentralNotificacoes
 import br.com.civic.launcher.Nuvem
+import br.com.civic.launcher.Voz
 import java.util.Locale
 
 /** Gravidade: define a cor da faixa e a prioridade quando há mais de um alerta. */
@@ -89,7 +90,7 @@ class AlertasMotor private constructor(private val ctx: Context) {
         val novo = visivel?.let { Alerta(it.key, it.value) }
         // Cada alerta que aparece na tela também entra no sininho (uma vez por ocorrência).
         if (novo != null && novo.tipo != atual?.tipo) {
-            if (novo.tipo.gravidade != Gravidade.Dica) br.com.civic.launcher.Voz.obter(ctx).falar(novo.tipo.titulo + ". " + novo.mensagem.substringBefore('.') + ".")
+            if (novo.tipo.gravidade != Gravidade.Dica) Voz.obter(ctx).falar(novo.tipo.titulo + ". " + novo.mensagem.substringBefore('.') + ".")
             CentralNotificacoes.obter(ctx).registrar(
                 "alerta_motor",
                 "${if (demonstracao) "(Demonstração) " else ""}${if (novo.tipo.gravidade == Gravidade.Critico) "🚨" else "⚠️"} ${novo.tipo.titulo}: ${novo.mensagem}",
