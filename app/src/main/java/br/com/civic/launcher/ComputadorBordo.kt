@@ -43,6 +43,13 @@ class ComputadorBordo private constructor(private val ctx: Context) {
     private var ultimaAtividade = 0L
     private var ultimaObd = 0L
 
+    private val verificador = object : Runnable {
+        override fun run() {
+            if (atual != null && System.currentTimeMillis() - ultimaAtividade > 5 * 60_000) finalizar()
+            principal.postDelayed(this, 60_000)
+        }
+    }
+
     init {
         carregar()
         principal.postDelayed(verificador, 60_000)
@@ -116,13 +123,6 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         val br = Locale("pt", "BR")
         val est = estimativa(v)?.let { (l, c) -> " · ~%.1f l".format(br, l) + if (c > 0f) " (R$ %.2f)".format(br, c) else "" } ?: ""
         return "%.1f km em %s · média %.0f km/h · máx. %d km/h".format(br, v.distanciaKm, duracao(v.duracaoMs), v.velMedia, v.velMaxima) + est
-    }
-
-    private val verificador = object : Runnable {
-        override fun run() {
-            if (atual != null && System.currentTimeMillis() - ultimaAtividade > 5 * 60_000) finalizar()
-            principal.postDelayed(this, 60_000)
-        }
     }
 
     private fun carregar() {
