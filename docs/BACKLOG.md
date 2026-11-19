@@ -36,8 +36,6 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 12. [x] **Rotina diária** — sugestões de destino por período, local e dias da semana (Config.), com faixa "Ir agora".
     Também retoma o Spotify de onde parou quando o motor liga (Config. > Música ao ligar o carro).
 13. [x] **"Onde parei o carro"** — salva o ponto de GPS ao desligar.
-14. [ ] **Brilho da tela** — mais baixo à noite ou com farol ligado.
-15. [ ] **Calibragem dos pneus (TPMS)** — sensores Bluetooth de tampinha de válvula (hardware extra).
 
 ## Integração com a Casatec (painel fora do carro)
 - [ ] **Dashboard do veículo dentro da Casatec** — uma tela dedicada, isolada do resto da Casatec, para consultar
