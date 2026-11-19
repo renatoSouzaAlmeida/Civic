@@ -6,7 +6,8 @@
 //   { acao: "info" }                    -> nome do bot e se o aparelho já está vinculado
 //   { acao: "vincular" }                -> procura o código do aparelho nas mensagens do bot e grava o chat
 //   { acao: "enviar", tipo, mensagem }  -> registra o evento e envia ao Telegram (se vinculado)
-//   { acao: "localizacao", tipo, mensagem, lat, lon } -> envia o texto e o pino do mapa (onde parei o carro)
+//   { acao: "localizacao", tipo, mensagem, lat, lon, data?, endereco?, idade_gps_s?, origem? }
+//       -> envia o texto e o pino do mapa (onde parei o carro) e grava no histórico civic_estacionamentos
 
 const URL_BASE = Deno.env.get("SUPABASE_URL")!;
 const CHAVE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -96,7 +97,20 @@ Deno.serve(async (req) => {
     await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {
       method: "POST", headers: cabecalhosDb, body: JSON.stringify({ dispositivo: token, tipo, mensagem, enviado }),
     });
-    return resposta({ enviado, vinculado: !!disp.telegram_chat_id });
+    // Histórico de estacionamentos (alimenta o dashboard da CasaTech) na mesma chamada do Telegram.
+    const quando = Number(corpo.data);
+    const idade = Number(corpo.idade_gps_s);
+    const gravou = await fetch(`${URL_BASE}/rest/v1/civic_estacionamentos?on_conflict=dispositivo,data`, {
+      method: "POST", headers: { ...cabecalhosDb, Prefer: "resolution=ignore-duplicates" }, // reenvio do mesmo aviso não duplica
+      body: JSON.stringify({
+        dispositivo: token, lat, lon,
+        data: Number.isFinite(quando) && quando > 0 ? new Date(quando).toISOString() : new Date().toISOString(),
+        endereco: corpo.endereco ? String(corpo.endereco).slice(0, 300) : null,
+        idade_gps_s: Number.isFinite(idade) && idade >= 0 ? Math.round(idade) : null,
+        origem: corpo.origem === "manual" ? "manual" : "auto",
+      }),
+    }).then((x) => x.ok).catch(() => false);
+    return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: gravou });
   }
 
   return resposta({ erro: "ação desconhecida" }, 400);

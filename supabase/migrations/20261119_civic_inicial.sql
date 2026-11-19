@@ -106,3 +106,58 @@ $$;
 revoke all on function public.civic_herdar_manutencao() from public, anon, authenticated;
 create trigger civic_herdar_manutencao after insert on public.civic_dispositivos
 for each row execute function public.civic_herdar_manutencao();
+
+-- ===== Aplicada em 19/11/2026 como "civic_historico_estacionamentos_e_acesso_dashboard" =====
+-- Histórico de onde o carro ficou estacionado. Quem grava é a função civic-notificar (service role),
+-- na mesma chamada que manda o Telegram; o aparelho não tem acesso direto (sem política para anon).
+create table public.civic_estacionamentos (
+  id bigserial primary key,
+  dispositivo text not null references public.civic_dispositivos(token) on delete cascade,
+  data timestamptz not null default now(),
+  lat double precision not null check (lat between -90 and 90),
+  lon double precision not null check (lon between -180 and 180),
+  endereco text,
+  idade_gps_s integer,          -- há quantos segundos foi o último sinal de GPS (0 = posição fresca)
+  origem text not null default 'auto',  -- 'auto' (ignição/motor) ou 'manual' (botão em Veículo)
+  criado_em timestamptz not null default now()
+);
+create index civic_estacionamentos_idx on public.civic_estacionamentos(dispositivo, data desc);
+alter table public.civic_estacionamentos enable row level security;
+
+-- Acesso do dashboard (CasaTech, login OAuth do Supabase): quais aparelhos cada usuário pode ver.
+-- O vínculo é criado por quem administra (insert manual); o usuário só lê o próprio.
+create table public.civic_acessos (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  dispositivo text not null references public.civic_dispositivos(token) on delete cascade,
+  criado_em timestamptz not null default now(),
+  primary key (user_id, dispositivo)
+);
+alter table public.civic_acessos enable row level security;
+create policy civic_acessos_ler on public.civic_acessos for select to authenticated using (user_id = auth.uid());
+
+-- Leitura (somente) para o usuário logado, só dos aparelhos vinculados a ele.
+create or replace function public.civic_meus_dispositivos() returns setof text
+language sql stable security definer set search_path = '' as $$
+  select dispositivo from public.civic_acessos where user_id = (select auth.uid())
+$$;
+revoke all on function public.civic_meus_dispositivos() from public, anon;
+grant execute on function public.civic_meus_dispositivos() to authenticated;
+
+create policy civic_dash_estacionamentos on public.civic_estacionamentos for select to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos()));
+create policy civic_dash_abastecimentos on public.civic_abastecimentos for select to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos()));
+create policy civic_dash_manutencao on public.civic_manutencao for select to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos()));
+create policy civic_dash_eventos on public.civic_eventos for select to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos()));
+
+-- Dados do aparelho para o dashboard, sem expor o token nem o chat do Telegram.
+create view public.civic_veiculos with (security_invoker = false) as
+  select d.token as dispositivo, d.nome, d.criado_em
+  from public.civic_dispositivos d where d.token in (select public.civic_meus_dispositivos());
+grant select on public.civic_veiculos to authenticated;
+revoke all on public.civic_veiculos from anon;
+
+-- ===== Aplicada em 19/11/2026 como "civic_estacionamentos_sem_duplicata" =====
+create unique index civic_estacionamentos_unico on public.civic_estacionamentos(dispositivo, data);

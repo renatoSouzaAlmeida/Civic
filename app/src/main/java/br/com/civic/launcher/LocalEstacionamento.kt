@@ -102,11 +102,11 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         atual = novo
         gravar(novo)
         viajando = false
-        if (rapido) { avisar(novo); return true } // ignição caindo: manda já, só com as coordenadas
+        if (rapido) { avisar(novo, manual); return true } // ignição caindo: manda já, só com as coordenadas
         fila.execute {
             val endereco = endereco(local.latitude, local.longitude)
             val completo = novo.copy(endereco = endereco)
-            principal.post { atual = completo; gravar(completo); avisar(completo) }
+            principal.post { atual = completo; gravar(completo); avisar(completo, manual) }
         }
         return true
     }
@@ -114,13 +114,13 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     /** Reenvia a localização salva para o Telegram. */
     fun reenviar() { atual?.let { avisar(it) } }
 
-    private fun avisar(e: Estacionamento) {
+    private fun avisar(e: Estacionamento, manual: Boolean = false) {
         val minutos = e.idadePosicaoMs / 60_000
         val idade = if (minutos >= 10) "\n⚠️ Último sinal de GPS há $minutos min: a posição pode estar um pouco defasada." else ""
         val texto = "🅿️ Carro estacionado" + (e.endereco?.let { " em $it" } ?: "") +
             "\n📍 %.5f, %.5f".format(Locale.US, e.lat, e.lon) +
             "\n🗺️ https://maps.google.com/?q=%.6f,%.6f".format(Locale.US, e.lat, e.lon) + idade
-        Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto)
+        Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual)
     }
 
     private fun ultimaPosicao(): Location? = runCatching {
