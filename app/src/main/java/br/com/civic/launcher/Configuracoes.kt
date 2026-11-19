@@ -39,6 +39,9 @@ class Configuracoes private constructor(ctx: Context) {
         private set
     var estiloMenu by mutableStateOf(lerEnum("estilo_menu", EstiloMenu.Barra))
         private set
+    /** Modo leve (multimídia mais simples, ex.: Honda Fit): sem animações contínuas nem vibração de toque. */
+    var modoLeve by mutableStateOf(prefs.getBoolean("modo_leve", false))
+        private set
     var enderecoCasa by mutableStateOf(prefs.getString("endereco_casa", "") ?: "")
         private set
     var enderecoTrabalho by mutableStateOf(prefs.getString("endereco_trabalho", "") ?: "")
@@ -60,6 +63,7 @@ class Configuracoes private constructor(ctx: Context) {
     val placaFormatada: String get() =
         if (Regex("^[A-Z]{3}[0-9]{4}$").matches(placa)) placa.substring(0, 3) + "-" + placa.substring(3) else placa
     fun salvarImagem(v: ImagemCarro) { imagemCarro = v; gravar("imagem_carro", v.name) }
+    fun salvarModoLeve(v: Boolean) { modoLeve = v; prefs.edit().putBoolean("modo_leve", v).apply() }
     fun salvarMapa(v: MapaPreferido) { mapa = v; gravar("mapa", v.name) }
     fun salvarEstiloMenu(v: EstiloMenu) { estiloMenu = v; gravar("estilo_menu", v.name) }
     fun salvarEnderecoCasa(v: String) { enderecoCasa = v; gravar("endereco_casa", v) }

@@ -313,11 +313,7 @@ private fun IndicadorBarra(icone: Int, ativo: Boolean?, tamanho: androidx.compos
         null -> Cores.TextoSuave.copy(alpha = 0.2f)
     }
     val pisca = if (ativo == true && piscar) {
-        androidx.compose.animation.core.rememberInfiniteTransition(label = "pisca").animateFloat(
-            1f, 0.15f,
-            androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(420), androidx.compose.animation.core.RepeatMode.Reverse),
-            label = "alfa",
-        )
+        pulsar(1f, 0.15f, 420)
     } else null
     Icon(
         androidx.compose.ui.res.painterResource(icone), null, tint = cor,

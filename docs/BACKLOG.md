@@ -72,4 +72,5 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   B) OpenStreetMap embutido, ou C) manter Waze/Maps em tela cheia com o painel de direção por cima.
 
 ## Honda Fit
-- [ ] Modo leve / perfil do Fit — aguardando dados da multimídia do Fit (versão do Android, RAM, resolução).
+- [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
+  (Fit: Android 12, 1280x720, 4 GB de RAM, 8 núcleos; o launcher já rodava bem, o modo leve é reserva para aparelhos mais simples.)

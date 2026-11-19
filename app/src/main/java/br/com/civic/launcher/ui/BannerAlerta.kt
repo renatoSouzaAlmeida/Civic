@@ -58,7 +58,7 @@ fun BannerAlerta(modifier: Modifier = Modifier, compacto: Boolean = false) {
         TipoAlerta.MotorFrio -> rememberVectorPainter(Icons.Filled.AcUnit)
     }
     val pulso = if (a.tipo.gravidade == Gravidade.Critico) {
-        rememberInfiniteTransition(label = "alerta").animateFloat(1f, 0.35f, infiniteRepeatable(tween(500), RepeatMode.Reverse), label = "pulso")
+        pulsar(1f, 0.35f, 500)
     } else null
     val forma = RoundedCornerShape(if (compacto) 12.dp else 18.dp)
     Row(

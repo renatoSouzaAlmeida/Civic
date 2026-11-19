@@ -418,9 +418,7 @@ private fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa:
         null -> p.suave.copy(alpha = 0.18f)
     }
     val pisca = if (ativa == true && piscar) {
-        rememberInfiniteTransition(label = "pisca").animateFloat(
-            1f, 0.12f, infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "alfa",
-        )
+        pulsar(1f, 0.12f, 420)
     } else null
     Icon(
         icone, null, tint = tint,

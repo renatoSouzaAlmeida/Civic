@@ -70,6 +70,13 @@ fun TelaConfig() {
                     }
                 }
             }
+            Secao("Desempenho") {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Opcao("Normal", !config.modoLeve, Modifier.weight(1f)) { config.salvarModoLeve(false) }
+                    Opcao("Modo leve", config.modoLeve, Modifier.weight(1f)) { config.salvarModoLeve(true) }
+                }
+                Text("Para multimídias mais simples (ex.: Honda Fit): sem animações contínuas nem vibração ao tocar.", color = Cores.TextoSuave, fontSize = 15.sp)
+            }
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     MapaPreferido.entries.forEach { m ->

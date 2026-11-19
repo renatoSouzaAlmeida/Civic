@@ -77,7 +77,7 @@ fun MostradorCentral(
     corAmbiente: Color? = null,
 ) {
     val Painel = coresPainel()
-    val anel by androidx.compose.animation.animateColorAsState(corAmbiente ?: Color.Transparent, androidx.compose.animation.core.tween(600), label = "anelEco")
+    val anel by androidx.compose.animation.animateColorAsState(corAmbiente ?: Color.Transparent, androidx.compose.animation.core.tween(if (br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current).modoLeve) 0 else 600), label = "anelEco")
     val f = fracao.coerceIn(0f, 1f)
     val divisoes = (marcas.size - 1) * 2
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {

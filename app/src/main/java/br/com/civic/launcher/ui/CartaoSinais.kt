@@ -124,7 +124,7 @@ private fun Seta(ativa: Boolean?, direita: Boolean, tamanho: androidx.compose.ui
         null -> Cores.TextoSuave.copy(alpha = 0.18f)
     }
     val pisca = if (ativa == true) {
-        rememberInfiniteTransition(label = "seta").animateFloat(1f, 0.15f, infiniteRepeatable(tween(420), RepeatMode.Reverse), label = "alfa")
+        pulsar(1f, 0.15f, 420)
     } else null
     Icon(
         painterResource(R.drawable.ic_seta), null, tint = cor,

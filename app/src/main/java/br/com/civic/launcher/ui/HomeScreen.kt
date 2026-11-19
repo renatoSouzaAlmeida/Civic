@@ -162,10 +162,7 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
 /** Bolinha vermelha que pisca, para a nova versão ficar evidente. */
 @Composable
 private fun PontoPiscando() {
-    val transicao = rememberInfiniteTransition(label = "pisca")
-    val alfa by transicao.animateFloat(
-        1f, 0.12f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "alfa",
-    )
+    val alfa by pulsar(1f, 0.12f, 650)
     Box(Modifier.size(12.dp).clip(CircleShape).background(Cores.Vermelho.copy(alpha = alfa)))
 }
 
