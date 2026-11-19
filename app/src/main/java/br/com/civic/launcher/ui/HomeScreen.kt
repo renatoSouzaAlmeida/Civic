@@ -149,7 +149,7 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                         ModoTema.Claro -> Icons.Filled.LightMode
                         ModoTema.Escuro -> Icons.Filled.DarkMode
                     },
-                    "Tema: ${modoTema.rotulo}", tint = Cores.Texto, modifier = Modifier.toqueSuave(aoAlternarTema).size(26.dp),
+                    "Tema: ${modoTema.rotulo}", tint = Cores.Destaque, modifier = Modifier.toqueSuave(aoAlternarTema).size(26.dp),
                 )
                 Sininho()
             }
@@ -239,7 +239,7 @@ private fun Sininho() {
     Box(Modifier.toqueSuave { aberto = true }) {
         Icon(
             if (naoLidas > 0) Icons.Filled.NotificationsActive else Icons.Filled.Notifications,
-            "Notificações", tint = if (naoLidas > 0) Cores.Destaque else Cores.Texto, modifier = Modifier.size(26.dp),
+            "Notificações", tint = Cores.Destaque, modifier = Modifier.size(26.dp),
         )
         if (naoLidas > 0) {
             Box(
