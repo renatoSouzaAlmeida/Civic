@@ -51,8 +51,14 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
     saúde da bateria e correção de combustível.
   - Possível caminho: o launcher já sincroniza com o Supabase (`supabase/`); a Casatec lê dessa base por uma
     função/API própria com chave de leitura restrita (RLS), sem expor as tabelas diretamente.
-  - A definir: como a Casatec autentica (usuário dedicado ou token), se vale guardar histórico de estacionamentos
-    na nuvem, e **mais indicadores a capturar** (ex.: última posição ao vivo, status online do carro, tensão da bateria).
+  - **Decidido:** autenticação da Casatec via OAuth do Supabase (login dedicado, só leitura, políticas RLS por usuário).
+  - **Decidido:** guardar na nuvem o **histórico completo de estacionamentos** (hoje só o último fica no aparelho):
+    data, posição, endereço, idade do sinal de GPS.
+  - **Decidido:** capturar e salvar **todo indicador possível** — quanto mais dados, melhor. Além do que já existe:
+    posição ao vivo e trajeto das viagens, status online/última comunicação do carro, tensão da bateria ao longo do
+    tempo, temperatura, rpm, velocidade, fuel trims, falhas DTC com histórico, eventos de ignição (ligou/desligou),
+    consumo, versão do app. Respeitar tamanho do app e uso de dados (envio em lote, só com internet).
+  - A definir: frequência de envio dos dados ao vivo, retenção do histórico e o desenho das telas do dashboard.
 
 ## Navegação / mapa
 - [ ] Decidir o mapa dentro do launcher: A) Google Maps embutido (Maps SDK, precisa de chave e Play Services),
