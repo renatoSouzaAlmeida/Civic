@@ -84,7 +84,15 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
 
     /** Guarda a posição de agora (a última conhecida) e avisa. Devolve false se não houver posição. */
     fun estacionar(manual: Boolean, rapido: Boolean = false): Boolean {
-        val local = ultimaPosicao() ?: return false
+        val local = runCatching { ultimaPosicao() }.getOrNull()
+        if (local == null) {
+            // Sem posição: avisa mesmo assim (só a hora), para o aviso nunca se perder.
+            if (manual) return false
+            viajando = false
+            val hora = java.text.SimpleDateFormat("HH:mm", Locale("pt", "BR")).format(java.util.Date())
+            Nuvem.obter(ctx).avisar("estacionamento", "🅿️ Carro estacionado às $hora\n⚠️ Não consegui obter a localização (sem sinal de GPS).")
+            return true
+        }
         val agora = System.currentTimeMillis()
         val idade = (agora - local.time).coerceAtLeast(0)
         val anterior = atual
