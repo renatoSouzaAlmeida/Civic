@@ -7,6 +7,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.BatteryChargingFull
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
@@ -39,9 +41,14 @@ fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BotaoPilula("Voltar", Icons.Filled.ArrowBack) { aoVoltar() }
-            Opcao("Falhas (DTC)", aba == 0, Modifier.width(200.dp)) { aba = 0 }
-            Opcao("Bateria", aba == 1, Modifier.width(200.dp)) { aba = 1 }
-            Opcao("Mistura", aba == 2, Modifier.width(200.dp)) { aba = 2 }
+            BarraAbas(
+                listOf(
+                    Aba("Falhas (DTC)", iconeRes = R.drawable.ic_motor),
+                    Aba("Bateria", Icons.Filled.BatteryChargingFull),
+                    Aba("Mistura", Icons.Filled.Tune),
+                ),
+                aba, Modifier.weight(1f),
+            ) { aba = it }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (aba) {

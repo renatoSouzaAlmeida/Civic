@@ -43,11 +43,10 @@ private val formatoDataEstrito = SimpleDateFormat("ddMMyyyy", BR).apply { isLeni
 fun TelaVeiculo() {
     var aba by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.widthIn(max = 760.dp)) {
-            Opcao("Viagem", aba == 0, Modifier.weight(1f)) { aba = 0 }
-            Opcao("Abastecimentos", aba == 1, Modifier.weight(1f)) { aba = 1 }
-            Opcao("Manutenção", aba == 2, Modifier.weight(1f)) { aba = 2 }
-        }
+        BarraAbas(
+            listOf(Aba("Viagem", Icons.Filled.Route), Aba("Abastecimentos", Icons.Filled.LocalGasStation), Aba("Manutenção", Icons.Filled.Build)),
+            aba, Modifier.fillMaxWidth(),
+        ) { aba = it }
         when (aba) {
             0 -> AbaViagem()
             1 -> AbaAbastecimentos()

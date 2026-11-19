@@ -224,15 +224,6 @@ private fun PainelEsportivo(
         Row(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BotaoRedondoPainel(if (obd.estado == EstadoObd.Demonstracao) Icons.Filled.Stop else Icons.Filled.PlayArrow) { obd.alternarDemonstracao() }
             BotaoRedondoPainel(Icons.Filled.Bluetooth) { aoEscolherAdaptador() }
-            // Falhas (DTC): com contador quando há códigos.
-            Box {
-                BotaoRedondoPainel(painterResource(R.drawable.ic_motor)) { aoVerFalhas() }
-                val qtd = d.codigos.size + d.codigosPendentes.size
-                if (qtd > 0) Box(
-                    Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(18.dp).clip(CircleShape).background(p.Vermelho),
-                    contentAlignment = Alignment.Center,
-                ) { Text("$qtd", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-            }
         }
 
         // Setas entre os mostradores: esquerda entre rpm e km/h, direita entre km/h e km/l.
@@ -255,6 +246,12 @@ private fun PainelEsportivo(
             LuzEspia(rememberVectorPainter(Icons.Filled.Thermostat), d.tempMotor?.let { it >= 105 }, p.Vermelho)
         }
 
+        // Diagnóstico em evidência: botão grande na ponta direita da linha azul, acima do Spotify.
+        BotaoDiagnostico(
+            d.codigos.size + d.codigosPendentes.size,
+            Modifier.offset(dp(g.w - 16f - 210f), dp(g.yBerco - 24f)).width(210.dp).height(48.dp),
+        ) { aoVerFalhas() }
+
         if (comInfos) {
             val topo = dp(g.yBerco + 8f)
             val altura = dp(g.h - g.yBerco - 14f)
@@ -267,7 +264,8 @@ private fun PainelEsportivo(
                 InfoPainel("Tensão", Icons.Filled.BatteryChargingFull, d.tensao?.let { "%.1f".format(it) }, "V", compacto = true)
                 InfoPainel("Combustível", Icons.Filled.LocalGasStation, d.nivelCombustivel?.toString(), "%", compacto = true)
             }
-            SpotifyPainel(monitor, Modifier.offset(dp(g.w * 0.71f), topo).width(dp(g.w * 0.29f - 16f)).height(altura))
+            // O Spotify desce um pouco para dar lugar ao botão do Diagnóstico.
+            SpotifyPainel(monitor, Modifier.offset(dp(g.w * 0.71f), dp(g.yBerco + 34f)).width(dp(g.w * 0.29f - 16f)).height(dp(g.h - g.yBerco - 40f)))
         }
     }
 }
@@ -454,6 +452,29 @@ private fun InfoPainel(rotulo: String, icone: ImageVector, valor: String?, unida
                 if (valor != null) Text(unidade, color = p.texto, fontSize = 16.sp, modifier = Modifier.padding(bottom = 3.dp))
             }
         }
+    }
+}
+
+/** Botão grande do Diagnóstico (falhas, bateria, mistura), com contador de códigos de falha. */
+@Composable
+private fun BotaoDiagnostico(codigos: Int, modifier: Modifier, aoClicar: () -> Unit) {
+    val forma = RoundedCornerShape(24.dp)
+    val alerta = codigos > 0
+    Box(modifier) {
+        Row(
+            Modifier.fillMaxSize().clip(forma)
+                .background(Brush.verticalGradient(if (alerta) listOf(Color(0xFFFFB020), Color(0xFFD97706)) else listOf(Color(0xFF4D9BFF), Color(0xFF1F66E0))))
+                .border(1.dp, Color(0xE6AAD2FF), forma).clickable { aoClicar() }.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(painterResource(R.drawable.ic_motor), null, tint = Color.White, modifier = Modifier.size(30.dp))
+            Text("Diagnóstico", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        }
+        if (alerta) Box(
+            Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).size(22.dp).clip(CircleShape).background(Color(0xFFEF4444))
+                .border(2.dp, Color.White, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { Text("$codigos", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
     }
 }
 
