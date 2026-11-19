@@ -84,6 +84,7 @@ fun TelaConfig() {
                 )
             }
             RotinaDiariaConfig()
+            MusicaAoLigar()
             VolumeAuto()
             Secao("Painel de direção") {
                 Text("Posição", color = Cores.TextoSuave, fontSize = 15.sp)
@@ -240,5 +241,28 @@ private fun VolumeAuto() {
         if (volume.nivel != br.com.civic.launcher.NivelVolumeAuto.Desligado && volume.volumeBase >= 0) {
             Text("Referência: ${volume.volumeBase} · ajuste agora: ${if (volume.ajusteAtual >= 0) "+" else ""}${volume.ajusteAtual}", color = Cores.Destaque, fontSize = 14.sp)
         }
+    }
+}
+
+/** Retomar a música de onde parou quando o motor ligar. */
+@Composable
+private fun MusicaAoLigar() {
+    val ctx = LocalContext.current
+    val musica = remember { br.com.civic.launcher.RetomarMusica.obter(ctx) }
+    var aviso by remember { mutableStateOf<String?>(null) }
+    Secao("Música ao ligar o carro") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Opcao("Retomar de onde parou", musica.ligado, Modifier.weight(1f)) { musica.definirLigado(true) }
+            Opcao("Não retomar", !musica.ligado, Modifier.weight(1f)) { musica.definirLigado(false) }
+        }
+        Text(
+            "Se a música estava tocando quando você desligou o carro, o Spotify continua de onde parou assim que o motor ligar. " +
+                "Se você pausou de propósito, não retoma. Para funcionar melhor, ative o acesso às notificações (abaixo, em Sistema).",
+            color = Cores.TextoSuave, fontSize = 13.sp,
+        )
+        BotaoPilula("Testar agora", Icons.Filled.PlayArrow, Modifier.fillMaxWidth()) {
+            aviso = if (musica.retomar()) "Pedido de play enviado ao Spotify." else "Não foi possível agora (em chamada?)."
+        }
+        aviso?.let { Text(it, color = Cores.Destaque, fontSize = 14.sp) }
     }
 }

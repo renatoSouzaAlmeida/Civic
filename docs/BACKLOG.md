@@ -36,7 +36,7 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 10. [x] **Correção de combustível (fuel trims)** — STFT/LTFT altos e persistentes indicam entrada falsa de ar, sonda ou bico.
 11. [x] **Volume automático pela velocidade** — compensa o ruído da estrada.
 12. [x] **Rotina diária** — sugestões de destino por período, local e dias da semana (Config.), com faixa "Ir agora".
-    Ainda falta: retomar o Spotify sozinho na partida.
+    Também retoma o Spotify de onde parou quando o motor liga (Config. > Música ao ligar o carro).
 13. [x] **"Onde parei o carro"** — salva o ponto de GPS ao desligar.
 14. [ ] **Brilho da tela** — mais baixo à noite ou com farol ligado.
 15. [ ] **Calibragem dos pneus (TPMS)** — sensores Bluetooth de tampinha de válvula (hardware extra).
