@@ -42,7 +42,8 @@ import br.com.civic.launcher.obd.TipoAlerta
  */
 @Composable
 fun BannerAlerta(modifier: Modifier = Modifier, compacto: Boolean = false) {
-    val alertas = remember { AlertasMotor.obter(LocalContext.current.applicationContext) }
+    val ctx = LocalContext.current
+    val alertas = remember { AlertasMotor.obter(ctx.applicationContext) }
     val a = alertas.atual ?: return
     val (fundo, texto) = when (a.tipo.gravidade) {
         Gravidade.Critico -> Color(0xFFDC2626) to Color.White
@@ -53,6 +54,7 @@ fun BannerAlerta(modifier: Modifier = Modifier, compacto: Boolean = false) {
         TipoAlerta.Superaquecimento -> rememberVectorPainter(Icons.Filled.Thermostat)
         TipoAlerta.Injecao -> painterResource(R.drawable.ic_motor)
         TipoAlerta.Alternador, TipoAlerta.BateriaFraca -> rememberVectorPainter(Icons.Filled.BatteryAlert)
+        TipoAlerta.FarolDesligado -> painterResource(R.drawable.ic_farol)
         TipoAlerta.MotorFrio -> rememberVectorPainter(Icons.Filled.AcUnit)
     }
     val pulso = if (a.tipo.gravidade == Gravidade.Critico) {

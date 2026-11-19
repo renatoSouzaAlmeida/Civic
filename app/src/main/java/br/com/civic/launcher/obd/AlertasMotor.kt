@@ -24,6 +24,7 @@ enum class TipoAlerta(
     Injecao("Luz de injeção acesa", Gravidade.Critico, 0, 24 * 3_600_000L, 60 * 60_000L),
     Alternador("Alternador sem carga", Gravidade.Aviso, 30_000, 6 * 3_600_000L, 30 * 60_000L),
     BateriaFraca("Bateria fraca", Gravidade.Aviso, 30_000, 6 * 3_600_000L, 30 * 60_000L),
+    FarolDesligado("Farol desligado", Gravidade.Aviso, 5_000, 0, 10 * 60_000L),
     MotorFrio("Motor frio", Gravidade.Dica, 3_000, 0, 5 * 60_000L),
 }
 
@@ -59,6 +60,9 @@ class AlertasMotor private constructor(private val ctx: Context) {
             condicoes[TipoAlerta.Alternador] = "Tensão em ${"%.1f".format(br, tensao)} V com o motor ligado: o alternador pode não estar carregando a bateria."
         if (!ligado && tensao != null && tensao < 12.2f)
             condicoes[TipoAlerta.BateriaFraca] = "Bateria em ${"%.1f".format(br, tensao)} V com o motor desligado. Pode faltar carga para a próxima partida."
+        // Segurança: farol apagado com o motor ligado (só quando o carro informa o farol).
+        if (ligado && d.farol == false)
+            condicoes[TipoAlerta.FarolDesligado] = "Ligue o farol baixo: é item de segurança e obrigatório em rodovias, mesmo de dia."
         if (temp != null && temp < 70 && rpm > 3000)
             condicoes[TipoAlerta.MotorFrio] = "Motor a $temp °C: evite passar de 3.000 rpm até aquecer (70 °C)."
 
