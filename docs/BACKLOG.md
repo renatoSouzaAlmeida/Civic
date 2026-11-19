@@ -66,8 +66,10 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   - A definir: quais campos entram no resumo enviado ao ligar, retenção do histórico e o desenho das telas do dashboard.
 
 ## Navegação / mapa
-- [ ] Decidir o mapa dentro do launcher: A) Google Maps embutido (Maps SDK, precisa de chave e Play Services),
-  B) OpenStreetMap embutido, ou C) manter Waze/Maps em tela cheia com o painel de direção por cima.
+- [ ] **Adiado — só fazer se realmente impactar o uso.** Waze fora de cogitação para embutir (não há SDK).
+  Caminho recomendado, se um dia valer: navegar no Google Maps em tela cheia com o painel de direção por cima
+  (já existe) + aba "Mapa" no launcher com o Maps SDK (posição, trânsito, vagas do histórico). Exige Google Play
+  Services na multimídia e chave de API. O Navigation SDK (rota embutida) exige contrato com o Google: descartado.
 
 ## Honda Fit
 - [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
