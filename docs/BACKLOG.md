@@ -60,14 +60,14 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 
 ### Integrações e notificações
 - [x] **Comandos no bot do Telegram** — pronto, falta validar: /onde, /status, /bateria, /consumo, /manutencao e /ajuda, respondendo com dados do Supabase (função civic-bot). Só responde a chats vinculados.
-- [ ] **Resumo semanal no Telegram** — km, consumo, gasto, alertas e manutenção próxima.
-- [ ] **Chuva onde o carro está parado** — cruza a vaga atual com a previsão do tempo.
-- [ ] **Preço da ANP** — compara o preço pago com a média da cidade e melhora "etanol ou gasolina?".
+- [x] **Resumo semanal no Telegram** — pronto, falta validar: automático aos domingos às 19h (pg_cron) e sob demanda com /resumo.
+- [x] **Chuva onde o carro está parado** — pronto, falta validar: checagem a cada 20 min na nuvem (pg_cron + Open-Meteo); um aviso por vaga.
+- [x] **Preço da ANP** — pronto, falta validar: planilha semanal da ANP lida todo dia às 11h (nuvem); aparece em Veículo > "Etanol ou gasolina?".
 
 ### Interface e usabilidade
 - [x] **Tela "Status do app"** — em Config., no topo: OBD, nível do tanque e MAF suportados, monitores de emissões, GPS, localização o tempo todo, nuvem, Telegram, Vigia, painel, Spotify, Bluetooth e voz, com botão para corrigir cada permissão.
-- [ ] **Modo HUD** — velocidade espelhada em tela cheia para refletir no para-brisa à noite.
-- [ ] **Comando de voz curto** — "onde parei", "quanto de combustível", "ir para casa".
+- [x] **Modo HUD** — pronto, falta validar: velocímetro da barra do topo ou Config. > Segurança; espelhado por padrão.
+- [x] **Comando de voz curto** — pronto, falta validar: microfone da barra do topo; depende de reconhecimento de voz no aparelho.
 
 ## Abastecimento automático
 - [x] **Pelo nível do tanque** — pronto, falta validar no carro: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais

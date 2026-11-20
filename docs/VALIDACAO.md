@@ -3,6 +3,16 @@
 Roteiro para testar de uma vez as funções novas. Marque cada item. Onde der, o "em casa" não precisa do carro.
 Antes de tudo: instale a versão mais nova (a multimídia atualiza sozinha; confira a versão no topo da tela inicial).
 
+## Itens novos desta versão (podem ser testados em casa)
+- [ ] **Clima na home pela localização atual:** o cartão mostra a sua cidade (ex.: Barueri) e não Brasília. O app usa GPS, depois a posição pela rede e, sem nada disso, o IP da internet (aparece "(aprox.)"). Se mostrar outra cidade, me diga.
+- [ ] **`/onde` do bot:** mostra a posição mais recente (GPS ou pela rede) e a última vaga, a que for mais nova. Deve trazer o dia de hoje se o app estiver aberto.
+- [ ] **Spotify:** o cartão tem a cor do cartão do veículo com um degradê azul claro.
+- [ ] **Resumo semanal:** mande `/resumo` ao bot. Chega km, usos, consumo, gasto, alertas, manutenção e lugares frequentes. O automático sai aos domingos, às 19h.
+- [ ] **Preço da ANP:** Veículo → Abastecimentos → "Etanol ou gasolina?" mostra "ANP · Barueri: gasolina R$ … · aditivada … · etanol …" e o botão "Usar os preços da ANP" preenche os campos. Confira com o levantamento da ANP.
+- [ ] **Modo HUD:** toque no ícone de velocímetro da barra do topo (ou Config. → Segurança). Velocidade enorme em fundo preto. Toque sai; segure alterna o espelhamento (ligado por padrão, para refletir no para-brisa).
+- [ ] **Comando de voz:** toque no microfone da barra do topo (aceite a permissão). Diga "onde parei", "quanto de combustível", "ir para casa", "bateria", "temperatura", "consumo" ou "que horas são". O app responde falando. Se não houver reconhecimento de voz, o Status do app avisa.
+- [ ] **Chuva onde o carro está parado:** depois de estacionar, se a previsão indicar chuva nas próximas 3 horas (60% ou mais), chega "🌧️ Deve chover onde seu carro está parado…". Um aviso por vaga, checado a cada 20 min. Só dá para ver em dia de chuva.
+
 ## 0. Antes de sair (em casa, ou com a ignição ligada na garagem)
 - [ ] **Config. → Status do app**: abrir e conferir os itens. Corrigir os vermelhos com o botão ao lado. Deixe esta tela aberta com o motor ligado para ver "Nível do tanque", "Consumo (fluxo de ar)" e "Monitores de emissões" aparecerem.
 - [ ] **Telegram**: item "Telegram" verde. Se não, vincule em "Avisos no celular" e envie o teste.
@@ -31,22 +41,32 @@ O app liga os comandos sozinho ao abrir, com o Telegram já vinculado (uma vez p
 - [ ] **Temperatura do câmbio**: em OBD → Falhas, preencher cabeçalho/comando do PID do câmbio (se descobrir) e "Salvar e testar". Se "sem resposta", anotar o texto recebido.
 - [ ] **Modo 06**: "Ler modo 06": deve listar testes (MID). Se "não respondeu", o carro não suporta.
 
-## 2. Dirigindo (percurso de 20–30 min, com parada no fim)
-- [ ] **Termostato**: se o motor partiu frio (até 45 °C), ver em OBD → Falhas → Termostato o tempo até 80 °C.
-- [ ] **Catalisador**: com o motor quente, em velocidade constante (50–80 km/h), tocar "Testar catalisador (45 s)". Ler o parecer.
-- [ ] **Marcha lenta**: parar no semáforo/garagem com o motor quente por 30 s; ver "Marcha lenta" (estável ou irregular).
-- [ ] **Frenagem/aceleração bruscas**: uma frenagem firme e uma arrancada forte (com segurança). No fim, o resumo da viagem no Telegram traz "condução NN/100 (X frenagens e Y acelerações bruscas)".
-- [ ] **Alertas falados**: quando aparecer um alerta (ex.: motor frio acima de 3.000 rpm não fala por ser dica; superaquecimento e falha falam), ouvir a voz.
-- [ ] **Painel de direção** (sobre o mapa): confira que os alertas e a nota seguem aparecendo.
-- [ ] **Posição e trajeto**: no fim, o Casa Tech mostra o trajeto (pontos a cada 15 s) e o status online.
+## 2. Dirigindo (percurso de 20–30 min) — passo a passo
+Não mexa no tablet dirigindo: peça a um passageiro ou faça nas paradas. Antes de sair, confira em Config. → Status do app que o OBD está verde.
+1. **Saída (motor frio, de preferência de manhã):** ligue o carro e saia. Nada a fazer: o app mede sozinho o **termostato** (tempo até 80 °C). Para ver depois: OBD → Falhas → "Termostato".
+2. **Primeiros 10 min:** dirija normalmente, com uma **frenagem firme** e uma **arrancada forte** (com segurança, via livre). Isso alimenta a nota de condução.
+3. **Depois de uns 15 min (motor quente, 80 °C ou mais):** pare em local seguro com o motor ligado, abra OBD → Falhas e toque em **"Testar catalisador (45 s)"**. Pode ficar parado em marcha lenta; dá um resultado, mas é mais confiável com um passageiro tocando o botão em **velocidade constante de 50–80 km/h** (via livre, sem frear). Aguarde o parecer na própria tela.
+4. **Parado 30 s com o motor quente** (semáforo ou garagem): em OBD → Falhas → "Marcha lenta" aparece "Estável" ou "Irregular" depois de uns 30 s.
+5. **Ouça os alertas falados:** em Config. → Segurança → "Testar alerta falado". Os reais (superaquecimento, falha) só falam se acontecerem.
+6. **Direção com mapa:** toque em "Iniciar direção" na home e veja o painel de direção sobre o Maps. Confira que alertas e velocidade aparecem.
+7. **Ao chegar:** desligue o carro. Em até 5 min chega no Telegram o resumo da viagem, com "condução NN/100 (X frenagens e Y acelerações bruscas)".
+8. **No dia seguinte:** abra o Casa Tech e confira o trajeto da viagem (pontos a cada 15 s) e o status online.
 
 ## 3. Ao desligar o carro
 - [ ] **Estacionamento**: chega no Telegram "🅿️ Carro estacionado em …" com mapa, em segundos.
 - [ ] **Arrastar o app** da lista de recentes com o carro ligado: o aviso de estacionamento também chega.
 - [ ] Na **próxima partida**: o Casa Tech recebe o resumo do último uso (estado, bateria, saúde do motor).
 
-## 4. Abastecimento (no próximo abastecimento)
-- [ ] Encher o tanque. Ao ligar o carro, chega "⛽ Abastecimento detectado" (se o carro informa o nível). Informar o valor pago ou o preço por litro em Veículo → Abastecimentos (lápis) e marcar aditivada se for o caso. Conferir o consumo (km/l) no próximo.
+## 4. Abastecimento
+**Teste sem ir ao posto:** Veículo → Abastecimentos → "Simular abastecimento detectado (teste)". Aparece no histórico um item "detectado pelo tanque (15% → 95%)" e chega no Telegram "🧪 TESTE ⛽ Abastecimento detectado…". Toque no lápis, informe o valor total OU o preço por litro, marque aditivada se quiser e salve. **Depois apague o item** (lixeira), pois ele conta no consumo e no Casa Tech.
+
+**Teste real (no próximo abastecimento):**
+1. Chegue ao posto com o tanque baixo (reserva), com o app aberto e o OBD conectado.
+2. **Desligue o carro** e abasteça até o desarme da bomba (tanque cheio).
+3. **Ligue o carro** e deixe o tablet ligado. Em cerca de 1 a 2 minutos chega no Telegram "⛽ Abastecimento detectado: ~NN l (tanque X% → Y%)". O app precisa de 5 leituras do nível (uma a cada ~8 s).
+4. Informe o valor pago no histórico (lápis).
+5. **Se não chegar nada em 5 min:** abra Config. → Status do app e veja "Nível do tanque". Se disser que o carro não informa o nível, a detecção automática não funciona neste carro: lance à mão em "Novo abastecimento".
+6. No abastecimento seguinte, confira o consumo (km/l) e o custo por km no histórico e no `/consumo` do bot.
 
 ## 5. Dias depois
 - [ ] **Dreno de bateria**: depois de uma noite parado, OBD → Falhas → Dreno de bateria mostra o registro (tensão na partida e queda por hora).
