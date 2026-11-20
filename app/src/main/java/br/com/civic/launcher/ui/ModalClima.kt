@@ -128,40 +128,142 @@ private fun LinhaHoras(horas: List<HoraDet>) {
     }
 }
 
-/** Escolha de um destino (Casa, Trabalho ou endereço digitado) e a previsão de chuva nas próximas 12 h por lá. */
+/** Um local encontrado na busca: nome curto, endereço completo e coordenadas. */
+private data class LocalAchado(val titulo: String, val detalhe: String, val lat: Double, val lon: Double, val km: Float?)
+
+/**
+ * Procura até 5 locais com esse nome: primeiro no Geocoder do aparelho (endereço, bairro, cidade), e, se ele não existir
+ * ou não achar nada, no geocodificador do Open-Meteo (cidades e bairros do Brasil). Ordena pelo mais perto daqui.
+ */
+@Suppress("DEPRECATION")
+private fun buscarLocais(ctx: android.content.Context, texto: String, refLat: Double?, refLon: Double?): List<LocalAchado> {
+    fun km(lat: Double, lon: Double): Float? = if (refLat == null || refLon == null) null else
+        FloatArray(1).also { android.location.Location.distanceBetween(refLat, refLon, lat, lon, it) }[0] / 1000f
+    val lista = mutableListOf<LocalAchado>()
+    runCatching {
+        if (Geocoder.isPresent()) Geocoder(ctx, Locale("pt", "BR")).getFromLocationName(texto, 5)?.forEach { a ->
+            val titulo = listOfNotNull(a.featureName?.takeIf { it != a.subThoroughfare && it.any { c -> c.isLetter() } }, a.thoroughfare, a.subLocality, a.locality)
+                .firstOrNull() ?: texto
+            val detalhe = (0..a.maxAddressLineIndex).mapNotNull { a.getAddressLine(it) }.joinToString(", ")
+                .ifEmpty { listOfNotNull(a.subLocality, a.locality ?: a.subAdminArea, a.adminArea).joinToString(", ") }
+            lista += LocalAchado(titulo, detalhe, a.latitude, a.longitude, km(a.latitude, a.longitude))
+        }
+    }
+    if (lista.isEmpty()) runCatching {
+        val url = "https://geocoding-api.open-meteo.com/v1/search?count=5&language=pt&countryCode=BR&name=" + java.net.URLEncoder.encode(texto, "UTF-8")
+        val con = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 10_000; readTimeout = 10_000 }
+        val r = org.json.JSONObject(con.inputStream.bufferedReader().use { it.readText() }).optJSONArray("results")
+        if (r != null) for (k in 0 until r.length()) {
+            val o = r.getJSONObject(k)
+            val lat = o.getDouble("latitude"); val lon = o.getDouble("longitude")
+            val detalhe = listOf(o.optString("admin3"), o.optString("admin2"), o.optString("admin1"), o.optString("country"))
+                .filter { it.isNotBlank() && it != o.optString("name") }.distinct().joinToString(", ")
+            lista += LocalAchado(o.optString("name", texto), detalhe, lat, lon, km(lat, lon))
+        }
+    }
+    return lista.distinctBy { "%.3f,%.3f".format(Locale.US, it.lat, it.lon) }.sortedBy { it.km ?: 0f }
+}
+
+/**
+ * Chuva no destino: digite o bairro, a cidade ou o endereço (ou toque em Casa/Trabalho). As sugestões aparecem
+ * enquanto digita, com o endereço completo e a distância; o local escolhido fica destacado com as coordenadas
+ * e o botão "Ver no mapa", para não haver dúvida de onde é a previsão.
+ */
 @Composable
 private fun DestinoChuva(casa: String, trabalho: String, post: (() -> Unit) -> Unit) {
     val ctx = LocalContext.current
+    val prefs = remember { ctx.getSharedPreferences("sensores", android.content.Context.MODE_PRIVATE) }
+    val refLat = remember { prefs.getString("clima_lat", null)?.toDoubleOrNull() }
+    val refLon = remember { prefs.getString("clima_lon", null)?.toDoubleOrNull() }
     var texto by remember { mutableStateOf("") }
-    var rotulo by remember { mutableStateOf<String?>(null) }
+    var sugestoes by remember { mutableStateOf<List<LocalAchado>>(emptyList()) }
+    var escolhido by remember { mutableStateOf<LocalAchado?>(null) }
     var horas by remember { mutableStateOf<List<HoraDet>?>(null) }
     var msg by remember { mutableStateOf<String?>(null) }
+    var busca by remember { mutableIntStateOf(0) }
+    var semSugestao by remember { mutableStateOf<String?>(null) } // texto posto por Casa/Trabalho: já busca e escolhe sozinho
 
-    @Suppress("DEPRECATION")
-    fun consultar(endereco: String) {
-        if (endereco.isBlank()) return
-        msg = "Procurando o destino…"; horas = null
-        thread(name = "geocode-destino") {
-            val a = runCatching { Geocoder(ctx, Locale("pt", "BR")).getFromLocationName(endereco, 1)?.firstOrNull() }.getOrNull()
-            if (a == null) { post { msg = "Não encontrei esse destino. Tente com cidade ou bairro." }; return@thread }
-            val nomeDestino = listOfNotNull(a.subLocality ?: a.thoroughfare, a.locality ?: a.subAdminArea).joinToString(", ").ifEmpty { endereco }
-            post { rotulo = nomeDestino; msg = "Consultando a previsão…" }
-            ClimaDetalhe.chuvaNoPonto(a.latitude, a.longitude, post) { r -> horas = r; msg = if (r == null) "Previsão indisponível para este destino." else null }
+    fun escolher(l: LocalAchado) {
+        escolhido = l; sugestoes = emptyList(); horas = null; msg = "Consultando a previsão…"
+        ClimaDetalhe.chuvaNoPonto(l.lat, l.lon, post) { r -> horas = r; msg = if (r == null) "Previsão indisponível para este local." else null }
+    }
+
+    /** Procura; com [automatico], já escolhe o primeiro resultado (Casa/Trabalho). */
+    fun procurar(t: String, automatico: Boolean = false) {
+        if (t.trim().length < 3) { sugestoes = emptyList(); return }
+        val id = ++busca
+        msg = "Procurando \"${t.trim()}\"…"
+        thread(name = "busca-destino") {
+            val r = buscarLocais(ctx, t.trim(), refLat, refLon)
+            post {
+                if (id != busca) return@post // chegou resposta de uma busca antiga
+                when {
+                    r.isEmpty() -> { sugestoes = emptyList(); msg = "Nada encontrado para \"${t.trim()}\". Tente com o nome da cidade junto (ex.: Centro, Barueri)." }
+                    automatico -> escolher(r.first())
+                    else -> { sugestoes = r; msg = if (r.size == 1) "1 local encontrado. Toque para confirmar." else "${r.size} locais encontrados. Toque no certo." }
+                }
+            }
         }
     }
 
+    // Sugestões enquanto digita (espera 0,8 s sem digitar).
+    LaunchedEffect(texto) {
+        if (texto == semSugestao) return@LaunchedEffect
+        kotlinx.coroutines.delay(800)
+        procurar(texto)
+    }
+
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (casa.isNotBlank()) Opcao("Casa", false, Modifier.weight(1f)) { texto = casa; consultar(casa) }
-        if (trabalho.isNotBlank()) Opcao("Trabalho", false, Modifier.weight(1f)) { texto = trabalho; consultar(trabalho) }
+        if (casa.isNotBlank()) Opcao("Casa", false, Modifier.weight(1f)) { semSugestao = casa; texto = casa; procurar(casa, automatico = true) }
+        if (trabalho.isNotBlank()) Opcao("Trabalho", false, Modifier.weight(1f)) { semSugestao = trabalho; texto = trabalho; procurar(trabalho, automatico = true) }
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(value = texto, onValueChange = { texto = it }, label = { Text("Cidade, bairro ou endereço do destino") }, singleLine = true, modifier = Modifier.weight(1f))
-        BotaoPilula("Ver chuva", Icons.Filled.WaterDrop) { consultar(texto) }
+        OutlinedTextField(value = texto, onValueChange = { texto = it; escolhido = null; horas = null },
+            label = { Text("Bairro, cidade ou endereço do destino") }, singleLine = true, modifier = Modifier.weight(1f),
+            leadingIcon = { Icon(Icons.Filled.Search, null) },
+            trailingIcon = { if (texto.isNotEmpty()) Icon(Icons.Filled.Close, "Limpar", Modifier.clickable { texto = ""; sugestoes = emptyList(); escolhido = null; horas = null; msg = null }) })
+        BotaoPilula("Buscar", Icons.Filled.Search) { procurar(texto) }
     }
     msg?.let { Text(it, color = Cores.TextoSuave, fontSize = 14.sp) }
+
+    // Sugestões: nome, endereço completo e distância daqui.
+    sugestoes.forEach { l ->
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Cores.Chip).border(1.dp, Cores.ChipBorda, RoundedCornerShape(12.dp))
+            .clickable { escolher(l) }.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Filled.Place, null, tint = Cores.Destaque, modifier = Modifier.size(26.dp))
+            Column(Modifier.weight(1f)) {
+                Text(l.titulo, color = Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(l.detalhe, color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 2)
+            }
+            l.km?.let { Text(if (it < 1f) "${(it * 1000).toInt()} m" else "%.0f km".format(Locale("pt", "BR"), it), color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
+        }
+    }
+
+    // Local consultado: sem dúvida de onde é a previsão.
+    escolhido?.let { l ->
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Destaque.copy(alpha = 0.12f)).border(1.5.dp, Cores.Destaque, RoundedCornerShape(14.dp))
+            .padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Filled.LocationOn, null, tint = Cores.Destaque, modifier = Modifier.size(32.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Previsão para", color = Cores.TextoSuave, fontSize = 12.sp)
+                Text(l.titulo, color = Cores.Texto, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text(l.detalhe, color = Cores.TextoSuave, fontSize = 13.sp)
+                Text("%.5f, %.5f".format(Locale.US, l.lat, l.lon) + (l.km?.let { " · a %.0f km daqui".format(Locale("pt", "BR"), it) } ?: ""),
+                    color = Cores.TextoSuave, fontSize = 12.sp)
+            }
+            BotaoPilula("Ver no mapa", Icons.Filled.Map) {
+                runCatching {
+                    ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.net.Uri.parse("geo:${l.lat},${l.lon}?q=${l.lat},${l.lon}(" + android.net.Uri.encode(l.titulo) + ")"))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }
+        }
+    }
     horas?.let { h ->
         val r = ClimaDetalhe.resumoChuva(h)
-        Text("${rotulo ?: "Destino"}: $r", color = if (r.startsWith("Sem")) Cores.Ok else Cores.Waze, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Text(r, color = if (r.startsWith("Sem")) Cores.Ok else Cores.Waze, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         LinhaHoras(h)
     }
 }
