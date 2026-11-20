@@ -63,7 +63,8 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
     val d = obd.dados
     val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     var escolhendo by remember { mutableStateOf(false) }
-    val config = remember { br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current) }
+    val contextoConfig = androidx.compose.ui.platform.LocalContext.current
+    val config = remember { br.com.civic.launcher.Configuracoes.obter(contextoConfig) }
 
     var vendoFalhas by remember { mutableStateOf(false) }
     if (vendoFalhas) {

@@ -206,6 +206,7 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val gauge = minOf(maxHeight * 0.86f, maxWidth * 0.27f)
+            val altura = maxHeight
             // Estrada em perspectiva, bem suave, atrás da velocidade.
             val linha = Cores.TextoSuave
             Canvas(Modifier.fillMaxSize()) {
@@ -242,7 +243,7 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
             }
             // Velocidade, carro e quilometragem.
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (maxHeight.value * 0.46f).sp, lineHeight = (maxHeight.value * 0.46f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1)
+                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (altura.value * 0.46f).sp, lineHeight = (altura.value * 0.46f).sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic, maxLines = 1)
                 Text("km/h", color = Cores.TextoSuave, fontSize = 30.sp)
             }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -299,7 +300,7 @@ private fun Etiqueta(titulo: String?, valor: String, unidade: String, icone: Ima
 @Composable
 fun LayoutOrbitas(obd: ObdMonitor, vel: Float) {
     val d = obd.dados
-    val azul = Cores.Destaque; val vaz = Cores.SegVazio; val fio = Cores.Destaque.copy(alpha = 0.35f)
+    val azul = Cores.Destaque; val vaz = Cores.SegVazio; val fio = Cores.Destaque.copy(alpha = 0.35f); val solido = Cores.CartaoSolido
     val fTemp = ((d.tempAdmissao ?: 0) / 60f); val fTensao = (((d.tensao ?: 11f) - 11f) / 4f); val fCarga = ((d.carga ?: 0) / 100f); val fComb = ((d.nivelCombustivel ?: 0) / 100f)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val w = maxWidth; val h = maxHeight
@@ -333,7 +334,7 @@ fun LayoutOrbitas(obd: ObdMonitor, vel: Float) {
             fun liga(de: Offset, paraX: Float, paraY: Float) = drawLine(fio, de, Offset(size.width * paraX, size.height * paraY), 2.5f)
             liga(ponto(207.0), 0.27f, 0.23f); liga(ponto(334.0), 0.745f, 0.22f); liga(ponto(110.0), 0.265f, 0.76f); liga(ponto(30.0), 0.755f, 0.76f)
             // Círculo central.
-            drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.9f), Cores.CartaoSolido), Offset(cx, cy), ry * 0.95f), ry * 0.95f, Offset(cx, cy))
+            drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.9f), solido), Offset(cx, cy), ry * 0.95f), ry * 0.95f, Offset(cx, cy))
             drawCircle(azul.copy(alpha = 0.55f), ry * 0.95f, Offset(cx, cy), style = Stroke(6f))
         }
         // Velocidade no centro.
