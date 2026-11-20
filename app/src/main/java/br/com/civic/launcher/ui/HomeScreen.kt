@@ -108,7 +108,7 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
     val hora = DateFormat.getTimeFormat(ctx).format(agora)
     val data = DateFormat.format("EEEE, d 'de' MMMM", agora).toString()
 
-    BoxWithConstraints(Modifier.fillMaxWidth().height(58.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(68.dp)) {
         // Em tela estreita (celular em retrato) esconde o que não cabe, mas mantém o botão de tema.
         val compacto = maxWidth < 760.dp
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -117,8 +117,8 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                 Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(if (compacto) 40.dp else 52.dp))
                 // A data fica embaixo da hora para sobrar espaço aos ícones da direita.
                 Column {
-                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 26.sp else 34.sp, lineHeight = if (compacto) 28.sp else 36.sp, fontFamily = FonteTitulo, maxLines = 1)
-                    if (!compacto) Text(data.replaceFirstChar { it.uppercase() }, color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1)
+                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 26.sp else 30.sp, lineHeight = if (compacto) 28.sp else 32.sp, fontFamily = FonteTitulo, maxLines = 1)
+                    if (!compacto) Text(data.replaceFirstChar { it.uppercase() }, color = Cores.TextoSuave, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 1)
                 }
             }
             if (!compacto) {
@@ -157,7 +157,6 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                     "Tema: ${modoTema.rotulo}", tint = Cores.Destaque, modifier = Modifier.toqueSuave(aoAlternarTema).size(26.dp),
                 )
                 BotaoVoz()
-                Icon(Icons.Filled.Speed, "Modo HUD", tint = Cores.Destaque, modifier = Modifier.toqueSuave { Hud.aberto = true }.size(26.dp))
                 Sininho()
             }
         }

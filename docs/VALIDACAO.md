@@ -9,7 +9,7 @@ Antes de tudo: instale a versão mais nova (a multimídia atualiza sozinha; conf
 - [ ] **Spotify:** o cartão tem a cor do cartão do veículo com um degradê azul claro.
 - [ ] **Resumo semanal:** mande `/resumo` ao bot. Chega km, usos, consumo, gasto, alertas, manutenção e lugares frequentes. O automático sai aos domingos, às 19h.
 - [ ] **Preço da ANP:** Veículo → Abastecimentos → "Etanol ou gasolina?" mostra "ANP · Barueri: gasolina R$ … · aditivada … · etanol …" e o botão "Usar os preços da ANP" preenche os campos. Confira com o levantamento da ANP.
-- [ ] **Modo HUD:** toque no ícone de velocímetro da barra do topo (ou Config. → Segurança). Velocidade enorme em fundo preto. Toque sai; segure alterna o espelhamento (ligado por padrão, para refletir no para-brisa).
+- [ ] **Modo HUD:** Config. → Segurança → "Abrir modo HUD". Velocidade enorme em fundo preto. Toque sai; segure alterna o espelhamento (ligado por padrão, para refletir no para-brisa).
 - [ ] **Comando de voz:** toque no microfone da barra do topo (aceite a permissão). Diga "onde parei", "quanto de combustível", "ir para casa", "bateria", "temperatura", "consumo" ou "que horas são". O app responde falando. Se não houver reconhecimento de voz, o Status do app avisa.
 - [ ] **Chuva onde o carro está parado:** depois de estacionar, se a previsão indicar chuva nas próximas 3 horas (60% ou mais), chega "🌧️ Deve chover onde seu carro está parado…". Um aviso por vaga, checado a cada 20 min. Só dá para ver em dia de chuva.
 
