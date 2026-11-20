@@ -157,6 +157,13 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                     },
                     "Tema: ${modoTema.rotulo}", tint = Cores.Destaque, modifier = Modifier.toqueSuave(aoAlternarTema).size(26.dp),
                 )
+                // Avisos sonoros: alto-falante liga/desliga (o mesmo de Config. > Avisos sonoros).
+                Icon(
+                    if (config.vozAlertas) Icons.Filled.VolumeUp else Icons.Filled.VolumeOff,
+                    if (config.vozAlertas) "Desligar avisos sonoros" else "Ligar avisos sonoros",
+                    tint = if (config.vozAlertas) Cores.Destaque else Cores.TextoSuave,
+                    modifier = Modifier.toqueSuave { config.salvarVoz(!config.vozAlertas) }.size(26.dp),
+                )
                 BotaoVoz()
                 Sininho()
             }

@@ -427,7 +427,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.desenharMoldura(g: 
  * desconhecida (o carro/adaptador ainda não informa) = bem esmaecida.
  */
 @Composable
-private fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa: Boolean?, cor: Color, piscar: Boolean = false, espelhar: Boolean = false, tamanho: Dp = 28.dp) {
+internal fun LuzEspia(icone: androidx.compose.ui.graphics.painter.Painter, ativa: Boolean?, cor: Color, piscar: Boolean = false, espelhar: Boolean = false, tamanho: Dp = 28.dp) {
     val p = coresPainel()
     val tint = when (ativa) {
         true -> cor

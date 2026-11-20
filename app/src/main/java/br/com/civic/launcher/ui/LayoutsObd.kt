@@ -179,6 +179,21 @@ private fun DialPremium(
     }
 }
 
+/** Setas (piscam quando ligadas; pisca-alerta acende as duas) e farol, com as luzes-espia do painel. */
+@Composable
+private fun SetaObd(d: DadosObd, esquerda: Boolean, tamanho: Dp) {
+    val ativa = if (d.alerta == true) true else if (esquerda) d.setaEsquerda else d.setaDireita
+    LuzEspia(painterResource(br.com.civic.launcher.R.drawable.ic_seta), ativa, Color(0xFF22C55E), piscar = true, espelhar = !esquerda, tamanho = tamanho)
+}
+
+@Composable
+private fun FarolObd(d: DadosObd, tamanho: Dp) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        LuzEspia(painterResource(br.com.civic.launcher.R.drawable.ic_farol), d.farol, Color(0xFF22C55E), tamanho = tamanho)
+        Text(when (d.farol) { true -> "farol ligado"; false -> "farol desligado"; null -> "farol" }, color = Cores.TextoSuave, fontSize = 13.sp)
+    }
+}
+
 @Composable
 private fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier) {
     val m = monitor.estado
@@ -295,12 +310,17 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                 }
             }
             // A velocidade começa abaixo dos cartões de música e diagnóstico (que ficam no canto superior direito).
-            Column(Modifier.align(Alignment.TopCenter).padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.align(Alignment.TopCenter).padding(top = 80.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+            SetaObd(d, esquerda = true, tamanho = 44.dp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("${vel.toInt()}", color = Cores.Texto, fontSize = (altura.value * 0.26f).sp, lineHeight = (altura.value * 0.26f).sp, fontWeight = FontWeight.Bold,
                     fontStyle = FontStyle.Italic, letterSpacing = (-4).sp, maxLines = 1, style = SombraNumero)
                 Text("km/h", color = Cores.TextoSuave, fontSize = 26.sp)
             }
+            SetaObd(d, esquerda = false, tamanho = 44.dp)
+            }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                FarolObd(d, 26.dp)
                 Text(listOf(config.ano, config.nomeCarro, config.modelo).filter { it.isNotBlank() }.joinToString(" "), color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                 Text(if (v.kmAtual > 0) "Total %,d km".format(BR, v.kmAtual) else "Total — km", color = Cores.TextoSuave, fontSize = 16.sp)
             }
@@ -361,6 +381,11 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
         // Velocidade e conta-giros.
         Column(Modifier.weight(1.12f).fillMaxHeight().cartaoSuave(RoundedCornerShape(26.dp)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Velocidade", color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                SetaObd(d, esquerda = true, tamanho = 32.dp)
+                FarolObd(d, 24.dp)
+                SetaObd(d, esquerda = false, tamanho = 32.dp)
+            }
             DialPremium(vel / 200f, (0..10).map { (it * 20).toString() }, Modifier.weight(1f).fillMaxWidth(), menores = 1) { lado ->
                 Column(Modifier.align(Alignment.Center).offset(y = -lado * 0.08f), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.22f).sp, lineHeight = (lado.value * 0.22f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)

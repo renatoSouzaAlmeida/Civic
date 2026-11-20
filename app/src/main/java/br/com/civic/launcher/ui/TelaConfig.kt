@@ -112,17 +112,19 @@ fun TelaConfig() {
             }
         }
         val direita: @Composable ColumnScope.() -> Unit = {
-            Secao("Segurança") {
+            Secao("Avisos sonoros") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Opcao("Avisos sonoros: ligados", config.vozAlertas, Modifier.weight(1f)) { config.salvarVoz(true) }
+                    Opcao("Ligados", config.vozAlertas, Modifier.weight(1f)) { config.salvarVoz(true) }
                     Opcao("Desligados", !config.vozAlertas, Modifier.weight(1f)) { config.salvarVoz(false) }
                 }
+                Text("Desligados, o app não fala nenhum aviso (motor, fadiga, colisão). Os avisos continuam na tela e no Telegram. Também dá para ligar e desligar pelo alto-falante na barra do topo.", color = Cores.TextoSuave, fontSize = 13.sp)
+            }
+            Secao("Segurança") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Opcao("Vigia total: ligado", config.vigiaTotal, Modifier.weight(1f)) { config.salvarVigia(true) }
                     Opcao("Desligado", !config.vigiaTotal, Modifier.weight(1f)) { config.salvarVigia(false) }
                 }
                 Text("Vigia total avisa no Telegram toda partida do motor. Com ele desligado, avisa só partidas em horários em que o carro nunca é usado.", color = Cores.TextoSuave, fontSize = 13.sp)
-                Text("Desligados, o app não fala nenhum aviso (motor, fadiga, colisão). Os avisos continuam na tela e no Telegram.", color = Cores.TextoSuave, fontSize = 13.sp)
                 BotaoPilula("Testar alerta falado", Icons.Filled.Notifications, Modifier.fillMaxWidth()) {
                     br.com.civic.launcher.Voz.obter(ctx).falar("Teste do alerta falado do Civic Renatin.", forcar = true)
                 }
