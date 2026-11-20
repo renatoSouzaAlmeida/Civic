@@ -6,6 +6,11 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
+import android.os.Looper
 import android.os.Build
 import android.os.IBinder
 
@@ -17,7 +22,39 @@ import android.os.IBinder
 class VigiaService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onDestroy() { ativo = false; super.onDestroy() }
+    // GPS e posição pela rede sempre ligados enquanto o Vigia roda: o local do estacionamento e o trajeto
+    // não dependem de o launcher estar na frente (com o Waze ou outro app na frente o launcher fica em segundo plano).
+    private var gpsLigado = false
+    private val ouvinteGps = object : LocationListener {
+        override fun onLocationChanged(local: Location) {
+            LocalEstacionamento.obter(this@VigiaService).registrarPosicao(local)
+            Telemetria.obter(this@VigiaService).posicao(local)
+        }
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+    }
+    private val ouvinteRede = object : LocationListener {
+        override fun onLocationChanged(local: Location) { Telemetria.obter(this@VigiaService).posicaoRede(local) }
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+    }
+
+    private fun ligarGps() {
+        if (gpsLigado) return
+        val lm = getSystemService(LocationManager::class.java)
+        runCatching { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2_000L, 0f, ouvinteGps, Looper.getMainLooper()); gpsLigado = true }
+        runCatching { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 60_000L, 0f, ouvinteRede, Looper.getMainLooper()) }
+    }
+
+    override fun onDestroy() {
+        ativo = false
+        runCatching { val lm = getSystemService(LocationManager::class.java); lm.removeUpdates(ouvinteGps); lm.removeUpdates(ouvinteRede) }
+        super.onDestroy()
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val nm = getSystemService(NotificationManager::class.java)
@@ -33,6 +70,7 @@ class VigiaService : Service() {
             else startForeground(ID, n)
         }
         ativo = true
+        ligarGps()
         // Os objetos abaixo vivem no processo; só garantimos que existem.
         Telemetria.obter(this)
         return START_STICKY

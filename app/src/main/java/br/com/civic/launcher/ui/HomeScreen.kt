@@ -27,6 +27,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import br.com.civic.launcher.EstiloMenu
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -186,6 +187,27 @@ private fun Versao(atualizador: Atualizador, compacto: Boolean) {
         modifier = Modifier.clickable { if (e is EstadoAtualizacao.Pronta) atualizador.instalar() else if (e !is EstadoAtualizacao.Baixando) atualizador.verificar() },
     )
 }
+
+/** Contagem de "possível colisão": ou toca em "Estou bem", ou o aviso com a localização vai para o Telegram. */
+@Composable
+private fun AlertaColisao() {
+    val ctx = LocalContext.current
+    val seg = remember { br.com.civic.launcher.Seguranca.obter(ctx) }
+    val s = seg.colisao ?: return
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("🚨 Possível colisão detectada", fontWeight = FontWeight.Bold, color = Cores.Vermelho) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("$s", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = Cores.Vermelho)
+                Text("Se não tocar em \"Estou bem\", a sua localização será enviada para o Telegram.", fontSize = 18.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = { seg.cancelarColisao() }) { Text("Estou bem", fontSize = 24.sp, fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = { seg.enviarColisaoAgora() }) { Text("Pedir ajuda agora", fontSize = 18.sp) } },
+    )
+}
+
 
 /** Janela que aparece ao abrir o app quando há versão nova pronta (uma vez por versão e por abertura). */
 @Composable

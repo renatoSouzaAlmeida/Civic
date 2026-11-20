@@ -463,7 +463,13 @@ private fun OndeParei() {
                 "Estacionado em ${fmt.format(Date(e.data))}" + if (e.idadePosicaoMs >= 10 * 60_000) " · posição do GPS de ${e.idadePosicaoMs / 60_000} min antes" else "",
                 color = Cores.TextoSuave, fontSize = 14.sp,
             )
+            Text("Este cartão mostra a última vez que o carro foi estacionado (motor desligado), não a posição de agora.", color = Cores.TextoSuave, fontSize = 12.sp)
         }
+        // A posição atual do aparelho, para comparar (e ver se o GPS está chegando).
+        estacionamento.posicaoRecente()?.let { p ->
+            val min = (System.currentTimeMillis() - p.time).coerceAtLeast(0) / 60_000
+            Text("Posição atual do aparelho: %.5f, %.5f · sinal ${if (min < 1) "agora" else "há $min min"} (${if (p.provider == "gps") "GPS" else "rede/aprox."})".format(Locale.US, p.latitude, p.longitude), color = Cores.Texto, fontSize = 13.sp)
+        } ?: Text("Sem posição atual do aparelho (sem sinal de GPS nem de rede).", color = Cores.Amarelo, fontSize = 13.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BotaoPilula("Abrir no mapa", Icons.Filled.Map, Modifier.weight(1f)) {
                 e?.let {
