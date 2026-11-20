@@ -24,7 +24,7 @@
 
 ## Versão
 - Formato **MAIOR.MENOR.PATCH** e **nenhuma parte passa de 99** (ao chegar em 99, a parte seguinte sobe: 0.3.99 → 0.4.0 … → 1.0.0). O CI calcula o nome a partir de `versao.properties` + número da execução; o `versionCode` continua sendo o número da execução.
-- **Marco 1.0.0:** quando terminar tudo do backlog (`docs/BACKLOG.md`), a versão sobe para **1.0.0**: em `versao.properties`, `MAIOR=1`, `MENOR=0`, `PATCH=0` e `RUN_BASE` = número da próxima execução do CI. Depois disso a contagem segue de 1.0.0.
+- **Marco 1.0.0:** a versão fica em **0.x** até o dono **decidir qual layout da tela do OBD permanece** (e terminar o backlog em `docs/BACKLOG.md`); só então sobe para **1.0.0**: em `versao.properties`, `MAIOR=1`, `MENOR=0`, `PATCH=0` e `RUN_BASE` = número da próxima execução do CI. Depois disso a contagem segue de 1.0.0.
 
 ## Supabase
 - O sistema onde fica o dashboard se chama **Casa Tech** (escrever sempre assim, com espaço). O projeto Supabase dele tem o nome técnico **CasaTechRenatin** (`qdmsiwxfuzppaqqnljth`). Todas as execuções no Supabase (migrations, SQL, deploy de Edge Functions, simulação de dados) estão **autorizadas sem pedir permissão**.

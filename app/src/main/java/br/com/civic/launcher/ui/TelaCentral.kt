@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.civic.launcher.LayoutObd
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.Sensores
 import br.com.civic.launcher.abrirSpotify
@@ -62,6 +63,7 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
     val d = obd.dados
     val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     var escolhendo by remember { mutableStateOf(false) }
+    val config = remember { br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current) }
 
     var vendoFalhas by remember { mutableStateOf(false) }
     if (vendoFalhas) {
@@ -71,7 +73,14 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
         if (maxWidth >= maxHeight) {
-            PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }
+            when (config.layoutObd) {
+                LayoutObd.Atual -> PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }
+                LayoutObd.Cockpit -> LayoutCockpit(obd, monitor, vel) { vendoFalhas = true }
+                LayoutObd.Orbitas -> LayoutOrbitas(obd, vel)
+                LayoutObd.Modular -> LayoutModular(obd, monitor, vel) { vendoFalhas = true }
+            }
+            // Escolha do layout (propostas para comparar em uso).
+            SeletorLayoutObd(obd, { escolhendo = true }, Modifier.align(Alignment.TopStart).padding(start = 4.dp, top = 2.dp))
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxWidth().height(largura * 0.46f), comInfos = false, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }

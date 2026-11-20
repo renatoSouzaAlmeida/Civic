@@ -1,6 +1,6 @@
 # Backlog — Civic Renatin
 
-> **Marco 1.0.0:** quando todos os itens abaixo estiverem concluídos, a versão do app sobe para 1.0.0 (ver `versao.properties` e CLAUDE.md). Nenhuma parte da versão passa de 99.
+> **Marco 1.0.0:** depois da escolha do layout da tela do OBD e quando todos os itens abaixo estiverem concluídos, a versão do app sobe para 1.0.0 (ver `versao.properties` e CLAUDE.md). Nenhuma parte da versão passa de 99.
 
 Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marque como feito).
 
@@ -68,6 +68,10 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] **Tela "Status do app"** — em Config., no topo: OBD, nível do tanque e MAF suportados, monitores de emissões, GPS, localização o tempo todo, nuvem, Telegram, Vigia, painel, Spotify, Bluetooth e voz, com botão para corrigir cada permissão.
 - [x] **Modo HUD** — pronto, falta validar: velocímetro da barra do topo ou Config. > Segurança; espelhado por padrão.
 - [x] **Comando de voz curto** — pronto, falta validar: microfone da barra do topo; depende de reconhecimento de voz no aparelho.
+
+## Layout da tela do OBD (decisão em aberto)
+- [ ] **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Atual, Cockpit, Órbitas e Modular (só o corpo das imagens; sem cabeçalho nem menu).
+  Testar com a demonstração do OBD e escolher quais ficam; as demais serão removidas. A versão segue 0.x até essa decisão.
 
 ## Abastecimento automático
 - [x] **Pelo nível do tanque** — pronto, falta validar no carro: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais

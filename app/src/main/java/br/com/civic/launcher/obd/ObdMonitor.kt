@@ -56,6 +56,9 @@ data class DadosObd(
     val kmDesdeApagar: Int? = null,
     /** Temperatura do fluido do câmbio (PID personalizado em Config. do diagnóstico). */
     val tempCambio: Int? = null,
+    /** Pressão do coletor (PID 010B, kPa) e avanço da ignição (PID 010E, graus antes do ponto morto superior). */
+    val map: Int? = null,
+    val avanco: Float? = null,
     // Sinais do carro (previstos). Não fazem parte do OBD padrão: dependem da rede CAN de carroceria
     // do Honda. Nulo = desconhecido (a luz-espia aparece apagada e esmaecida).
     val farol: Boolean? = null,
@@ -94,6 +97,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             br.com.civic.launcher.EstadoCarro.obter(ctx).amostra(novo, demonstracao = demo)
             br.com.civic.launcher.Telemetria.obter(ctx).amostra(novo.rpm, novo.tensao, demonstracao = demo)
             br.com.civic.launcher.Seguranca.obter(ctx).amostra(novo, demonstracao = demo)
+            SeriesObd.obter().amostra(novo)
             if (!demo) DiagnosticoAvancado.obter(ctx).let { dg ->
                 dg.termostato(novo.tempMotor, novo.rpm)
                 dg.dreno(novo.tensao, novo.rpm)
@@ -426,6 +430,8 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 consultar("0111")?.firstOrNull()?.let { d = d.copy(acelerador = it * 100 / 255) }
                 consultar("010F")?.firstOrNull()?.let { d = d.copy(tempAdmissao = it - 40) }
                 if (suportados == null) suportados = lerSuportados()
+                if (suporta(0x0B)) consultar("010B")?.firstOrNull()?.let { d = d.copy(map = it) }
+                if (suporta(0x0E)) consultar("010E")?.firstOrNull()?.let { d = d.copy(avanco = it / 2f - 64f) }
                 if (ciclo % 20 == 0) DiagnosticoAvancado.obter(ctx).cambio.takeIf { it.ativo }?.let { c -> lerCambioPid(c).first?.let { d = d.copy(tempCambio = it) } }
                 d = lerCombustivel(d)
                 if (ciclo % 10 == 0 && suporta(0x2F)) consultar("012F")?.firstOrNull()?.let { d = d.copy(nivelCombustivel = it * 100 / 255) }
@@ -786,6 +792,8 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 falhas = demoCodigos.size,
                 codigos = demoCodigos,
                 codigosPendentes = demoPendentes,
+                map = (38 + sin(t / 3) * 6).toInt(),
+                avanco = (12 + sin(t / 2) * 3).toFloat(),
                 nivelCombustivel = 62,
                 consumoMedio = 11.8f + (sin(t / 15) * 0.4f).toFloat(),
                 // Ciclo de 60 s para mostrar as luzes-espia: farol, setas, piloto e alerta.
