@@ -95,6 +95,7 @@ fun HomeScreen(
     }
 
     ModalNovaVersao(atualizador)
+    ModalSemInternet()
     AlertaColisao()
     if (Hud.aberto) ModoHud(obd, sensores)
 }
