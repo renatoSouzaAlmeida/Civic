@@ -73,6 +73,10 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [ ] **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Esportivo (o atual), Cockpit e Modular (só o corpo das imagens; sem cabeçalho nem menu). Órbitas foi descartado.
   Testar com a demonstração do OBD e escolher quais ficam; as demais serão removidas. A versão segue 0.x até essa decisão.
 
+## Layout da Tela Início (decisão em aberto)
+- [ ] **Comparar 3 propostas** — pílula "Início: …" no alto da Tela Início: Padrão (a atual), Caixas (clara, caixas separadas e mapa menor)
+  e Painel (proposta escura, segue o tema). Escolher qual fica; as demais e a pílula serão removidas.
+
 ## Abastecimento automático
 - [x] **Pelo nível do tanque** — pronto, falta validar no carro: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais
   (gasolina, tanque cheio, litros pela capacidade do tanque em Config.), avisa no Telegram, e o valor pago (total OU preço por litro)
