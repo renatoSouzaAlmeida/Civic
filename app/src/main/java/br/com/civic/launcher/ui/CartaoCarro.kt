@@ -52,7 +52,7 @@ internal fun FotoCarro(modifier: Modifier, fracaoAltura: Float) {
                 val larguraFoto = 800f * escala; val alturaFoto = 460f * escala
                 val ox = (maxWidth.value - larguraFoto) * 0.35f
                 val oy = (maxHeight.value - alturaFoto) / 2f
-                val (px, py) = if (fit) 0.335f to 0.79f else 0.272f to 0.83f
+                val (px, py) = if (fit) 0.335f to 0.755f else 0.272f to 0.83f
                 val largura = (larguraFoto * 0.2f).coerceIn(64f, 132f)
                 val altura = largura * 0.34f
                 val x = (ox + px * larguraFoto - largura / 2f).coerceIn(4f, maxWidth.value - largura - 4f)
