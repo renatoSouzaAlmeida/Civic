@@ -796,6 +796,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 avanco = (12 + sin(t / 2) * 3).toFloat(),
                 nivelCombustivel = 62,
                 consumoMedio = 11.8f + (sin(t / 15) * 0.4f).toFloat(),
+                consumoInstantaneo = if (partida) null else (6f + onda * 10f).toFloat(),
                 // Ciclo de 60 s para mostrar as luzes-espia: farol, setas, piloto e alerta.
                 farol = (t % 60) < 40,
                 farolete = (t % 60) < 50,
