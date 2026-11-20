@@ -70,7 +70,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] **Comando de voz curto** — pronto, falta validar: microfone da barra do topo; depende de reconhecimento de voz no aparelho.
 
 ## Layout da tela do OBD (decisão em aberto)
-- [ ] **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Atual, Cockpit, Órbitas e Modular (só o corpo das imagens; sem cabeçalho nem menu).
+- [ ] **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Esportivo (o atual), Cockpit e Modular (só o corpo das imagens; sem cabeçalho nem menu). Órbitas foi descartado.
   Testar com a demonstração do OBD e escolher quais ficam; as demais serão removidas. A versão segue 0.x até essa decisão.
 
 ## Abastecimento automático

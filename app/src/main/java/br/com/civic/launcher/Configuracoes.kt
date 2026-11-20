@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 enum class ImagemCarro(val rotulo: String) { Civic("Civic"), Fit("Fit") }
 
 /** Layout da tela do OBD: o atual e três propostas para comparar (a escolha final será feita em uso). */
-enum class LayoutObd(val rotulo: String) { Atual("Atual"), Cockpit("Cockpit"), Orbitas("Órbitas"), Modular("Modular") }
+enum class LayoutObd(val rotulo: String) { Atual("Esportivo"), Cockpit("Cockpit"), Modular("Modular") }
 
 /** Modelo do menu: B = barra fina embaixo; D = dock flutuante no centro. */
 enum class EstiloMenu(val rotulo: String) { Barra("Barra fina"), Dock("Dock flutuante") }

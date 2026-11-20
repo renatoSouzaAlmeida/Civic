@@ -84,7 +84,6 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when (config.layoutObd) {
                             LayoutObd.Cockpit -> LayoutCockpit(obd, monitor, vel) { vendoFalhas = true }
-                            LayoutObd.Orbitas -> LayoutOrbitas(obd, vel)
                             else -> LayoutModular(obd, monitor, vel) { vendoFalhas = true }
                         }
                     }

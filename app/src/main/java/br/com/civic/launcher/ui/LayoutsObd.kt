@@ -185,17 +185,17 @@ private fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier) {
     Row(modifier.cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Cores.Chip), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.MusicNote, null, tint = Cores.Texto, modifier = Modifier.size(26.dp))
+            Icon(Icons.Filled.MusicNote, null, tint = Cores.Destaque, modifier = Modifier.size(26.dp))
         }
         Column(Modifier.weight(1f)) {
             Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Música", color = Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             Text(if (m.temSessao) m.artista else "Nenhuma mídia", color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1)
         }
-        Icon(Icons.Filled.SkipPrevious, null, tint = Cores.Texto, modifier = Modifier.size(28.dp).clickable { monitor.anterior() })
-        Box(Modifier.size(44.dp).clip(CircleShape).background(Cores.Texto).clickable { monitor.alternar() }, contentAlignment = Alignment.Center) {
-            Icon(if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Cores.CartaoSolido, modifier = Modifier.size(26.dp))
+        Icon(Icons.Filled.SkipPrevious, null, tint = Cores.Destaque, modifier = Modifier.size(28.dp).clickable { monitor.anterior() })
+        Box(Modifier.size(44.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(Cores.Destaque).clickable { monitor.alternar() }, contentAlignment = Alignment.Center) {
+            Icon(if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, null, tint = Color.White, modifier = Modifier.size(26.dp))
         }
-        Icon(Icons.Filled.SkipNext, null, tint = Cores.Texto, modifier = Modifier.size(28.dp).clickable { monitor.proxima() })
+        Icon(Icons.Filled.SkipNext, null, tint = Cores.Destaque, modifier = Modifier.size(28.dp).clickable { monitor.proxima() })
     }
 }
 
@@ -230,17 +230,28 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val altura = maxHeight
-            val gauge = minOf(maxHeight * 0.80f, maxWidth * 0.255f)
+            // Os mostradores ficam abaixo dos cartões de música e diagnóstico (66 dp + folga).
+            val gauge = minOf(maxHeight - 84.dp, maxWidth * 0.255f)
             // Paisagem: morros suaves no horizonte e uma estrada larga em perspectiva (asfalto, bordas e faixas tracejadas).
             val asfalto = Cores.SegVazio; val morro = Cores.Destaque
             Canvas(Modifier.fillMaxSize()) {
                 val hz = size.height * 0.50f; val cx = size.width / 2; val base = size.height
-                fun morroEm(x: Float, larg: Float, alt: Float, a: Float) {
-                    val p = Path().apply { moveTo(x - larg, hz); quadraticBezierTo(x - larg * 0.3f, hz - alt, x, hz - alt * 0.85f); quadraticBezierTo(x + larg * 0.4f, hz - alt * 0.7f, x + larg, hz); close() }
-                    drawPath(p, Brush.verticalGradient(listOf(morro.copy(alpha = a), morro.copy(alpha = 0f)), startY = hz - alt, endY = hz))
+                // Cordilheiras em camadas (atrás, mais claras; na frente, mais definidas), atravessando a tela inteira.
+                fun cordilheira(picos: List<Pair<Float, Float>>, alfa: Float) {
+                    val p = Path().apply {
+                        moveTo(0f, hz + size.height * 0.02f)
+                        var xAnt = 0f; var yAnt = hz + size.height * 0.02f
+                        for ((fx, fh) in picos) {
+                            val x = size.width * fx; val y = hz - size.height * fh
+                            quadraticBezierTo((xAnt + x) / 2, (yAnt + y) / 2 - size.height * 0.015f, x, y)
+                            xAnt = x; yAnt = y
+                        }
+                        lineTo(size.width, hz + size.height * 0.02f); close()
+                    }
+                    drawPath(p, Brush.verticalGradient(listOf(morro.copy(alpha = alfa), morro.copy(alpha = alfa * 0.25f)), startY = hz - size.height * 0.22f, endY = hz + size.height * 0.02f))
                 }
-                morroEm(size.width * 0.12f, size.width * 0.22f, size.height * 0.10f, 0.16f); morroEm(size.width * 0.35f, size.width * 0.18f, size.height * 0.06f, 0.10f)
-                morroEm(size.width * 0.70f, size.width * 0.20f, size.height * 0.08f, 0.12f); morroEm(size.width * 0.92f, size.width * 0.20f, size.height * 0.11f, 0.15f)
+                cordilheira(listOf(0.05f to 0.12f, 0.16f to 0.20f, 0.27f to 0.10f, 0.38f to 0.15f, 0.50f to 0.08f, 0.62f to 0.16f, 0.74f to 0.11f, 0.86f to 0.21f, 0.97f to 0.13f), 0.13f)
+                cordilheira(listOf(0.08f to 0.07f, 0.20f to 0.12f, 0.33f to 0.05f, 0.45f to 0.09f, 0.58f to 0.04f, 0.70f to 0.10f, 0.82f to 0.06f, 0.94f to 0.12f), 0.20f)
                 // Asfalto.
                 val topoL = size.width * 0.012f; val baseL = size.width * 0.36f
                 val pista = Path().apply { moveTo(cx - topoL, hz); lineTo(cx + topoL, hz); lineTo(cx + baseL, base); lineTo(cx - baseL, base); close() }
@@ -320,118 +331,6 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
 }
 
 // ---------------------------------------------------------------------------------------------
-// 2) ÓRBITAS
-// ---------------------------------------------------------------------------------------------
-
-@Composable
-private fun Etiqueta(titulo: String?, valor: String, unidade: String, icone: ImageVector?, modifier: Modifier = Modifier, grande: Boolean = false) {
-    val forma = RoundedCornerShape(16.dp)
-    val azul = Cores.Destaque
-    // Caixa de vidro com borda luminosa em degradê e brilho azul em volta.
-    val vidro = Modifier.shadow(16.dp, forma, clip = false, ambientColor = azul.copy(alpha = 0.35f), spotColor = azul.copy(alpha = 0.45f))
-        .clip(forma).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.92f), Cores.CartaoSolido.copy(alpha = 0.85f))))
-        .border(1.6.dp, Brush.linearGradient(listOf(azul.copy(alpha = 0.95f), Color.White.copy(alpha = 0.9f), Color(0xFF7CC4FF), azul.copy(alpha = 0.6f))), forma)
-    Row(
-        modifier.then(if (grande) Modifier else vidro).padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        icone?.let { Icon(it, null, tint = Cores.TextoSuave, modifier = Modifier.size(if (grande) 38.dp else 28.dp)) }
-        Column {
-            titulo?.let { Text(it, color = Cores.TextoSuave, fontSize = 14.sp, maxLines = 1) }
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(valor, color = Cores.Texto, fontSize = if (grande) 52.sp else 32.sp, fontWeight = FontWeight.Medium, maxLines = 1, style = if (grande) SombraNumero else androidx.compose.ui.text.TextStyle.Default)
-                Text(" $unidade", color = Cores.TextoSuave, fontSize = if (grande) 24.sp else 16.sp, modifier = Modifier.padding(bottom = if (grande) 8.dp else 5.dp), maxLines = 1)
-            }
-        }
-    }
-}
-
-@Composable
-fun LayoutOrbitas(obd: ObdMonitor, vel: Float) {
-    val d = obd.dados
-    val azul = Cores.Destaque; val azulClaro = Color(0xFF7CC4FF); val tubo = Cores.SegVazio; val fio = Cores.Destaque.copy(alpha = 0.28f)
-    val solido = Cores.CartaoSolido; val borda = Cores.Borda
-    val fTemp = (d.tempAdmissao ?: 0) / 60f; val fTensao = ((d.tensao ?: 11f) - 11f) / 4f; val fCarga = (d.carga ?: 0) / 100f; val fComb = (d.nivelCombustivel ?: 0) / 100f
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val w = maxWidth; val h = maxHeight
-        Canvas(Modifier.fillMaxSize()) {
-            val cx = size.width / 2; val cy = size.height * 0.5f
-            val rx = size.width * 0.33f; val ry = size.height * 0.36f
-            val rCentro = size.height * 0.26f
-            fun ponto(g: Double) = Offset(cx + rx * cos(Math.toRadians(g)).toFloat(), cy + ry * sin(Math.toRadians(g)).toFloat())
-            val ciano = Color(0xFF5FD0FF)
-            // Órbitas finas, em degradê, inclinadas e cruzando pelo centro.
-            for ((ang, esc) in listOf(-20f to 0.60f, 20f to 0.60f, -8f to 0.80f, 8f to 0.80f)) rotate(ang, Offset(cx, cy)) {
-                drawOval(Brush.linearGradient(listOf(azul.copy(alpha = 0.05f), azul.copy(alpha = 0.45f), azul.copy(alpha = 0.05f)), Offset(cx - rx, cy), Offset(cx + rx, cy)),
-                    Offset(cx - rx * 0.99f, cy - ry * esc), Size(rx * 1.98f, ry * esc * 2), style = Stroke(2.2f))
-            }
-            // Anéis concêntricos em volta do centro.
-            for (k in 1..4) drawCircle(Brush.sweepGradient(listOf(azul.copy(alpha = 0.04f), azul.copy(alpha = 0.30f / k), azul.copy(alpha = 0.04f)), Offset(cx, cy)), rCentro * (1.10f + k * 0.14f), Offset(cx, cy), style = Stroke(2f))
-            // Anel principal de vidro: sombra, corpo translúcido em degradê, contorno e reflexo.
-            drawOval(Color(0x18000000), Offset(cx - rx, cy - ry + 8f), Size(rx * 2, ry * 2), style = Stroke(46f))
-            drawOval(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.95f), tubo.copy(alpha = 0.9f), Color.White.copy(alpha = 0.85f)), startY = cy - ry, endY = cy + ry), Offset(cx - rx, cy - ry), Size(rx * 2, ry * 2), style = Stroke(34f))
-            drawOval(azul.copy(alpha = 0.22f), Offset(cx - rx - 17f, cy - ry - 17f), Size(rx * 2 + 34f, ry * 2 + 34f), style = Stroke(1.5f))
-            drawOval(azul.copy(alpha = 0.22f), Offset(cx - rx + 17f, cy - ry + 17f), Size(rx * 2 - 34f, ry * 2 - 34f), style = Stroke(1.5f))
-            drawOval(Color.White, Offset(cx - rx, cy - ry - 8f), Size(rx * 2, ry * 2), style = Stroke(3f))
-            // Segmentos acesos com brilho (camadas que imitam o desfoque) e esferas nas pontas.
-            fun arco(de: Double, ate: Double): Path = Path().apply {
-                for (i in 0..48) { val p = ponto(de + (ate - de) * i / 48); if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
-            }
-            fun no(p: Offset, r: Float) {
-                drawCircle(ciano.copy(alpha = 0.12f), r * 3f, p); drawCircle(ciano.copy(alpha = 0.22f), r * 2f, p)
-                drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFD8EEFF)), p, r), r, p); drawCircle(azul, r, p, style = Stroke(r * 0.35f))
-            }
-            fun segmento(de: Double, ate: Double, f: Float): Offset {
-                val fim = de + (ate - de) * f.coerceIn(0.05f, 1f)
-                val caminho = arco(de, fim)
-                drawPath(caminho, ciano.copy(alpha = 0.10f), style = Stroke(64f, cap = StrokeCap.Round))
-                drawPath(caminho, ciano.copy(alpha = 0.20f), style = Stroke(44f, cap = StrokeCap.Round))
-                drawPath(caminho, Brush.linearGradient(listOf(ciano, azul, Color(0xFF1E5BFF)), ponto(de), ponto(fim)), style = Stroke(24f, cap = StrokeCap.Round))
-                drawPath(caminho, Color.White.copy(alpha = 0.6f), style = Stroke(5f, cap = StrokeCap.Round))
-                no(ponto(fim), 13f)
-                return ponto(de)
-            }
-            val pTL = segmento(196.0, 250.0, fTemp)
-            val pTR = segmento(290.0, 344.0, fTensao)
-            val pBL = segmento(106.0, 160.0, fCarga)
-            val pBR = segmento(16.0, 72.0, fComb)
-            no(ponto(180.0), 15f)
-            // Linhas com cotovelo até as etiquetas.
-            fun liga(de: Offset, x: Float, y: Float) {
-                val fimP = Offset(size.width * x, size.height * y); val cot = Offset(de.x + (fimP.x - de.x) * 0.45f, fimP.y)
-                val p = Path().apply { moveTo(de.x, de.y); lineTo(cot.x, cot.y); lineTo(fimP.x, fimP.y) }
-                drawPath(p, azul.copy(alpha = 0.6f), style = Stroke(2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawCircle(azul, 5f, de); drawCircle(azul, 5f, fimP)
-            }
-            liga(pTL, 0.245f, 0.16f); liga(pTR, 0.765f, 0.16f); liga(pBL, 0.245f, 0.86f); liga(pBR, 0.765f, 0.86f)
-            // Esfera central: halo em camadas, vidro com reflexo e aro ciano brilhante.
-            for (k in 6 downTo 1) drawCircle(ciano.copy(alpha = 0.035f * k), rCentro + k * 9f, Offset(cx, cy))
-            drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFF2F8FF), Color(0xFFD6E7FA)), Offset(cx - rCentro * 0.25f, cy - rCentro * 0.3f), rCentro * 1.3f), rCentro, Offset(cx, cy))
-            drawCircle(ciano.copy(alpha = 0.35f), rCentro + 6f, Offset(cx, cy), style = Stroke(16f))
-            drawCircle(Brush.sweepGradient(listOf(ciano, azul, ciano, Color.White, ciano), Offset(cx, cy)), rCentro + 2f, Offset(cx, cy), style = Stroke(6f))
-            drawCircle(Color.White.copy(alpha = 0.8f), rCentro - 8f, Offset(cx, cy), style = Stroke(2f))
-        }
-        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${vel.toInt()}", color = Cores.Texto, fontSize = (h.value * 0.25f).sp, lineHeight = (h.value * 0.25f).sp, fontWeight = FontWeight.Bold, letterSpacing = (-3).sp, maxLines = 1, style = SombraNumero)
-            Text("km/h", color = Cores.TextoSuave, fontSize = 28.sp)
-        }
-        // Etiquetas (posições casam com as linhas desenhadas acima).
-        Etiqueta("Temp. Admissão", n0(d.tempAdmissao), "°C", Icons.Outlined.Thermostat, Modifier.align(Alignment.TopStart).offset(w * 0.03f, h * 0.08f).width(w * 0.215f))
-        Etiqueta("Tensão", n1(d.tensao), "V", Icons.Outlined.BatteryChargingFull, Modifier.align(Alignment.TopStart).offset(w * 0.765f, h * 0.08f).width(w * 0.205f))
-        Etiqueta("Carga Motor", n0(d.carga), "%", Icons.Outlined.Memory, Modifier.align(Alignment.TopStart).offset(w * 0.03f, h * 0.78f).width(w * 0.215f))
-        Etiqueta("Consumo médio", n1(d.consumoMedio), "km/l", Icons.Outlined.LocalGasStation, Modifier.align(Alignment.TopStart).offset(w * 0.765f, h * 0.78f).width(w * 0.205f))
-        Etiqueta(null, n0(d.tempMotor), "°C", Icons.Outlined.Thermostat, Modifier.align(Alignment.TopCenter).offset(x = w * 0.06f), grande = true)
-        Etiqueta(null, n0(d.nivelCombustivel), "%", Icons.Outlined.LocalGasStation, Modifier.align(Alignment.BottomCenter).offset(x = w * 0.08f), grande = true)
-        Column(Modifier.align(Alignment.CenterStart).padding(start = 4.dp), horizontalAlignment = Alignment.End) {
-            Text((d.rpm ?: 0).let { "%,d".format(BR, it) }, color = Cores.Texto, fontSize = 50.sp, fontWeight = FontWeight.Bold, maxLines = 1, style = SombraNumero)
-            Text("rpm", color = Cores.TextoSuave, fontSize = 20.sp)
-        }
-        Etiqueta("MAP", n0(d.map), "kPa", null, Modifier.align(Alignment.TopStart).offset(w * 0.635f, h * 0.30f))
-        Etiqueta("Avanço", (d.avanco?.let { "%.0f".format(BR, it) } ?: "—"), "°", null, Modifier.align(Alignment.TopStart).offset(w * 0.635f, h * 0.55f))
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
 // 3) MODULAR
 // ---------------------------------------------------------------------------------------------
 
@@ -469,11 +368,11 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                 }
                 // Conta-giros dentro do velocímetro, na abertura de baixo do arco (como na proposta).
                 Column(
-                    Modifier.align(Alignment.BottomCenter).offset(y = -lado * 0.02f).width(lado * 0.46f).cartaoSuave(RoundedCornerShape(lado * 0.07f)).padding(vertical = lado * 0.02f),
+                    Modifier.align(Alignment.BottomCenter).offset(y = lado * 0.04f).width(lado * 0.54f).cartaoSuave(RoundedCornerShape(lado * 0.07f)).padding(vertical = lado * 0.02f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("RPM", color = Cores.TextoSuave, fontSize = (lado.value * 0.04f).sp)
-                    DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(lado * 0.24f), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f) { l2 ->
+                    DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(lado * 0.30f), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f) { l2 ->
                         Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = (l2.value * 0.24f).sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center).offset(y = l2 * 0.08f))
                     }
                     Text("x1000 rpm", color = Cores.TextoSuave, fontSize = (lado.value * 0.035f).sp)
