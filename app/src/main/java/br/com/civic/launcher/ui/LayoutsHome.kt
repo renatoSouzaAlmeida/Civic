@@ -34,6 +34,10 @@ import br.com.civic.launcher.LayoutHome
 import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.Sensores
 import br.com.civic.launcher.Veiculo
+import br.com.civic.launcher.abrirNavegacaoComPainel
+import br.com.civic.launcher.abrirSpotify
+import br.com.civic.launcher.navegarFavorito
+import androidx.compose.ui.graphics.asImageBitmap
 import br.com.civic.launcher.obd.DadosObd
 import br.com.civic.launcher.obd.ObdMonitor
 import java.util.Locale
@@ -152,118 +156,288 @@ private fun Leitura(icone: ImageVector, valor: String, rotulo: String, modifier:
 }
 
 // ---------------------------------------------------------------------------------------------
-// Proposta "Painel": carro + leituras | velocidade e giro no centro | mapa, música e clima
-// (segue o tema do app: claro de dia, escuro à noite)
+// Proposta "Painel" (segue a imagem escura e o tema do app):
+//   esquerda: foto do carro com placa + cartão único de leituras com divisórias
+//   centro: velocidade em cima, meia-lua de RPM com o valor no meio, barra de RPM embaixo
+//   direita: mapa compacto, Spotify em linha e clima
 // ---------------------------------------------------------------------------------------------
 
 @Composable
 fun HomePainel(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
-    val ctx = LocalContext.current
     val d = obd.dados
     val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
-    Row(Modifier.fillMaxSize().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(EspacoCaixas)) {
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(EspacoCaixas)) {
-            Box(Modifier.weight(1.1f).fillMaxWidth().cartaoSuave()) {
-                FotoCarro(Modifier.fillMaxSize(), 0.85f)
-                Column(Modifier.fillMaxSize().padding(18.dp)) { TituloCarro() }
+    Row(Modifier.fillMaxSize().padding(2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Box(Modifier.weight(1f).fillMaxWidth().cartaoSuave()) {
+                FotoCarro(Modifier.fillMaxSize(), 1f)
+                Column(Modifier.fillMaxSize().padding(16.dp)) { TituloCarro() }
             }
-            Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Leitura(Icons.Outlined.Thermostat, d.tempMotor?.toString() ?: "—", "°C motor", Modifier.weight(1f).fillMaxHeight())
-                    Leitura(Icons.Outlined.BatteryChargingFull, d.tensao?.let { "%.1f".format(BR, it) } ?: "—", "V bateria", Modifier.weight(1f).fillMaxHeight())
-                    Leitura(Icons.Outlined.AcUnit, d.tempAdmissao?.toString() ?: "—", "°C ar", Modifier.weight(1f).fillMaxHeight())
-                }
-                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Leitura(Icons.Outlined.LocalGasStation, d.nivelCombustivel?.toString() ?: "—", "% tanque", Modifier.weight(1f).fillMaxHeight())
-                    Leitura(Icons.Outlined.Eco, consumo(d, ctx), "km/l", Modifier.weight(1f).fillMaxHeight())
-                    Leitura(Icons.Outlined.Speed, d.carga?.toString() ?: "—", "% carga", Modifier.weight(1f).fillMaxHeight())
-                }
-            }
+            GradeLeituras(d, Modifier.weight(1.05f).fillMaxWidth())
         }
-        PainelCentral(d, vel, Modifier.weight(1.3f).fillMaxHeight())
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(EspacoCaixas)) {
-            CartaoWaze(sensores, obd, Modifier.weight(0.85f).fillMaxWidth().sombraCaixa())
-            CartaoSpotify(monitor, Modifier.weight(1.3f).fillMaxWidth().sombraCaixa())
-            ClimaCompacto(sensores.clima, Modifier.weight(0.7f).fillMaxWidth())
+        PainelCentral(d, vel, Modifier.weight(1.15f).fillMaxHeight())
+        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            MapaCompacto(sensores, Modifier.weight(1.1f).fillMaxWidth())
+            SpotifyLinha(monitor, Modifier.weight(1f).fillMaxWidth())
+            ClimaLinha(sensores.clima, Modifier.weight(0.9f).fillMaxWidth())
         }
     }
 }
 
-/** Velocidade grande dentro de um arco em degraus; embaixo, o giro em barra com temperatura e farol. */
+/** Cartão único com as leituras em grade, separadas por linhas finas (3 + 3 + 2). */
+@Composable
+private fun GradeLeituras(d: DadosObd, modifier: Modifier) {
+    val ctx = LocalContext.current
+    val f = d.falhas
+    val linhas: List<List<@Composable (Modifier) -> Unit>> = listOf(
+        listOf(
+            { m -> Celula(Icons.Outlined.Speed, d.acelerador?.toString() ?: "—", "%", "acelerador", m) },
+            { m -> Celula(Icons.Outlined.Thermostat, d.tempMotor?.toString() ?: "—", "", "°C motor", m, if ((d.tempMotor ?: 0) >= 105) Cores.Vermelho else Cores.Destaque) },
+            { m -> Celula(Icons.Outlined.AcUnit, d.tempAdmissao?.toString() ?: "—", "", "°C ar", m) },
+        ),
+        listOf(
+            { m -> Celula(Icons.Outlined.BatteryChargingFull, d.tensao?.let { "%.1f".format(BR, it) } ?: "—", "V", "bateria", m) },
+            { m -> Celula(Icons.Outlined.LocalGasStation, d.nivelCombustivel?.toString() ?: "—", "%", "combustível", m) },
+            { m -> Celula(Icons.Outlined.Eco, d.consumoInstantaneo?.let { "%.1f".format(BR, it) } ?: "—", "", "km/l agora", m, Cores.Ok) },
+        ),
+        listOf(
+            { m -> Celula(null, consumo(d, ctx), "", "km/l média", m) },
+            { m ->
+                Row(m, horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(if (f == 0) Icons.Filled.CheckCircle else Icons.Filled.Warning, null,
+                        tint = when { f == null -> Cores.TextoSuave; f == 0 -> Cores.Ok; else -> Cores.Vermelho }, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text(when (f) { null -> "Falhas —"; 0 -> "Sem falhas"; 1 -> "1 falha"; else -> "$f falhas" }, color = Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                }
+            },
+        ),
+    )
+    Column(modifier.cartaoSuave().padding(horizontal = 8.dp, vertical = 6.dp)) {
+        linhas.forEachIndexed { i, linha ->
+            if (i > 0) Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(1.dp).background(Cores.Borda))
+            Row(Modifier.weight(1f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                linha.forEachIndexed { j, celula ->
+                    if (j > 0) Box(Modifier.width(1.dp).fillMaxHeight(0.6f).background(Cores.Borda))
+                    celula(Modifier.weight(if (linha.size == 2 && j == 1) 2f else 1f).fillMaxHeight())
+                }
+            }
+        }
+    }
+}
+
+/** Ícone + valor grande na mesma linha, rótulo pequeno embaixo (como na proposta). */
+@Composable
+private fun Celula(icone: ImageVector?, valor: String, unidade: String, rotulo: String, modifier: Modifier, cor: Color = Cores.Destaque) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (icone != null) Icon(icone, null, tint = cor, modifier = Modifier.size(20.dp))
+            Text(valor, color = Cores.Texto, fontSize = 24.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (unidade.isNotEmpty()) Text(unidade, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Text(rotulo, color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Velocidade grande em cima; meia-lua de RPM com o giro no meio; barra de RPM embaixo. */
 @Composable
 private fun PainelCentral(d: DadosObd, vel: Float, modifier: Modifier) {
     val destaque = Cores.Destaque
-    val amarelo = Cores.Amarelo
-    val vermelho = Cores.Vermelho
     val vazio = Cores.SegVazio
-    Column(modifier.cartaoSuave(RoundedCornerShape(26.dp)).padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val lado = minOf(maxWidth, maxHeight)
-            Canvas(Modifier.size(lado)) {
-                val segmentos = 44
-                val fracao = (vel / 200f).coerceIn(0f, 1f)
-                val ligados = (fracao * segmentos).toInt()
-                val r = size.minDimension / 2f
-                val externo = r * 0.98f
-                val interno = r * 0.84f
-                val c = Offset(size.width / 2f, size.height / 2f)
+    val vermelho = Cores.Vermelho
+    val rpm = d.rpm ?: 0
+    val situacao = when {
+        (d.tempMotor ?: 0) >= 105 -> "motor quente"
+        rpm >= 6000 -> "giro alto"
+        d.rpm == null -> "sem OBD"
+        else -> "normal"
+    }
+    Column(modifier.cartaoSuave(RoundedCornerShape(26.dp)).padding(horizontal = 18.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Velocidade
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("${vel.toInt()}", color = Cores.Texto, fontSize = 64.sp, lineHeight = 64.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, style = SombraNumero)
+            Text("km/h", color = Cores.Texto, fontSize = 20.sp, modifier = Modifier.padding(bottom = 8.dp))
+        }
+        Text(situacao, color = if (situacao == "normal") Cores.TextoSuave else Cores.Vermelho, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        // Meia-lua de RPM
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+            val largura = minOf(maxWidth, maxHeight * 2f)
+            Canvas(Modifier.width(largura).height(largura / 2f)) {
+                val segmentos = 60
+                val ligados = (rpm / 8000f * segmentos).toInt()
+                val r = size.width / 2f
+                val c = Offset(size.width / 2f, size.height)
+                val externo = r * 0.97f
+                val interno = r * 0.80f
                 for (i in 0 until segmentos) {
-                    val ang = Math.toRadians(135.0 + 270.0 * (i + 0.5) / segmentos)
+                    val t = (i + 0.5f) / segmentos
+                    val ang = Math.toRadians(180.0 + 180.0 * t)
+                    val zonaVermelha = t >= 6500f / 8000f
                     val cor = when {
-                        i >= ligados -> vazio
-                        i >= segmentos * 0.85f -> vermelho
-                        i >= segmentos * 0.6f -> amarelo
-                        else -> destaque
+                        i < ligados -> if (zonaVermelha) vermelho else destaque.copy(alpha = 0.55f + 0.45f * t)
+                        zonaVermelha -> vermelho.copy(alpha = 0.25f)
+                        else -> vazio
                     }
-                    drawLine(
-                        cor, Offset(c.x + interno * cos(ang).toFloat(), c.y + interno * sin(ang).toFloat()),
+                    drawLine(cor,
+                        Offset(c.x + interno * cos(ang).toFloat(), c.y + interno * sin(ang).toFloat()),
                         Offset(c.x + externo * cos(ang).toFloat(), c.y + externo * sin(ang).toFloat()),
-                        strokeWidth = r * 0.07f, cap = StrokeCap.Round,
-                    )
+                        strokeWidth = r * 0.028f, cap = StrokeCap.Round)
                 }
+                // Arco fino por dentro, para dar acabamento
+                drawArc(destaque.copy(alpha = 0.35f), 180f, 180f, false,
+                    Offset(c.x - r * 0.74f, c.y - r * 0.74f), androidx.compose.ui.geometry.Size(r * 1.48f, r * 1.48f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
+                // Marcador da zona vermelha
+                val angV = Math.toRadians(180.0 + 180.0 * 6500 / 8000)
+                drawCircle(vermelho, r * 0.025f, Offset(c.x + r * 1.0f * cos(angV).toFloat(), c.y + r * 1.0f * sin(angV).toFloat()))
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.30f).sp, lineHeight = (lado.value * 0.30f).sp,
-                    fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
-                Text("km/h", color = Cores.TextoSuave, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                d.consumoInstantaneo?.let {
-                    Spacer(Modifier.height(6.dp))
-                    ChipInfo("%.1f km/l agora".format(BR, it), Icons.Filled.Eco, Cores.Ok)
+            Column(Modifier.width(largura).padding(bottom = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("RPM", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(if (d.rpm == null) "—" else "%,d".format(BR, rpm).replace(",", "."), color = Cores.Texto,
+                    fontSize = (largura.value * 0.13f).coerceIn(28f, 56f).sp, lineHeight = (largura.value * 0.13f).coerceIn(28f, 56f).sp,
+                    fontWeight = FontWeight.ExtraBold, maxLines = 1, style = SombraNumero)
+                Row(Modifier.fillMaxWidth().padding(horizontal = largura * 0.2f), verticalAlignment = Alignment.CenterVertically) {
+                    val reserva = (d.nivelCombustivel ?: 100) <= 15
+                    Icon(Icons.Outlined.LocalGasStation, null, tint = Cores.TextoSuave, modifier = Modifier.size(20.dp))
+                    Text(if (d.rpm != null && rpm > 0) "motor ligado" else "motor desligado", color = Cores.TextoSuave, fontSize = 12.sp,
+                        modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Icon(Icons.Filled.LocalGasStation, null, tint = if (reserva) Cores.Vermelho else Cores.TextoSuave.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
                 }
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(8.dp))
+        // Barra de RPM com temperatura e farol
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("RPM", color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Icon(Icons.Outlined.Thermostat, null, tint = if ((d.tempMotor ?: 0) >= 105) Cores.Vermelho else Cores.Destaque, modifier = Modifier.size(22.dp))
-            Text(d.tempMotor?.let { "$it°" } ?: "—", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            BarraSegmentos((d.rpm ?: 0) / 8000f, Modifier.weight(1f), 30, 20.dp)
-            Text(d.rpm?.let { "%,d".format(BR, it) } ?: "—", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.width(18.dp))
             LuzEspia(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_farol), d.farol, Color(0xFF22C55E), tamanho = 24.dp)
+            Text(d.tempMotor?.let { "$it °C" } ?: "—", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
-        Text("rpm", color = Cores.TextoSuave, fontSize = 11.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth().height(22.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            val segmentos = 34
+            val ligados = (rpm / 8000f * segmentos).toInt()
+            for (i in 0 until segmentos) {
+                Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(3.dp))
+                    .background(if (i < ligados) Cores.Destaque else Cores.SegVazio))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
     }
 }
 
-/** Clima numa caixa baixa: ícone, temperatura, condição e chuva. Tocar abre a previsão completa. */
+/** Mapa ilustrativo de fundo, nome do app, Casa/Trabalho, Iniciar direção e o bairro atual. */
 @Composable
-private fun ClimaCompacto(clima: ClimaUi?, modifier: Modifier) {
+private fun MapaCompacto(sensores: Sensores, modifier: Modifier) {
+    val ctx = LocalContext.current
+    val config = Configuracoes.obter(ctx)
+    Box(modifier.cartaoSuave().clickable { ctx.abrirNavegacaoComPainel() }) {
+        MapaDecorativo(Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(
+            0f to Cores.CartaoSolido.copy(alpha = 0.85f), 0.6f to Cores.CartaoSolido.copy(alpha = 0.2f), 1f to Color.Transparent)))
+        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(Cores.Waze), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Filled.Navigation, null, tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+                Column {
+                    Text(config.mapa.rotulo, color = Cores.Texto, fontSize = 19.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("Navegação", color = Cores.TextoSuave, fontSize = 12.sp)
+                }
+            }
+            Row(Modifier.clip(RoundedCornerShape(50)).background(Cores.Chip).border(1.dp, Cores.ChipBorda, RoundedCornerShape(50)),
+                verticalAlignment = Alignment.CenterVertically) {
+                listOf(Triple("Casa", Icons.Filled.Home, "Home"), Triple("Trabalho", Icons.Filled.Work, "Work")).forEach { (rotulo, icone, destino) ->
+                    Row(Modifier.clickable { ctx.navegarFavorito(destino) }.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(icone, null, tint = Cores.Texto, modifier = Modifier.size(17.dp))
+                        Text(rotulo, color = Cores.Texto, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.clip(RoundedCornerShape(50)).background(Cores.Destaque).padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.Navigation, null, tint = Color.White, modifier = Modifier.size(17.dp))
+                    Text("Iniciar direção", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.weight(1f))
+                sensores.clima?.local?.let { local ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Filled.DirectionsCar, null, tint = Cores.Destaque, modifier = Modifier.size(18.dp))
+                        Text(local, color = Cores.Texto, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Spotify em linha: logo, título e controles (prev, play, next). */
+@Composable
+private fun SpotifyLinha(monitor: MediaMonitor, modifier: Modifier) {
+    val ctx = LocalContext.current
+    val m = monitor.estado
+    Row(modifier.cartaoSuave().clickable { ctx.abrirSpotify() }.padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (m.capa != null) {
+            androidx.compose.foundation.Image(m.capa.asImageBitmap(), null, Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        } else {
+            Icon(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_spotify), null, tint = Color(0xFF1ED760), modifier = Modifier.size(60.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column {
+                Text("Spotify", color = Cores.TextoSuave, fontSize = 12.sp)
+                Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Nada tocando", color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(when { !m.permitido -> "Toque aqui para ativar capa e título"; m.temSessao -> m.artista; else -> "Toque para abrir" },
+                    color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Redondo(Icons.Filled.SkipPrevious, 38.dp, Cores.Chip, Cores.Texto) { monitor.anterior() }
+                Redondo(if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, 46.dp, Cores.Destaque, Color.White) {
+                    if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify()
+                }
+                Redondo(Icons.Filled.SkipNext, 38.dp, Cores.Chip, Cores.Texto) { monitor.proxima() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Redondo(icone: ImageVector, tamanho: androidx.compose.ui.unit.Dp, fundo: Color, cor: Color, aoTocar: () -> Unit) {
+    Box(Modifier.size(tamanho).clip(androidx.compose.foundation.shape.CircleShape).background(fundo).clickable(onClick = aoTocar), contentAlignment = Alignment.Center) {
+        Icon(icone, null, tint = cor, modifier = Modifier.size(tamanho * 0.55f))
+    }
+}
+
+/** Clima: bairro e hora no alto; ícone, temperatura e detalhes na mesma linha. Tocar abre a previsão. */
+@Composable
+private fun ClimaLinha(clima: ClimaUi?, modifier: Modifier) {
     var aberto by remember { mutableStateOf(false) }
     if (aberto) ModalClima { aberto = false }
-    Row(
-        modifier.cartaoSuave().clickable { aberto = true }.padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    Column(modifier.cartaoSuave().clickable { aberto = true }.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.SpaceEvenly) {
         if (clima == null) {
             Text("Clima: precisa de internet", color = Cores.TextoSuave, fontSize = 14.sp)
-            return@Row
+            return@Column
         }
         val (icone, cor) = iconeCondicao(clima.condicao)
-        Icon(icone, null, tint = cor, modifier = Modifier.size(38.dp))
-        Text("${clima.temperatura}°", color = Cores.Texto, fontSize = 34.sp, fontWeight = FontWeight.Light, maxLines = 1)
-        Column(Modifier.weight(1f)) {
-            Text(clima.condicao.texto, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(clima.chuva.ifEmpty { "Máx. ${clima.maxima}°  Mín. ${clima.minima}°" }, color = if (clima.chovendo) Cores.Waze else Cores.TextoSuave,
-                fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val hora = remember(clima.atualizadoEm) { java.text.SimpleDateFormat("HH:mm", BR).format(java.util.Date(clima.atualizadoEm)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.LocationOn, null, tint = Cores.TextoSuave, modifier = Modifier.size(14.dp))
+            Text(clima.local, color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+            Text("atualizado $hora", color = Cores.TextoSuave, fontSize = 11.sp)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(icone, null, tint = cor, modifier = Modifier.size(36.dp))
+            Text("${clima.temperatura}°", color = Cores.Texto, fontSize = 36.sp, lineHeight = 38.sp, fontWeight = FontWeight.Light, maxLines = 1)
+            Column(Modifier.weight(1f)) {
+                Text(clima.condicao.texto, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Máx. ${clima.maxima}°  Mín. ${clima.minima}°", color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1)
+                Text(clima.chuva.ifEmpty { "Sensação ${clima.sensacao}° · Umidade ${clima.umidade}%" },
+                    color = if (clima.chovendo) Cores.Waze else Cores.TextoSuave, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }

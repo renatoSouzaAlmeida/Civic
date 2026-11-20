@@ -106,7 +106,7 @@ private fun Favorito(texto: String, icone: androidx.compose.ui.graphics.vector.I
 
 /** Mapa ilustrativo desenhado em Canvas (ruas, parques e uma rota). Estático e barato para a GPU. */
 @Composable
-private fun MapaDecorativo(modifier: Modifier) {
+internal fun MapaDecorativo(modifier: Modifier) {
     val fundo = Cores.MapaFundo
     val via = Cores.MapaVia
     val parque = Cores.MapaParque
