@@ -168,13 +168,23 @@ class Nuvem private constructor(ctx: Context) {
         nomeBot = r.optString("bot").ifEmpty { null }
         definirVinculado(r.optBoolean("vinculado"))
         situacao = if (vinculado) "Vinculado ao Telegram." else "Ainda não vinculado."
+        if (vinculado) registrarBot()
+    }
+
+    /** Liga os comandos do bot (/onde, /status, /bateria, /consumo, /manutencao). No máximo uma vez por dia. */
+    private fun registrarBot() {
+        val agora = System.currentTimeMillis()
+        if (agora - prefs.getLong("bot_registrado_em", 0L) < 24 * 3_600_000L) return
+        funcao(JSONObject().put("acao", "registrar_bot")) { r ->
+            if (r?.optBoolean("registrado") == true) prefs.edit().putLong("bot_registrado_em", agora).apply()
+        }
     }
 
     fun vincular() = funcao(JSONObject().put("acao", "vincular")) { r ->
         when {
             r == null -> situacao = "Sem conexão com a nuvem."
             !r.optBoolean("configurado", true) -> situacao = "O bot do Telegram ainda não foi configurado no Supabase."
-            r.optBoolean("vinculado") -> { definirVinculado(true); situacao = "Vinculado! Você recebeu uma mensagem no Telegram." }
+            r.optBoolean("vinculado") -> { definirVinculado(true); situacao = "Vinculado! Você recebeu uma mensagem no Telegram."; registrarBot() }
             else -> situacao = "Código não encontrado. Envie $codigo para o bot e toque em Vincular de novo."
         }
     }

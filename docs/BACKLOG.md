@@ -57,7 +57,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] **Temperatura do fluido do câmbio** — pronto, falta validar no carro: PID personalizado (cabeçalho, comando, bytes, multiplicador e deslocamento) em OBD > Falhas; alerta a partir de 110 °C. Depende de descobrir o PID certo do Civic.
 
 ### Integrações e notificações
-- [ ] **Comandos no bot do Telegram** — /onde, /status, /bateria, /consumo respondendo com dados do Supabase.
+- [x] **Comandos no bot do Telegram** — pronto, falta validar: /onde, /status, /bateria, /consumo, /manutencao e /ajuda, respondendo com dados do Supabase (função civic-bot). Só responde a chats vinculados.
 - [ ] **Resumo semanal no Telegram** — km, consumo, gasto, alertas e manutenção próxima.
 - [ ] **Chuva onde o carro está parado** — cruza a vaga atual com a previsão do tempo.
 - [ ] **Preço da ANP** — compara o preço pago com a média da cidade e melhora "etanol ou gasolina?".

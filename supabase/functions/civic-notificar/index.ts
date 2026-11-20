@@ -50,8 +50,27 @@ Deno.serve(async (req) => {
     return resposta({ configurado: true, bot: eu?.result?.username ?? null, vinculado: !!disp.telegram_chat_id, codigo: disp.codigo_vinculo });
   }
 
+  // Liga o webhook do bot (comandos /onde, /status...) e o menu de comandos. O app chama isto quando está vinculado.
+  if (acao === "registrar_bot") {
+    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(BOT + "|civic-bot"));
+    const segredo = Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, "0")).join("");
+    const r = await telegram("setWebhook", { url: `${URL_BASE}/functions/v1/civic-bot`, secret_token: segredo, allowed_updates: ["message"] });
+    await telegram("setMyCommands", { commands: [
+      { command: "onde", description: "Onde o carro está ou onde parou" },
+      { command: "status", description: "Resumo do carro agora" },
+      { command: "bateria", description: "Tensão e saúde da bateria" },
+      { command: "consumo", description: "Consumo, custo e abastecimentos" },
+      { command: "manutencao", description: "Itens vencidos e próximos" },
+      { command: "ajuda", description: "Lista de comandos" },
+    ] });
+    return resposta({ registrado: !!r?.ok, descricao: r?.description ?? null });
+  }
+
   if (acao === "vincular") {
+    // Com o webhook do bot ligado, a vinculação acontece no civic-bot quando o código chega; aqui só conferimos.
+    if (disp.telegram_chat_id) return resposta({ vinculado: true });
     const atualizacoes = await telegram("getUpdates", { limit: 100, timeout: 0 });
+    if (atualizacoes && atualizacoes.ok === false) return resposta({ vinculado: false, motivo: "envie o código ao bot e toque em Vincular de novo" });
     const codigo = String(disp.codigo_vinculo).toUpperCase();
     // deno-lint-ignore no-explicit-any
     const achou = (atualizacoes?.result ?? []).reverse().find((u: any) =>

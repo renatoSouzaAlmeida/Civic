@@ -11,6 +11,18 @@ Antes de tudo: instale a versão mais nova (a multimídia atualiza sozinha; conf
 - [ ] **Modo leve** (Config. → Desempenho): ligar e navegar; as setas e alertas ficam parados.
 - [ ] **Clima na home**: temperatura, "atualizado HH:mm" e a linha de chuva.
 
+### Comandos do bot do Telegram (podem ser testados em casa)
+O app liga os comandos sozinho ao abrir, com o Telegram já vinculado (uma vez por dia). Abra o app uma vez antes de testar.
+- [ ] No Telegram, abra a conversa com o bot e toque no botão de menu "/": devem aparecer os comandos.
+- [ ] `/ajuda`: lista os comandos.
+- [ ] `/status`: online/offline, motor, bateria, combustível, falhas, manutenção e último uso.
+- [ ] `/onde`: com o carro parado, mostra onde parou (endereço, link e pino do mapa). Com o motor ligado e andando, mostra a posição ao vivo.
+- [ ] `/bateria`: tensão agora, última partida e queda por hora parado.
+- [ ] `/consumo`: consumo médio, custo por km, gasto no mês e último abastecimento (aguardando valor, se for o caso).
+- [ ] `/manutencao`: itens vencidos e próximos.
+- [ ] De outro chat (ou um amigo) mande `/status` para o bot: ele deve recusar ("este chat ainda não está vinculado").
+- [ ] Vincular de novo: com o webhook ligado, o vínculo se faz mandando o código CIVIC-XXXXX ao bot (o app não precisa consultar). Confira em Config. → Avisos no celular que aparece "Vinculado".
+
 ## 1. Com o motor ligado, parado (garagem)
 - [ ] **Status do app**: "Nível do tanque" informa ou não (se não informar, o abastecimento automático não funciona; lance à mão).
 - [ ] **Monitores de emissões** (Status e OBD → Falhas): quantos prontos e quais faltam.
