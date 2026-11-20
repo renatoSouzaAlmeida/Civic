@@ -174,18 +174,23 @@ private fun PontoPiscando() {
 @Composable
 private fun Versao(atualizador: Atualizador, compacto: Boolean) {
     val tamanho = if (compacto) 12.sp else 15.sp
-    val laranja = Color(0xFFFF8A1F)
     val e = atualizador.estado
-    // Só o número da versão e um sinal: verde com ✔️ (em dia) ou laranja com 🔄️ (há versão nova). Tocar no laranja instala.
-    val (sinal, cor) = when {
-        e is EstadoAtualizacao.Pronta || e is EstadoAtualizacao.Baixando -> "🔄️" to laranja
-        atualizador.situacao == SituacaoVersao.Atualizado -> "✔️" to Cores.Ok
-        else -> "" to Cores.TextoSuave
+    // Só o número da versão e um ícone no padrão do app: verde suave com "ok" (em dia) ou laranja suave com
+    // "sincronizar" (há versão nova). Tocar no laranja instala; tocar no restante verifica de novo.
+    val verdeSuave = Cores.Ok.copy(alpha = 0.75f)
+    val laranjaSuave = Color(0xFFF2A25C)
+    val (icone, cor) = when {
+        e is EstadoAtualizacao.Pronta || e is EstadoAtualizacao.Baixando -> Icons.Filled.Sync to laranjaSuave
+        atualizador.situacao == SituacaoVersao.Atualizado -> Icons.Filled.CheckCircle to verdeSuave
+        else -> null to Cores.TextoSuave
     }
-    Text(
-        "v${atualizador.versaoAtual} $sinal".trim(), color = cor, fontSize = tamanho, fontWeight = FontWeight.SemiBold, maxLines = 1,
-        modifier = Modifier.clickable { if (e is EstadoAtualizacao.Pronta) atualizador.instalar() else if (e !is EstadoAtualizacao.Baixando) atualizador.verificar() },
-    )
+    Row(
+        Modifier.clickable { if (e is EstadoAtualizacao.Pronta) atualizador.instalar() else if (e !is EstadoAtualizacao.Baixando) atualizador.verificar() },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Text("v${atualizador.versaoAtual}", color = cor, fontSize = tamanho, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        icone?.let { Icon(it, if (it == Icons.Filled.Sync) "Atualização disponível" else "Versão em dia", tint = cor, modifier = Modifier.size(if (compacto) 14.dp else 18.dp)) }
+    }
 }
 
 /** Contagem de "possível colisão": ou toca em "Estou bem", ou o aviso com a localização vai para o Telegram. */
