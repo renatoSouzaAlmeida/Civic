@@ -53,4 +53,4 @@ Tabela do plano: item, intervalo, última vez (data · km), situação (Em dia /
 | Atenção e aba Manutenção | `civic_manutencao` (`situacao`, `ultimo_km`, `ultima_data`, intervalos) |
 
 ## Dados para validar
-Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASA-TECH.md`): 7 dias de viagens, vagas, estados e alertas. Regerar: `select public.civic_simular(30);`.
+Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASA-TECH.md`): 30 dias de viagens, trajetos, vagas, estados, abastecimentos, manutenção e alertas. Regerar: `select public.civic_simular_completo(30);`.
