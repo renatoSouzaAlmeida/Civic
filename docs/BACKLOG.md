@@ -59,10 +59,8 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 ### Integrações e notificações
 - [ ] **Comandos no bot do Telegram** — /onde, /status, /bateria, /consumo respondendo com dados do Supabase.
 - [ ] **Resumo semanal no Telegram** — km, consumo, gasto, alertas e manutenção próxima.
-- [ ] **Rodízio e calendário** — aviso no dia do rodízio da placa; lembretes de IPVA e licenciamento pelo final da placa.
 - [ ] **Chuva onde o carro está parado** — cruza a vaga atual com a previsão do tempo.
 - [ ] **Preço da ANP** — compara o preço pago com a média da cidade e melhora "etanol ou gasolina?".
-- [ ] **Revisão com um toque** — quando a manutenção vence, o Telegram oferece botão para avisar a oficina.
 
 ### Interface e usabilidade
 - [x] **Tela "Status do app"** — em Config., no topo: OBD, nível do tanque e MAF suportados, monitores de emissões, GPS, localização o tempo todo, nuvem, Telegram, Vigia, painel, Spotify, Bluetooth e voz, com botão para corrigir cada permissão.

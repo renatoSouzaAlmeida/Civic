@@ -29,6 +29,7 @@ enum class TipoAlerta(
     FarolDesligado("Farol desligado", Gravidade.Aviso, 5_000, 0, 10 * 60_000L),
     MotorFrio("Motor frio", Gravidade.Dica, 3_000, 0, 5 * 60_000L),
     Fadiga("Hora de uma pausa", Gravidade.Aviso, 0, 3 * 3_600_000L, 30 * 60_000L),
+    CambioQuente("Câmbio quente", Gravidade.Aviso, 30_000, 3 * 3_600_000L, 15 * 60_000L),
 }
 
 data class Alerta(val tipo: TipoAlerta, val mensagem: String)
@@ -62,6 +63,7 @@ class AlertasMotor private constructor(private val ctx: Context) {
             condicoes[TipoAlerta.Superaquecimento] = "Motor a $temp °C. Diminua o ritmo; se continuar subindo, pare em local seguro e desligue o motor."
         if (d.luzMotor)
             condicoes[TipoAlerta.Injecao] = "O carro registrou ${d.falhas ?: 0} código(s) de falha. Veja os detalhes em OBD e leve para avaliar."
+        d.tempCambio?.let { c -> if (c >= 110) condicoes[TipoAlerta.CambioQuente] = "Fluido do câmbio a $c °C. Evite subidas e arrancadas fortes; se continuar, pare e deixe esfriar." }
         if (ligado && tensao != null && tensao < 13.2f)
             condicoes[TipoAlerta.Alternador] = "Tensão em ${"%.1f".format(br, tensao)} V com o motor ligado: o alternador pode não estar carregando a bateria."
         if (!ligado && tensao != null && tensao < 12.2f)

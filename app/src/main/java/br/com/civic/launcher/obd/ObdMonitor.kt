@@ -52,6 +52,10 @@ data class DadosObd(
     val monitoresProntos: Int? = null,
     val monitoresTotal: Int? = null,
     val monitoresPendentes: List<String> = emptyList(),
+    /** Km rodados desde que os códigos de falha foram apagados (PID 0131). */
+    val kmDesdeApagar: Int? = null,
+    /** Temperatura do fluido do câmbio (PID personalizado em Config. do diagnóstico). */
+    val tempCambio: Int? = null,
     // Sinais do carro (previstos). Não fazem parte do OBD padrão: dependem da rede CAN de carroceria
     // do Honda. Nulo = desconhecido (a luz-espia aparece apagada e esmaecida).
     val farol: Boolean? = null,
@@ -90,6 +94,12 @@ class ObdMonitor private constructor(private val ctx: Context) {
             br.com.civic.launcher.EstadoCarro.obter(ctx).amostra(novo, demonstracao = demo)
             br.com.civic.launcher.Telemetria.obter(ctx).amostra(novo.rpm, novo.tensao, demonstracao = demo)
             br.com.civic.launcher.Seguranca.obter(ctx).amostra(novo, demonstracao = demo)
+            if (!demo) DiagnosticoAvancado.obter(ctx).let { dg ->
+                dg.termostato(novo.tempMotor, novo.rpm)
+                dg.dreno(novo.tensao, novo.rpm)
+                dg.marchaLenta(novo.rpm, novo.velocidade, novo.tempMotor)
+                dg.tempCambio = novo.tempCambio
+            }
             br.com.civic.launcher.AbastecimentoAuto.obter(ctx).amostra(novo.nivelCombustivel, novo.rpm, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
@@ -127,6 +137,8 @@ class ObdMonitor private constructor(private val ctx: Context) {
     private var kmAcum = 0.0
     private var ultimoCombustivel = 0L
     // Luzes-espia pelo CAN (experimental): captura guiada para descobrir quais bits mudam com cada luz.
+    /** Teste de diagnóstico pedido pela tela ("catalisador", "modo06" ou "cambio"). */
+    @Volatile private var tarefaDiag: String? = null
     @Volatile private var tarefaCan: Boolean? = null // null = nada; false = captura "apagado"; true = captura "aceso"
     var capturaBase by mutableStateOf<Map<String, List<IntArray>>>(emptyMap())
         private set
@@ -383,6 +395,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 val qtd = d.codigos.size + d.codigosPendentes.size
                 principal.post { ocupadoFalhas = false; situacaoFalhas = if (qtd == 0) "Nenhum código de falha no carro." else "Leitura concluída: $qtd código(s)." }
             }
+            tarefaDiag?.let { t -> tarefaDiag = null; executarTarefaDiag(t, d) }
             tarefaCan?.let { ligado ->
                 tarefaCan = null
                 val quadros = escutarCan(5_000)
@@ -413,6 +426,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 consultar("0111")?.firstOrNull()?.let { d = d.copy(acelerador = it * 100 / 255) }
                 consultar("010F")?.firstOrNull()?.let { d = d.copy(tempAdmissao = it - 40) }
                 if (suportados == null) suportados = lerSuportados()
+                if (ciclo % 20 == 0) DiagnosticoAvancado.obter(ctx).cambio.takeIf { it.ativo }?.let { c -> lerCambioPid(c).first?.let { d = d.copy(tempCambio = it) } }
                 d = lerCombustivel(d)
                 if (ciclo % 10 == 0 && suporta(0x2F)) consultar("012F")?.firstOrNull()?.let { d = d.copy(nivelCombustivel = it * 100 / 255) }
                 // Correção de combustível (fuel trims) e estado da malha da injeção.
@@ -448,6 +462,121 @@ class ObdMonitor private constructor(private val ctx: Context) {
     val nivelTanqueSuportado: Boolean? get() = suportados?.contains(0x2F)
     /** O carro informa a vazão de ar (MAF 0110)? Sem ela, o consumo é estimado pelo MAP. */
     val mafSuportado: Boolean? get() = suportados?.contains(0x10)
+
+    // ---------- diagnóstico avançado ----------
+
+    /** Texto hexadecimal limpo de uma resposta do ELM327 (junta as linhas, tira espaços, prompt e o contador "0:"). */
+    private fun limparHex(bruto: String): String = bruto.uppercase().split('\r', '\n')
+        .map { it.trim().replace(">", "").replace(Regex("^[0-9A-F]:"), "").replace(" ", "") }
+        .filter { it.isNotEmpty() && it.length != 3 && !it.contains("NODATA") }.joinToString("")
+
+    /** Modo 02: valor de um PID no instante em que o código de falha surgiu (quadro 0). */
+    private fun consultarFreeze(pid: String): IntArray? {
+        val hex = limparHex(enviar("02${pid}00", 2_500).orEmpty())
+        val p = "42${pid}00"
+        val i = hex.indexOf(p)
+        if (i < 0) return null
+        return hex.substring(i + p.length).chunked(2).mapNotNull { it.toIntOrNull(16) }.toIntArray()
+    }
+
+    private fun lerFreeze(codigo: String) {
+        val itens = mutableListOf<Pair<String, String>>()
+        consultarFreeze("0C")?.takeIf { it.size >= 2 }?.let { itens += "rpm" to "${(it[0] * 256 + it[1]) / 4}" }
+        consultarFreeze("0D")?.firstOrNull()?.let { itens += "velocidade" to "$it km/h" }
+        consultarFreeze("05")?.firstOrNull()?.let { itens += "temp. motor" to "${it - 40} °C" }
+        consultarFreeze("04")?.firstOrNull()?.let { itens += "carga" to "${it * 100 / 255}%" }
+        consultarFreeze("0B")?.firstOrNull()?.let { itens += "MAP" to "$it kPa" }
+        consultarFreeze("0F")?.firstOrNull()?.let { itens += "temp. ar" to "${it - 40} °C" }
+        consultarFreeze("06")?.firstOrNull()?.let { itens += "correção curta" to "%.1f%%".format(java.util.Locale("pt", "BR"), (it - 128) * 100f / 128f) }
+        consultarFreeze("07")?.firstOrNull()?.let { itens += "correção longa" to "%.1f%%".format(java.util.Locale("pt", "BR"), (it - 128) * 100f / 128f) }
+        if (itens.isEmpty()) return // o carro não guardou freeze frame
+        val f = FreezeFrame(codigo, System.currentTimeMillis(), itens)
+        principal.post { DiagnosticoAvancado.obter(ctx).registrarFreeze(f) }
+    }
+
+    /** Pede um teste de diagnóstico (catalisador, modo 06 ou câmbio). Roda na próxima volta do laço. */
+    fun pedirTeste(nome: String) {
+        val dg = DiagnosticoAvancado.obter(ctx)
+        if (demo) { dg.situacao = "Desligue a demonstração para testar o carro."; return }
+        if (estado != EstadoObd.Conectado) { dg.situacao = "Conecte o adaptador OBD primeiro."; return }
+        if (nome != "modo06" && (dados.rpm ?: 0) < 400) { dg.situacao = "Ligue o motor para fazer este teste."; return }
+        dg.ocupado = true
+        dg.situacao = when (nome) { "catalisador" -> "Testando o catalisador por 45 s… mantenha velocidade constante."; "modo06" -> "Lendo o modo 06…"; else -> "Lendo o PID do câmbio…" }
+        tarefaDiag = nome
+    }
+
+    private fun executarTarefaDiag(nome: String, d: DadosObd) {
+        val dg = DiagnosticoAvancado.obter(ctx)
+        val msg = runCatching {
+            when (nome) {
+                "catalisador" -> testarCatalisador(d, dg)
+                "modo06" -> lerModo06(dg)
+                else -> testarCambio(dg)
+            }
+        }.getOrElse { "Não foi possível concluir o teste." }
+        principal.post { dg.situacao = msg; dg.ocupado = false }
+    }
+
+    private fun testarCatalisador(d: DadosObd, dg: DiagnosticoAvancado): String {
+        if (suportados == null) suportados = lerSuportados()
+        val antesPid = if (suporta(0x14) && suportados?.contains(0x14) == true) "0114" else if (suportados?.contains(0x24) == true) "0124" else null
+        if (antesPid == null || suportados?.contains(0x15) != true) return "O carro não informa as sondas de oxigênio pelo OBD (PIDs 0114/0124 e 0115): teste indisponível."
+        if ((d.tempMotor ?: 0) < 75) return "Aqueça o motor (acima de 75 °C) e repita o teste em velocidade constante."
+        val antes = ArrayList<Double>(); val depois = ArrayList<Double>()
+        val fim = SystemClock.elapsedRealtime() + 45_000
+        while (SystemClock.elapsedRealtime() < fim && !Thread.currentThread().isInterrupted) {
+            consultar(antesPid)?.let { b -> if (antesPid == "0114") antes += b[0] / 200.0 else if (b.size >= 2) antes += (b[0] * 256 + b[1]) * 2 / 65535.0 }
+            consultar("0115")?.let { b -> depois += b[0] / 200.0 }
+        }
+        if (antes.size < 25 || depois.size < 25) return "Poucas leituras das sondas (${antes.size}/${depois.size}). Tente de novo."
+        val r = dg.analisarCatalisador(antes, depois)
+        return r.parecer
+    }
+
+    /** Modo 06: lista os testes que o carro suporta e guarda o resultado bruto de cada um (para análise). */
+    private fun lerModo06(dg: DiagnosticoAvancado): String {
+        val suportadosMid = ArrayList<Int>()
+        var base = 0
+        while (base <= 0xE0) {
+            val hex = limparHex(enviar("06%02X".format(base), 3_000).orEmpty())
+            val p = "46%02X".format(base)
+            val i = hex.indexOf(p)
+            if (i < 0) break
+            val b = hex.substring(i + p.length).chunked(2).mapNotNull { it.toIntOrNull(16) }
+            if (b.size < 4) break
+            for (k in 0..31) if ((b[k / 8] shr (7 - k % 8)) and 1 == 1) suportadosMid += base + k + 1
+            if ((base + 0x20) !in suportadosMid) break
+            base += 0x20
+        }
+        if (suportadosMid.isEmpty()) return "O carro não respondeu ao modo 06."
+        val linhas = suportadosMid.filter { it % 0x20 != 0 }.take(24).map { mid ->
+            "MID %02X: %s".format(mid, limparHex(enviar("06%02X".format(mid), 3_000).orEmpty()).ifEmpty { "sem dados" })
+        }
+        principal.post { dg.definirModo06(linhas) }
+        return "Modo 06 lido: ${linhas.size} testes."
+    }
+
+    private fun testarCambio(dg: DiagnosticoAvancado): String {
+        val c = dg.cambio
+        if (!c.ativo) return "Informe o comando (ex.: 221234) e salve antes de testar."
+        val (valor, hex) = lerCambioPid(c)
+        return if (valor != null) { principal.post { dg.tempCambio = valor }; "Resposta: $hex → $valor °C" } else "Sem resposta válida. Recebido: ${hex.ifEmpty { "nada" }}"
+    }
+
+    /** Lê o PID personalizado do câmbio (modo 22 etc.). Devolve o valor convertido (ou null) e o texto recebido. */
+    private fun lerCambioPid(c: ConfigCambio): Pair<Int?, String> {
+        if (c.cabecalho.isNotBlank()) enviar("ATSH${c.cabecalho.trim()}", 2_000)
+        val bruto = enviar(c.comando.trim().uppercase(), 3_000).orEmpty()
+        if (c.cabecalho.isNotBlank()) enviar("ATSH7DF", 2_000)
+        val hex = limparHex(bruto)
+        val cmd = c.comando.trim().uppercase()
+        val esperado = "%02X".format(cmd.take(2).toInt(16) + 0x40) + cmd.drop(2)
+        val i = hex.indexOf(esperado)
+        if (i < 0) return null to hex
+        val b = hex.substring(i + esperado.length).chunked(2).mapNotNull { it.toIntOrNull(16) }
+        val bruto2 = if (c.bytes >= 2 && b.size >= 2) b[0] * 256 + b[1] else b.firstOrNull() ?: return null to hex
+        return Math.round(bruto2 * c.multiplicador + c.deslocamento).toInt() to hex
+    }
 
     // ---------- combustível ----------
 
@@ -548,6 +677,10 @@ class ObdMonitor private constructor(private val ctx: Context) {
         }
         val confirmados = if ((novo.falhas ?: 0) > 0) lerCodigos("03", "43") else emptyList()
         val pendentes = lerCodigos("07", "47")
+        consultar("0131")?.takeIf { it.size >= 2 }?.let { b -> (b[0] * 256 + b[1]).let { km -> novo = novo.copy(kmDesdeApagar = km); DiagnosticoAvancado.obter(ctx).verificarApagados(km) } }
+        // Código novo: guarda o freeze frame (dados do motor no instante da falha).
+        val dg = DiagnosticoAvancado.obter(ctx)
+        confirmados?.firstOrNull { it !in d.codigos && !dg.jaTemFreeze(it) }?.let { lerFreeze(it) }
         return novo.copy(codigos = confirmados ?: novo.codigos, codigosPendentes = pendentes ?: novo.codigosPendentes)
     }
 

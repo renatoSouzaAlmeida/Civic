@@ -134,6 +134,7 @@ fun TelaFalhas(obd: ObdMonitor, aoVoltar: (() -> Unit)? = null) {
                 }
                 if (historico.itens.isNotEmpty()) TextButton(onClick = { historico.limpar() }) { Text("Limpar histórico", fontSize = 15.sp) }
             }
+            SecaoDiagnosticoAvancado(obd)
             Text(
                 "As descrições são uma referência. Para o diagnóstico completo, leve o código a uma oficina de confiança.",
                 color = Cores.TextoSuave, fontSize = 13.sp,
