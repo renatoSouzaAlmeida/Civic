@@ -68,8 +68,8 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Brush.linearGradient(listOf(Cores.Fundo, Cores.FundoB)))
             .systemBarsPadding()
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         BarraTopo(sensores, atualizador, obd, modoTema, aoAlternarTema)
         // Sugestão da rotina diária (só aparece no período cadastrado).
@@ -108,17 +108,17 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
     val hora = DateFormat.getTimeFormat(ctx).format(agora)
     val data = DateFormat.format("EEEE, d 'de' MMMM", agora).toString()
 
-    BoxWithConstraints(Modifier.fillMaxWidth().height(68.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(52.dp)) {
         // Em tela estreita (celular em retrato) esconde o que não cabe, mas mantém o botão de tema.
         val compacto = maxWidth < 760.dp
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
             // Esquerda: logo, hora e data. Centro: nome do app (editável em Config.).
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(if (compacto) 40.dp else 52.dp))
+                Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(if (compacto) 36.dp else 44.dp))
                 // A data fica embaixo da hora para sobrar espaço aos ícones da direita.
                 Column {
-                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 26.sp else 30.sp, lineHeight = if (compacto) 28.sp else 32.sp, fontFamily = FonteTitulo, maxLines = 1)
-                    if (!compacto) Text(data.replaceFirstChar { it.uppercase() }, color = Cores.TextoSuave, fontSize = 12.sp, lineHeight = 15.sp, maxLines = 1)
+                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 24.sp else 26.sp, lineHeight = if (compacto) 26.sp else 28.sp, fontFamily = FonteTitulo, maxLines = 1)
+                    if (!compacto) Text(data.replaceFirstChar { it.uppercase() }, color = Cores.TextoSuave, fontSize = 11.sp, lineHeight = 13.sp, maxLines = 1)
                 }
             }
             if (!compacto) {
