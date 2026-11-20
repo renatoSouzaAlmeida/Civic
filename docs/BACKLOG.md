@@ -104,12 +104,6 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
     com dados simulados para validar o dash.
   - A definir: retenção do histórico e o desenho das telas do dashboard.
 
-## Navegação / mapa
-- [ ] **Adiado — só fazer se realmente impactar o uso.** Waze fora de cogitação para embutir (não há SDK).
-  Caminho recomendado, se um dia valer: navegar no Google Maps em tela cheia com o painel de direção por cima
-  (já existe) + aba "Mapa" no launcher com o Maps SDK (posição, trânsito, vagas do histórico). Exige Google Play
-  Services na multimídia e chave de API. O Navigation SDK (rota embutida) exige contrato com o Google: descartado.
-
 ## Honda Fit
 - [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
   (Fit: Android 12, 1280x720, 4 GB de RAM, 8 núcleos; o launcher já rodava bem, o modo leve é reserva para aparelhos mais simples.)
