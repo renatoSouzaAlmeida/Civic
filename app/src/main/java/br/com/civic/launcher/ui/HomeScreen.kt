@@ -115,9 +115,10 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
             // Esquerda: logo, hora e data. Centro: nome do app (editável em Config.).
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.size(if (compacto) 40.dp else 52.dp))
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 26.sp else 36.sp, fontFamily = FonteTitulo, maxLines = 1)
-                    if (!compacto) Text(data, color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 6.dp), maxLines = 1)
+                // A data fica embaixo da hora para sobrar espaço aos ícones da direita.
+                Column {
+                    Text(hora, color = Cores.Texto, fontSize = if (compacto) 26.sp else 34.sp, lineHeight = if (compacto) 28.sp else 36.sp, fontFamily = FonteTitulo, maxLines = 1)
+                    if (!compacto) Text(data.replaceFirstChar { it.uppercase() }, color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1)
                 }
             }
             if (!compacto) {
@@ -128,7 +129,7 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
             }
             Row(
                 Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(if (compacto) 10.dp else 18.dp, Alignment.End),
+                horizontalArrangement = Arrangement.spacedBy(if (compacto) 10.dp else 14.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Versao(atualizador, compacto)

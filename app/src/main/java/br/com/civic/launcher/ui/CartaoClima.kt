@@ -6,7 +6,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,7 +37,9 @@ fun iconeCondicao(c: CondicaoClima): Pair<ImageVector, Color> = when (c) {
  */
 @Composable
 fun CartaoClima(clima: ClimaUi?, modifier: Modifier = Modifier) {
-    Cartao(modifier) {
+    var aberto by remember { mutableStateOf(false) }
+    if (aberto) ModalClima { aberto = false }
+    Cartao(modifier.clickable { aberto = true }) {
         if (clima == null) {
             Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center) {
                 Text("Clima", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.Bold)
