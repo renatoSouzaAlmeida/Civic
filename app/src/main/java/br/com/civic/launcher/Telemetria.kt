@@ -40,12 +40,16 @@ class Telemetria private constructor(private val ctx: Context) {
     private var velocidade = 0f
     private var tensao: Float? = null
     private var enviando = false
+    /** Última leitura com giro vindo do OBD; sem OBD (Fit) o uso do carro é detectado pelo GPS. */
+    private var ultimaObd = 0L
+    private var porGps = false
+    private var ultimoMovimento = 0L
 
     private val aoDesligar = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             if (i.action == Intent.ACTION_SHUTDOWN || i.action == "android.intent.action.QUICKBOOT_POWEROFF") {
-                if (motorLigado) registrar("motor_desligou")
-                motorLigado = false
+                if (motorLigado) { registrar("motor_desligou"); if (porGps) EstadoCarro.obter(ctx).usoSemObd(false) }
+                motorLigado = false; porGps = false
                 registrar("multimidia_desligou")
                 enviar(forcarStatus = true)
             }
@@ -53,7 +57,11 @@ class Telemetria private constructor(private val ctx: Context) {
     }
 
     private val ciclo = object : Runnable {
-        override fun run() { enviar(); principal.postDelayed(this, 30_000) }
+        override fun run() {
+            // Sem OBD: 5 min parado depois de andar = carro desligado.
+            if (porGps && motorLigado && System.currentTimeMillis() - ultimoMovimento >= 5 * 60_000L) desligouSemObd()
+            enviar(); principal.postDelayed(this, 30_000)
+        }
     }
 
     init {
@@ -64,7 +72,8 @@ class Telemetria private constructor(private val ctx: Context) {
 
     /** O app foi fechado com o motor ligado: registra o desligamento e envia já. */
     fun aoFecharApp() {
-        if (motorLigado) { motorLigado = false; registrar("motor_desligou") }
+        if (motorLigado) { motorLigado = false; registrar("motor_desligou"); if (porGps) EstadoCarro.obter(ctx).usoSemObd(false) }
+        porGps = false
         enviar(forcarStatus = true)
     }
 
@@ -73,6 +82,7 @@ class Telemetria private constructor(private val ctx: Context) {
         if (demonstracao) return
         tensaoAgora?.let { tensao = it }
         val agora = System.currentTimeMillis()
+        if (rpm != null) { ultimaObd = agora; if (porGps) { porGps = false; motorLigado = false } }
         if ((rpm ?: 0) > 400) {
             semGiroDesde = 0L
             if (!motorLigado) {
@@ -91,6 +101,15 @@ class Telemetria private constructor(private val ctx: Context) {
         }
     }
 
+    private fun desligouSemObd() {
+        motorLigado = false; porGps = false
+        registrar("motor_desligou")
+        EstadoCarro.obter(ctx).usoSemObd(false)
+        // Reserva: se a multimídia não desligar com a chave, avisa onde parou mesmo assim (não repete se já avisou nessa vaga).
+        runCatching { LocalEstacionamento.obter(ctx).aoFecharApp() }
+        enviar(forcarStatus = true)
+    }
+
     /** A cada posição de GPS: guarda um ponto do trajeto a cada 15 s (com o motor ligado ou andando). */
     /** Posição pela rede (Wi-Fi/antenas), usada no status só quando o GPS não dá sinal há mais de 5 min (ex.: tablet em casa). */
     fun posicaoRede(local: Location) {
@@ -101,6 +120,19 @@ class Telemetria private constructor(private val ctx: Context) {
         posicao = local; fonteRede = false; ultimoGps = System.currentTimeMillis()
         velocidade = if (local.hasSpeed()) local.speed * 3.6f else 0f
         val agora = System.currentTimeMillis()
+        // Sem OBD (ex.: Honda Fit): andar a mais de 8 km/h marca o carro como "em uso" (ligou) e 5 min parado como desligou.
+        if (agora - ultimaObd > 60_000L) {
+            if (velocidade > 8f) {
+                ultimoMovimento = agora
+                if (!motorLigado) {
+                    motorLigado = true; porGps = true
+                    viagem = agora; prefs.edit().putLong("viagem", viagem).apply()
+                    registrar("motor_ligou")
+                    EstadoCarro.obter(ctx).usoSemObd(true)
+                    enviar(forcarStatus = true)
+                }
+            } else if (velocidade > 3f) ultimoMovimento = agora
+        }
         if ((motorLigado || velocidade > 3f) && agora - ultimoPonto >= 15_000) {
             ultimoPonto = agora
             pontos.put(JSONObject().put("em", iso(agora)).put("lat", local.latitude).put("lon", local.longitude)

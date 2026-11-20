@@ -68,6 +68,15 @@ class EstadoCarro private constructor(private val ctx: Context) {
         primeira = false
     }
 
+    /**
+     * Sem OBD (ex.: Fit com CarPlay): o uso é detectado pelo GPS. Ao começar a andar envia o resumo do uso anterior;
+     * ao parar (5 min parado ou multimídia desligando) guarda o resumo desta viagem (km, tempo, média, máxima e posição).
+     */
+    fun usoSemObd(comecou: Boolean) {
+        if (comecou) { if (prefs.getBoolean("pendente", false)) tentarEnviar(); velMax = 0; rpmMax = 0 }
+        else salvar()
+    }
+
     /** Guarda o resumo do último uso no aparelho e marca como pendente de envio. */
     private fun salvar() {
         val agoraMs = System.currentTimeMillis()
@@ -96,6 +105,7 @@ class EstadoCarro private constructor(private val ctx: Context) {
         ComputadorBordo.obter(ctx).let { cb ->
             (cb.atual ?: cb.historico.lastOrNull())?.let { v ->
                 o.put("viagem_km", v.distanciaKm).put("viagem_duracao_s", v.duracaoMs / 1000).put("viagem_vel_media", v.velMedia)
+                if (velMax == 0) o.put("vel_max", v.velMaxima) // sem OBD, a máxima vem do GPS
             }
         }
         runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull()?.let {
