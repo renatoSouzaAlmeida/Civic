@@ -107,6 +107,18 @@ class EstadoCarro private constructor(private val ctx: Context) {
         prefs.edit().putString("resumo", o.toString()).putBoolean("pendente", true).apply()
     }
 
+    /** Simulação (demonstração do OBD): envia já um resumo do "último uso" com os dados simulados, marcado como simulação. */
+    fun enviarSimulacao(v: Viagem?, d: DadosObd) {
+        val o = JSONObject().put("registrado_em", iso(System.currentTimeMillis())).put("versao_app", versao() + " (simulação)")
+        d.tensao?.let { o.put("tensao", it.toDouble()) }; d.tempMotor?.let { o.put("temp_motor", it) }; d.tempAdmissao?.let { o.put("temp_admissao", it) }
+        d.nivelCombustivel?.let { o.put("nivel_combustivel", it) }; d.consumoMedio?.let { o.put("consumo_medio", it.toDouble()) }
+        d.stft?.let { o.put("stft", it.toDouble()) }; d.ltft?.let { o.put("ltft", it.toDouble()) }
+        o.put("luz_motor", d.luzMotor).put("dtc", JSONArray(d.codigos)).put("dtc_pendentes", JSONArray(d.codigosPendentes))
+        v?.let { o.put("viagem_km", it.distanciaKm).put("viagem_duracao_s", it.duracaoMs / 1000).put("viagem_vel_media", it.velMedia).put("vel_max", it.velMaxima).put("rpm_max", it.rpmMaximo) }
+        runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull()?.let { o.put("lat", it.latitude).put("lon", it.longitude).put("gps_em", iso(it.time)) }
+        Nuvem.obter(ctx).enviarEstado(o) { }
+    }
+
     private fun tentarEnviar() {
         if (enviando) return
         val resumo = prefs.getString("resumo", null)?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return

@@ -101,11 +101,12 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         val agora = System.currentTimeMillis()
         val idade = (agora - local.time).coerceAtLeast(0)
         if (simulado) {
-            // Simulação: manda a mensagem real, mas não guarda como vaga do carro nem entra no histórico do dashboard.
+            // Simulação: grava como vaga (aparece em "Onde parei") e vai ao histórico da nuvem marcada como "simulado".
             val sim = Estacionamento(local.latitude, local.longitude, agora, idade, null)
+            atual = sim; gravar(sim)
             fila.execute {
                 val completo = sim.copy(endereco = endereco(local.latitude, local.longitude))
-                principal.post { avisar(completo, manual = false, simulado = true) }
+                principal.post { atual = completo; gravar(completo); avisar(completo, manual = false, simulado = true) }
             }
             return true
         }

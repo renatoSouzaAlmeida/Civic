@@ -735,9 +735,15 @@ class ObdMonitor private constructor(private val ctx: Context) {
         if (demo) {
             demo = false
             principal.removeCallbacks(tique)
-            // Parar a simulação = simular o desligamento do carro: manda o fim da viagem e onde estacionou para o Telegram.
-            br.com.civic.launcher.ComputadorBordo.obter(ctx).finalizar(simulacao = true)
+            // Parar a simulação = simular o desligamento do carro: grava a viagem e onde estacionou (no app e na nuvem,
+            // marcados como simulação) e manda os avisos para o Telegram, para conferir o caminho completo.
+            val cb = br.com.civic.launcher.ComputadorBordo.obter(ctx)
+            val viagem = cb.atual
+            val ultimos = dados
+            cb.finalizar(simulacao = true)
             br.com.civic.launcher.LocalEstacionamento.obter(ctx).estacionar(manual = false, simulado = true)
+            br.com.civic.launcher.EstadoCarro.obter(ctx).enviarSimulacao(viagem, ultimos)
+            viagem?.let { br.com.civic.launcher.Telemetria.obter(ctx).simularViagem(it.inicio, it.fim) }
             dados = DadosObd()
             estado = estadoReal
         } else {

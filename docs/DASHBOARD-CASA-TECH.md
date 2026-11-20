@@ -11,7 +11,7 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | Tabela | Para que serve | Colunas principais | Uso sugerido no dash |
 |---|---|---|---|
 | `civic_veiculos` (view) | Lista os aparelhos/carros do usuário logado, sem expor segredos | `dispositivo`, `nome`, `criado_em` | Seletor de veículo; ponto de partida de todas as consultas |
-| `civic_estacionamentos` | **Histórico de onde o carro ficou estacionado** (um registro por vez que parou) | `data`, `lat`, `lon`, `endereco`, `idade_gps_s` (0 = posição fresca; alto = GPS defasado), `origem` (`auto` ou `manual`) | Mapa com o último ponto e trilha de vagas; lista "onde parei" por data; destacar pontos com GPS defasado |
+| `civic_estacionamentos` | **Histórico de onde o carro ficou estacionado** (um registro por vez que parou) | `data`, `lat`, `lon`, `endereco`, `idade_gps_s` (0 = posição fresca; alto = GPS defasado), `origem` (`auto`, `manual` ou `simulado` = teste com a demonstração do OBD) | Mapa com o último ponto e trilha de vagas; lista "onde parei" por data; destacar pontos com GPS defasado |
 | `civic_eventos` | Alertas e avisos gerados pelo app (motor, bateria, falhas, manutenção, estacionamento) | `tipo`, `mensagem`, `enviado` (foi ao Telegram), `criado_em` | Linha do tempo de alertas; contagem por tipo; filtro por período |
 | `civic_manutencao` | Plano de manutenção e situação de cada item | `id`, `nome`, `intervalo_km`, `intervalo_meses`, `ultimo_km`, `ultima_data`, `situacao` (vencido/próximo/ok), `atualizado_em` | Cartões de manutenção com semáforo; itens vencidos no topo |
 | `civic_abastecimentos` | Registro de abastecimentos | `data`, `km`, `litros`, `preco_litro`, `combustivel`, `tanque_cheio` | Consumo km/l (tanque cheio a tanque cheio), gasto por mês, custo por km, preço do litro ao longo do tempo |
@@ -59,6 +59,11 @@ const { data: alertas } = await supabase.from('civic_eventos')
 const { data: manut } = await supabase.from('civic_manutencao')
   .select('*').eq('dispositivo', dispositivo).in('situacao', ['Vencido','Proximo'])
 ```
+
+## Dados de simulação (demonstração do OBD)
+Ao parar a demonstração do OBD no app, ele grava como teste: uma vaga em `civic_estacionamentos` com `origem = 'simulado'`,
+um resumo em `civic_estados` com `versao_app` terminando em "(simulação)" e o par `motor_ligou`/`motor_desligou` em
+`civic_ignicao`. O dash pode mostrar esses itens com um selo "Simulação" ou filtrá-los.
 
 ## Como o estado do carro é gravado
 Durante o uso o app guarda o resumo no aparelho (a cada 30 s e quando o motor desliga). **Quando o carro liga de novo**, envia

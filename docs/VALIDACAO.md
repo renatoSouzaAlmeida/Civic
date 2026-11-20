@@ -16,7 +16,7 @@ Antes de tudo: instale a versão mais nova (a multimídia atualiza sozinha; conf
 ## 0. Antes de sair (em casa, ou com a ignição ligada na garagem)
 - [ ] **Config. → Status do app**: abrir e conferir os itens. Corrigir os vermelhos com o botão ao lado. Deixe esta tela aberta com o motor ligado para ver "Nível do tanque", "Consumo (fluxo de ar)" e "Monitores de emissões" aparecerem.
 - [ ] **Telegram**: item "Telegram" verde. Se não, vincule em "Avisos no celular" e envie o teste.
-- [ ] **Demonstração do OBD**: iniciar e parar. Chegam no Telegram o fim da viagem e o estacionamento, marcados 🧪 SIMULAÇÃO.
+- [ ] **Demonstração do OBD**: iniciar, deixar rodar 1–2 min e parar. Chegam no Telegram o fim da viagem e o estacionamento, marcados 🧪 SIMULAÇÃO. A viagem aparece em Veículo → Viagem (histórico), a vaga em "Onde parei o carro", e na Casa Tech entram a vaga (origem "simulado"), o resumo e o liga/desliga do motor.
 - [ ] **Config. → Segurança**: "Testar alerta falado" (ouvir a voz). "Testar possível colisão (10 s)": a contagem aparece e, sem tocar, chega o aviso 🧪 com mapa; repetir tocando "Estou bem" (cancela).
 - [ ] **Modo leve** (Config. → Desempenho): ligar e navegar; as setas e alertas ficam parados.
 - [ ] **Clima na home**: temperatura, "atualizado HH:mm" e a linha de chuva.

@@ -109,6 +109,17 @@ class Telemetria private constructor(private val ctx: Context) {
         }
     }
 
+    /** Simulação (demonstração do OBD): registra o "motor ligou" e o "motor desligou" da viagem simulada e envia já. */
+    fun simularViagem(inicio: Long, fim: Long) {
+        listOf("motor_ligou" to inicio, "motor_desligou" to fim).forEach { (tipo, em) ->
+            val o = JSONObject().put("tipo", tipo).put("em", iso(em)).put("viagem", inicio)
+            posicao?.let { o.put("lat", it.latitude).put("lon", it.longitude) }
+            eventos.put(o)
+        }
+        limitar(); gravar("eventos", eventos)
+        enviar(forcarStatus = true)
+    }
+
     private fun registrar(tipo: String) {
         val o = JSONObject().put("tipo", tipo).put("em", iso(System.currentTimeMillis())).put("viagem", viagem)
         posicao?.let { o.put("lat", it.latitude).put("lon", it.longitude) }

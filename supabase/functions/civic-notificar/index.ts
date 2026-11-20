@@ -137,8 +137,8 @@ Deno.serve(async (req) => {
     await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {
       method: "POST", headers: cabecalhosDb, body: JSON.stringify({ dispositivo: token, tipo, mensagem, enviado }),
     });
-    // Só o estacionamento (auto ou manual) entra no histórico; simulação, colisão e uso incomum só avisam.
-    if (corpo.origem !== "auto" && corpo.origem !== "manual") return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false });
+    // Só o estacionamento (auto, manual ou simulado pela demonstração) entra no histórico; colisão e uso incomum só avisam.
+    if (!["auto", "manual", "simulado"].includes(String(corpo.origem))) return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false });
     // Histórico de estacionamentos (alimenta o dashboard da Casa Tech) na mesma chamada do Telegram.
     const quando = Number(corpo.data);
     const idade = Number(corpo.idade_gps_s);
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
         data: Number.isFinite(quando) && quando > 0 ? new Date(quando).toISOString() : new Date().toISOString(),
         endereco: corpo.endereco ? String(corpo.endereco).slice(0, 300) : null,
         idade_gps_s: Number.isFinite(idade) && idade >= 0 ? Math.round(idade) : null,
-        origem: corpo.origem === "manual" ? "manual" : "auto",
+        origem: ["manual", "simulado"].includes(String(corpo.origem)) ? String(corpo.origem) : "auto",
       }),
     }).then((x) => x.ok).catch(() => false);
     return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: gravou });
