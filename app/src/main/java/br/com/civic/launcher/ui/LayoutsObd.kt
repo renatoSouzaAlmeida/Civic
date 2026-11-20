@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -230,20 +231,36 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val altura = maxHeight
             val gauge = minOf(maxHeight * 0.80f, maxWidth * 0.255f)
-            // Estrada em perspectiva, bem suave, abaixo da velocidade.
+            // Paisagem: morros suaves no horizonte e uma estrada larga em perspectiva (asfalto, bordas e faixas tracejadas).
+            val asfalto = Cores.SegVazio; val morro = Cores.Destaque
             Canvas(Modifier.fillMaxSize()) {
-                val yTopo = size.height * 0.58f; val cx = size.width / 2
-                val pista = Path().apply {
-                    moveTo(cx - size.width * 0.02f, yTopo); lineTo(cx + size.width * 0.02f, yTopo)
-                    lineTo(cx + size.width * 0.20f, size.height); lineTo(cx - size.width * 0.20f, size.height); close()
+                val hz = size.height * 0.50f; val cx = size.width / 2; val base = size.height
+                fun morroEm(x: Float, larg: Float, alt: Float, a: Float) {
+                    val p = Path().apply { moveTo(x - larg, hz); quadraticBezierTo(x - larg * 0.3f, hz - alt, x, hz - alt * 0.85f); quadraticBezierTo(x + larg * 0.4f, hz - alt * 0.7f, x + larg, hz); close() }
+                    drawPath(p, Brush.verticalGradient(listOf(morro.copy(alpha = a), morro.copy(alpha = 0f)), startY = hz - alt, endY = hz))
                 }
-                drawPath(pista, Brush.verticalGradient(listOf(linha.copy(alpha = 0.0f), linha.copy(alpha = 0.10f)), startY = yTopo, endY = size.height))
-                drawLine(linha.copy(alpha = 0.18f), Offset(cx - size.width * 0.02f, yTopo), Offset(cx - size.width * 0.20f, size.height), 3f)
-                drawLine(linha.copy(alpha = 0.18f), Offset(cx + size.width * 0.02f, yTopo), Offset(cx + size.width * 0.20f, size.height), 3f)
-                for (i in 0..4) {
-                    val t0 = 0.08f + i * 0.2f; val t1 = t0 + 0.09f
-                    drawLine(linha.copy(alpha = 0.22f), Offset(cx, yTopo + (size.height - yTopo) * t0), Offset(cx, yTopo + (size.height - yTopo) * t1), 3f + 5f * t0, StrokeCap.Round)
+                morroEm(size.width * 0.12f, size.width * 0.22f, size.height * 0.10f, 0.16f); morroEm(size.width * 0.35f, size.width * 0.18f, size.height * 0.06f, 0.10f)
+                morroEm(size.width * 0.70f, size.width * 0.20f, size.height * 0.08f, 0.12f); morroEm(size.width * 0.92f, size.width * 0.20f, size.height * 0.11f, 0.15f)
+                // Asfalto.
+                val topoL = size.width * 0.012f; val baseL = size.width * 0.36f
+                val pista = Path().apply { moveTo(cx - topoL, hz); lineTo(cx + topoL, hz); lineTo(cx + baseL, base); lineTo(cx - baseL, base); close() }
+                drawPath(pista, Brush.verticalGradient(listOf(asfalto.copy(alpha = 0.15f), asfalto.copy(alpha = 0.95f)), startY = hz, endY = base))
+                // Bordas brancas.
+                drawLine(Color.White.copy(alpha = 0.95f), Offset(cx - topoL, hz), Offset(cx - baseL * 0.97f, base), 5f)
+                drawLine(Color.White.copy(alpha = 0.95f), Offset(cx + topoL, hz), Offset(cx + baseL * 0.97f, base), 5f)
+                // Faixas tracejadas (três pistas): traços que crescem com a perspectiva.
+                for (div in listOf(-1f / 3f, 1f / 3f)) {
+                    var t = 0.04f
+                    while (t < 1f) {
+                        val t2 = (t + 0.05f + t * 0.10f).coerceAtMost(1f)
+                        val x1 = cx + div * (topoL + (baseL - topoL) * t) * 2f; val x2 = cx + div * (topoL + (baseL - topoL) * t2) * 2f
+                        drawLine(Color.White.copy(alpha = 0.85f), Offset(x1, hz + (base - hz) * t), Offset(x2, hz + (base - hz) * t2), 2f + 7f * t, StrokeCap.Butt)
+                        t = t2 + 0.04f + t * 0.10f
+                    }
                 }
+                // Névoa no horizonte.
+                drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0f), Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0f)), startY = hz - size.height * 0.08f, endY = hz + size.height * 0.10f),
+                    Offset(0f, hz - size.height * 0.08f), Size(size.width, size.height * 0.18f))
             }
             Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniMusica(monitor, Modifier.width(360.dp).height(66.dp))
@@ -266,10 +283,11 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                     Text("Média da viagem", color = Cores.TextoSuave, fontSize = (lado.value * 0.045f).sp)
                 }
             }
-            Column(Modifier.align(Alignment.TopCenter).padding(top = altura * 0.10f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (altura.value * 0.36f).sp, lineHeight = (altura.value * 0.36f).sp, fontWeight = FontWeight.Bold,
+            // A velocidade começa abaixo dos cartões de música e diagnóstico (que ficam no canto superior direito).
+            Column(Modifier.align(Alignment.TopCenter).padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (altura.value * 0.26f).sp, lineHeight = (altura.value * 0.26f).sp, fontWeight = FontWeight.Bold,
                     fontStyle = FontStyle.Italic, letterSpacing = (-4).sp, maxLines = 1, style = SombraNumero)
-                Text("km/h", color = Cores.TextoSuave, fontSize = 28.sp)
+                Text("km/h", color = Cores.TextoSuave, fontSize = 26.sp)
             }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(listOf(config.ano, config.nomeCarro, config.modelo).filter { it.isNotBlank() }.joinToString(" "), color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Medium, maxLines = 1)
@@ -279,10 +297,10 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
         // Faixa de indicadores.
         Row(Modifier.fillMaxWidth().height(86.dp).cartaoSuave().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             val itens = listOf(
-                Triple("Temp. Motor", n0(d.tempMotor) to "°C", Icons.Filled.Thermostat), Triple("Temp. Admissão", n0(d.tempAdmissao) to "°C", Icons.Filled.AcUnit),
-                Triple("Tensão", n1(d.tensao) to "V", Icons.Filled.BatteryChargingFull), Triple("Combustível", n0(d.nivelCombustivel) to "%", Icons.Filled.LocalGasStation),
-                Triple("Carga Motor", n0(d.carga) to "%", Icons.Filled.Memory), Triple("MAP", n0(d.map) to "kPa", Icons.Filled.Speed),
-                Triple("Avanço", (d.avanco?.let { "%.0f".format(BR, it) } ?: "—") to "°", Icons.Filled.Tune),
+                Triple("Temp. Motor", n0(d.tempMotor) to "°C", Icons.Outlined.Thermostat), Triple("Temp. Admissão", n0(d.tempAdmissao) to "°C", Icons.Outlined.DeviceThermostat),
+                Triple("Tensão", n1(d.tensao) to "V", Icons.Outlined.BatteryChargingFull), Triple("Combustível", n0(d.nivelCombustivel) to "%", Icons.Outlined.LocalGasStation),
+                Triple("Carga Motor", n0(d.carga) to "%", Icons.Outlined.Memory), Triple("MAP", n0(d.map) to "kPa", Icons.Outlined.Speed),
+                Triple("Avanço", (d.avanco?.let { "%.0f".format(BR, it) } ?: "—") to "°", Icons.Outlined.Tune),
             )
             itens.forEachIndexed { i, (rot, vu, ic) ->
                 if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight(0.55f).background(Cores.Borda))
@@ -291,7 +309,7 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                     Column {
                         Text(rot, color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1)
                         Row(verticalAlignment = Alignment.Bottom) {
-                            Text(vu.first, color = Cores.Texto, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                            Text(vu.first, color = Cores.Texto, fontSize = 28.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                             Text(" ${vu.second}", color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp), maxLines = 1)
                         }
                     }
@@ -308,15 +326,20 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
 @Composable
 private fun Etiqueta(titulo: String?, valor: String, unidade: String, icone: ImageVector?, modifier: Modifier = Modifier, grande: Boolean = false) {
     val forma = RoundedCornerShape(16.dp)
+    val azul = Cores.Destaque
+    // Caixa de vidro com borda luminosa em degradê e brilho azul em volta.
+    val vidro = Modifier.shadow(16.dp, forma, clip = false, ambientColor = azul.copy(alpha = 0.35f), spotColor = azul.copy(alpha = 0.45f))
+        .clip(forma).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.92f), Cores.CartaoSolido.copy(alpha = 0.85f))))
+        .border(1.6.dp, Brush.linearGradient(listOf(azul.copy(alpha = 0.95f), Color.White.copy(alpha = 0.9f), Color(0xFF7CC4FF), azul.copy(alpha = 0.6f))), forma)
     Row(
-        modifier.then(if (grande) Modifier else Modifier.cartaoSuave(forma).border(1.dp, Cores.Destaque.copy(alpha = 0.35f), forma)).padding(horizontal = 16.dp, vertical = 10.dp),
+        modifier.then(if (grande) Modifier else vidro).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        icone?.let { Icon(it, null, tint = Cores.TextoSuave, modifier = Modifier.size(if (grande) 36.dp else 28.dp)) }
+        icone?.let { Icon(it, null, tint = Cores.TextoSuave, modifier = Modifier.size(if (grande) 38.dp else 28.dp)) }
         Column {
             titulo?.let { Text(it, color = Cores.TextoSuave, fontSize = 14.sp, maxLines = 1) }
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(valor, color = Cores.Texto, fontSize = if (grande) 52.sp else 32.sp, fontWeight = FontWeight.Bold, maxLines = 1, style = if (grande) SombraNumero else androidx.compose.ui.text.TextStyle.Default)
+                Text(valor, color = Cores.Texto, fontSize = if (grande) 52.sp else 32.sp, fontWeight = FontWeight.Medium, maxLines = 1, style = if (grande) SombraNumero else androidx.compose.ui.text.TextStyle.Default)
                 Text(" $unidade", color = Cores.TextoSuave, fontSize = if (grande) 24.sp else 16.sp, modifier = Modifier.padding(bottom = if (grande) 8.dp else 5.dp), maxLines = 1)
             }
         }
@@ -336,62 +359,69 @@ fun LayoutOrbitas(obd: ObdMonitor, vel: Float) {
             val rx = size.width * 0.33f; val ry = size.height * 0.36f
             val rCentro = size.height * 0.26f
             fun ponto(g: Double) = Offset(cx + rx * cos(Math.toRadians(g)).toFloat(), cy + ry * sin(Math.toRadians(g)).toFloat())
-            // Órbitas finas inclinadas que cruzam pelo centro (o "atomo").
-            for (ang in listOf(-14f, 14f)) rotate(ang, Offset(cx, cy)) {
-                drawOval(fio, Offset(cx - rx * 0.98f, cy - ry * 0.62f), Size(rx * 1.96f, ry * 1.24f), style = Stroke(2.2f))
+            val ciano = Color(0xFF5FD0FF)
+            // Órbitas finas, em degradê, inclinadas e cruzando pelo centro.
+            for ((ang, esc) in listOf(-20f to 0.60f, 20f to 0.60f, -8f to 0.80f, 8f to 0.80f)) rotate(ang, Offset(cx, cy)) {
+                drawOval(Brush.linearGradient(listOf(azul.copy(alpha = 0.05f), azul.copy(alpha = 0.45f), azul.copy(alpha = 0.05f)), Offset(cx - rx, cy), Offset(cx + rx, cy)),
+                    Offset(cx - rx * 0.99f, cy - ry * esc), Size(rx * 1.98f, ry * esc * 2), style = Stroke(2.2f))
             }
-            // Halos em volta do centro.
-            for (k in 1..3) drawCircle(fio.copy(alpha = 0.22f / k), rCentro * (1.12f + k * 0.16f), Offset(cx, cy), style = Stroke(2f))
-            // Anel principal em "tubo": sombra, corpo e reflexo.
-            drawOval(Color(0x14000000), Offset(cx - rx, cy - ry + 6f), Size(rx * 2, ry * 2), style = Stroke(40f))
-            drawOval(tubo, Offset(cx - rx, cy - ry), Size(rx * 2, ry * 2), style = Stroke(30f))
-            drawOval(Color.White.copy(alpha = 0.85f), Offset(cx - rx, cy - ry - 7f), Size(rx * 2, ry * 2), style = Stroke(3f))
-            // Segmentos acesos (cada um ligado a um indicador).
+            // Anéis concêntricos em volta do centro.
+            for (k in 1..4) drawCircle(Brush.sweepGradient(listOf(azul.copy(alpha = 0.04f), azul.copy(alpha = 0.30f / k), azul.copy(alpha = 0.04f)), Offset(cx, cy)), rCentro * (1.10f + k * 0.14f), Offset(cx, cy), style = Stroke(2f))
+            // Anel principal de vidro: sombra, corpo translúcido em degradê, contorno e reflexo.
+            drawOval(Color(0x18000000), Offset(cx - rx, cy - ry + 8f), Size(rx * 2, ry * 2), style = Stroke(46f))
+            drawOval(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.95f), tubo.copy(alpha = 0.9f), Color.White.copy(alpha = 0.85f)), startY = cy - ry, endY = cy + ry), Offset(cx - rx, cy - ry), Size(rx * 2, ry * 2), style = Stroke(34f))
+            drawOval(azul.copy(alpha = 0.22f), Offset(cx - rx - 17f, cy - ry - 17f), Size(rx * 2 + 34f, ry * 2 + 34f), style = Stroke(1.5f))
+            drawOval(azul.copy(alpha = 0.22f), Offset(cx - rx + 17f, cy - ry + 17f), Size(rx * 2 - 34f, ry * 2 - 34f), style = Stroke(1.5f))
+            drawOval(Color.White, Offset(cx - rx, cy - ry - 8f), Size(rx * 2, ry * 2), style = Stroke(3f))
+            // Segmentos acesos com brilho (camadas que imitam o desfoque) e esferas nas pontas.
             fun arco(de: Double, ate: Double): Path = Path().apply {
                 for (i in 0..48) { val p = ponto(de + (ate - de) * i / 48); if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) }
             }
             fun no(p: Offset, r: Float) {
-                drawCircle(azul.copy(alpha = 0.18f), r * 2.1f, p); drawCircle(Color.White, r, p); drawCircle(azul, r, p, style = Stroke(r * 0.4f))
+                drawCircle(ciano.copy(alpha = 0.12f), r * 3f, p); drawCircle(ciano.copy(alpha = 0.22f), r * 2f, p)
+                drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFD8EEFF)), p, r), r, p); drawCircle(azul, r, p, style = Stroke(r * 0.35f))
             }
             fun segmento(de: Double, ate: Double, f: Float): Offset {
-                val fim = de + (ate - de) * f.coerceIn(0.04f, 1f)
+                val fim = de + (ate - de) * f.coerceIn(0.05f, 1f)
                 val caminho = arco(de, fim)
-                drawPath(caminho, azul.copy(alpha = 0.18f), style = Stroke(40f, cap = StrokeCap.Round))
-                drawPath(caminho, Brush.linearGradient(listOf(azulClaro, azul), ponto(de), ponto(fim)), style = Stroke(20f, cap = StrokeCap.Round))
-                drawPath(caminho, Color.White.copy(alpha = 0.55f), style = Stroke(4f, cap = StrokeCap.Round))
-                no(ponto(de), 12f); no(ponto(fim), 13f)
+                drawPath(caminho, ciano.copy(alpha = 0.10f), style = Stroke(64f, cap = StrokeCap.Round))
+                drawPath(caminho, ciano.copy(alpha = 0.20f), style = Stroke(44f, cap = StrokeCap.Round))
+                drawPath(caminho, Brush.linearGradient(listOf(ciano, azul, Color(0xFF1E5BFF)), ponto(de), ponto(fim)), style = Stroke(24f, cap = StrokeCap.Round))
+                drawPath(caminho, Color.White.copy(alpha = 0.6f), style = Stroke(5f, cap = StrokeCap.Round))
+                no(ponto(fim), 13f)
                 return ponto(de)
             }
             val pTL = segmento(196.0, 250.0, fTemp)
             val pTR = segmento(290.0, 344.0, fTensao)
             val pBL = segmento(106.0, 160.0, fCarga)
             val pBR = segmento(16.0, 72.0, fComb)
-            no(ponto(180.0), 14f)
+            no(ponto(180.0), 15f)
             // Linhas com cotovelo até as etiquetas.
             fun liga(de: Offset, x: Float, y: Float) {
                 val fimP = Offset(size.width * x, size.height * y); val cot = Offset(de.x + (fimP.x - de.x) * 0.45f, fimP.y)
                 val p = Path().apply { moveTo(de.x, de.y); lineTo(cot.x, cot.y); lineTo(fimP.x, fimP.y) }
-                drawPath(p, azul.copy(alpha = 0.55f), style = Stroke(2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                drawCircle(azul, 5f, fimP)
+                drawPath(p, azul.copy(alpha = 0.6f), style = Stroke(2.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawCircle(azul, 5f, de); drawCircle(azul, 5f, fimP)
             }
             liga(pTL, 0.245f, 0.16f); liga(pTR, 0.765f, 0.16f); liga(pBL, 0.245f, 0.86f); liga(pBR, 0.765f, 0.86f)
-            // Esfera central de vidro com brilho.
-            drawCircle(Brush.radialGradient(listOf(azul.copy(alpha = 0.22f), Color.Transparent), Offset(cx, cy), rCentro * 1.45f), rCentro * 1.45f, Offset(cx, cy))
-            drawCircle(Brush.radialGradient(listOf(Color.White, solido, borda.copy(alpha = 0.5f)), Offset(cx - rCentro * 0.2f, cy - rCentro * 0.25f), rCentro * 1.2f), rCentro, Offset(cx, cy))
-            drawCircle(azulClaro.copy(alpha = 0.35f), rCentro + 10f, Offset(cx, cy), style = Stroke(14f))
-            drawCircle(Brush.sweepGradient(listOf(azulClaro, azul, azulClaro, azul, azulClaro), Offset(cx, cy)), rCentro + 2f, Offset(cx, cy), style = Stroke(5f))
+            // Esfera central: halo em camadas, vidro com reflexo e aro ciano brilhante.
+            for (k in 6 downTo 1) drawCircle(ciano.copy(alpha = 0.035f * k), rCentro + k * 9f, Offset(cx, cy))
+            drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFFF2F8FF), Color(0xFFD6E7FA)), Offset(cx - rCentro * 0.25f, cy - rCentro * 0.3f), rCentro * 1.3f), rCentro, Offset(cx, cy))
+            drawCircle(ciano.copy(alpha = 0.35f), rCentro + 6f, Offset(cx, cy), style = Stroke(16f))
+            drawCircle(Brush.sweepGradient(listOf(ciano, azul, ciano, Color.White, ciano), Offset(cx, cy)), rCentro + 2f, Offset(cx, cy), style = Stroke(6f))
+            drawCircle(Color.White.copy(alpha = 0.8f), rCentro - 8f, Offset(cx, cy), style = Stroke(2f))
         }
         Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("${vel.toInt()}", color = Cores.Texto, fontSize = (h.value * 0.25f).sp, lineHeight = (h.value * 0.25f).sp, fontWeight = FontWeight.Bold, letterSpacing = (-3).sp, maxLines = 1, style = SombraNumero)
             Text("km/h", color = Cores.TextoSuave, fontSize = 28.sp)
         }
         // Etiquetas (posições casam com as linhas desenhadas acima).
-        Etiqueta("Temp. Admissão", n0(d.tempAdmissao), "°C", Icons.Filled.Thermostat, Modifier.align(Alignment.TopStart).offset(w * 0.03f, h * 0.08f).width(w * 0.215f))
-        Etiqueta("Tensão", n1(d.tensao), "V", Icons.Filled.BatteryChargingFull, Modifier.align(Alignment.TopStart).offset(w * 0.765f, h * 0.08f).width(w * 0.205f))
-        Etiqueta("Carga Motor", n0(d.carga), "%", Icons.Filled.Memory, Modifier.align(Alignment.TopStart).offset(w * 0.03f, h * 0.78f).width(w * 0.215f))
-        Etiqueta("Consumo médio", n1(d.consumoMedio), "km/l", Icons.Filled.LocalGasStation, Modifier.align(Alignment.TopStart).offset(w * 0.765f, h * 0.78f).width(w * 0.205f))
-        Etiqueta(null, n0(d.tempMotor), "°C", Icons.Filled.Thermostat, Modifier.align(Alignment.TopCenter).offset(x = w * 0.06f), grande = true)
-        Etiqueta(null, n0(d.nivelCombustivel), "%", Icons.Filled.LocalGasStation, Modifier.align(Alignment.BottomCenter).offset(x = w * 0.08f), grande = true)
+        Etiqueta("Temp. Admissão", n0(d.tempAdmissao), "°C", Icons.Outlined.Thermostat, Modifier.align(Alignment.TopStart).offset(w * 0.03f, h * 0.08f).width(w * 0.215f))
+        Etiqueta("Tensão", n1(d.tensao), "V", Icons.Outlined.BatteryChargingFull, Modifier.align(Alignment.TopStart).offset(w * 0.765f, h * 0.08f).width(w * 0.205f))
+        Etiqueta("Carga Motor", n0(d.carga), "%", Icons.Outlined.Memory, Modifier.align(Alignment.TopStart).offset(w * 0.03f, h * 0.78f).width(w * 0.215f))
+        Etiqueta("Consumo médio", n1(d.consumoMedio), "km/l", Icons.Outlined.LocalGasStation, Modifier.align(Alignment.TopStart).offset(w * 0.765f, h * 0.78f).width(w * 0.205f))
+        Etiqueta(null, n0(d.tempMotor), "°C", Icons.Outlined.Thermostat, Modifier.align(Alignment.TopCenter).offset(x = w * 0.06f), grande = true)
+        Etiqueta(null, n0(d.nivelCombustivel), "%", Icons.Outlined.LocalGasStation, Modifier.align(Alignment.BottomCenter).offset(x = w * 0.08f), grande = true)
         Column(Modifier.align(Alignment.CenterStart).padding(start = 4.dp), horizontalAlignment = Alignment.End) {
             Text((d.rpm ?: 0).let { "%,d".format(BR, it) }, color = Cores.Texto, fontSize = 50.sp, fontWeight = FontWeight.Bold, maxLines = 1, style = SombraNumero)
             Text("rpm", color = Cores.TextoSuave, fontSize = 20.sp)
@@ -413,7 +443,7 @@ private fun CartaoMetrica(titulo: String, icone: ImageVector, valor: String, uni
             Text(titulo, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(valor, color = Cores.Texto, fontSize = 40.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(valor, color = Cores.Texto, fontSize = 40.sp, fontWeight = FontWeight.Medium, maxLines = 1)
             Text(" $unidade", color = Cores.TextoSuave, fontSize = 18.sp, modifier = Modifier.padding(bottom = 6.dp), maxLines = 1)
         }
         rodape()
@@ -433,42 +463,43 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
         Column(Modifier.weight(1.12f).fillMaxHeight().cartaoSuave(RoundedCornerShape(26.dp)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Velocidade", color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Medium)
             DialPremium(vel / 200f, (0..10).map { (it * 20).toString() }, Modifier.weight(1f).fillMaxWidth(), menores = 1) { lado ->
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.24f).sp, lineHeight = (lado.value * 0.24f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
-                    Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.07f).sp)
+                Column(Modifier.align(Alignment.Center).offset(y = -lado * 0.08f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.22f).sp, lineHeight = (lado.value * 0.22f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
+                    Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.065f).sp)
                 }
-            }
-            Row(Modifier.cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                DialPremium((d.rpm ?: 0) / 9000f, emptyList(), Modifier.size(58.dp), zonaVermelhaDesde = 0.8f, menores = 0, espessuraArco = 0.13f)
-                Column {
-                    Text("RPM", color = Cores.TextoSuave, fontSize = 13.sp)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                        Text(" x1000 rpm", color = Cores.TextoSuave, fontSize = 12.sp, modifier = Modifier.padding(bottom = 5.dp))
+                // Conta-giros dentro do velocímetro, na abertura de baixo do arco (como na proposta).
+                Column(
+                    Modifier.align(Alignment.BottomCenter).offset(y = -lado * 0.02f).width(lado * 0.46f).cartaoSuave(RoundedCornerShape(lado * 0.07f)).padding(vertical = lado * 0.02f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("RPM", color = Cores.TextoSuave, fontSize = (lado.value * 0.04f).sp)
+                    DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(lado * 0.24f), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f) { l2 ->
+                        Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = (l2.value * 0.24f).sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center).offset(y = l2 * 0.08f))
                     }
+                    Text("x1000 rpm", color = Cores.TextoSuave, fontSize = (lado.value * 0.035f).sp)
                 }
             }
         }
         // Cartões de indicadores.
         Column(Modifier.weight(2.3f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                CartaoMetrica("Temp. Motor", Icons.Filled.Thermostat, n0(d.tempMotor), "°C", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tempMotor"), Cores.Destaque, Modifier.fillMaxWidth().height(44.dp)) }
-                CartaoMetrica("Temp. Admissão", Icons.Filled.AcUnit, n0(d.tempAdmissao), "°C", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tempAdmissao"), Cores.Destaque, Modifier.fillMaxWidth().height(44.dp)) }
-                CartaoMetrica("Tensão", Icons.Filled.BatteryChargingFull, n1(d.tensao), "V", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tensao"), Cores.Ok, Modifier.fillMaxWidth().height(44.dp)) }
+                CartaoMetrica("Temp. Motor", Icons.Outlined.Thermostat, n0(d.tempMotor), "°C", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tempMotor"), Cores.Destaque, Modifier.fillMaxWidth().height(44.dp)) }
+                CartaoMetrica("Temp. Admissão", Icons.Outlined.DeviceThermostat, n0(d.tempAdmissao), "°C", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tempAdmissao"), Cores.Destaque, Modifier.fillMaxWidth().height(44.dp)) }
+                CartaoMetrica("Tensão", Icons.Outlined.BatteryChargingFull, n1(d.tensao), "V", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tensao"), Cores.Ok, Modifier.fillMaxWidth().height(44.dp)) }
             }
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                CartaoMetrica("Combustível", Icons.Filled.LocalGasStation, n0(d.nivelCombustivel), "%", Modifier.weight(1f).fillMaxHeight()) { BarraFina((d.nivelCombustivel ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 12.dp) }
-                CartaoMetrica("Carga Motor", Icons.Filled.Memory, n0(d.carga), "%", Modifier.weight(1f).fillMaxHeight()) { BarraFina((d.carga ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 12.dp) }
-                CartaoMetrica("MAP", Icons.Filled.Speed, n0(d.map), "kPa", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("map"), Cores.Destaque, Modifier.fillMaxWidth().height(44.dp)) }
+                CartaoMetrica("Combustível", Icons.Outlined.LocalGasStation, n0(d.nivelCombustivel), "%", Modifier.weight(1f).fillMaxHeight()) { BarraFina((d.nivelCombustivel ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 12.dp) }
+                CartaoMetrica("Carga Motor", Icons.Outlined.Memory, n0(d.carga), "%", Modifier.weight(1f).fillMaxHeight()) { BarraFina((d.carga ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 12.dp) }
+                CartaoMetrica("MAP", Icons.Outlined.Speed, n0(d.map), "kPa", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("map"), Cores.Destaque, Modifier.fillMaxWidth().height(44.dp)) }
             }
             Row(Modifier.fillMaxWidth().height(90.dp).cartaoSuave().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Speed, null, tint = Cores.TextoSuave, modifier = Modifier.size(24.dp))
+                Icon(Icons.Outlined.Speed, null, tint = Cores.TextoSuave, modifier = Modifier.size(24.dp))
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text("Velocidade média", color = Cores.Texto, fontSize = 15.sp)
                     Row(verticalAlignment = Alignment.Bottom) { Text(viagem?.velMedia?.let { "%.0f".format(BR, it) } ?: "—", color = Cores.Texto, fontSize = 32.sp, fontWeight = FontWeight.Bold); Text(" km/h", color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 5.dp)) }
                 }
                 Box(Modifier.width(1.dp).fillMaxHeight(0.6f).background(Cores.Borda))
-                Icon(Icons.Filled.Timeline, null, tint = Cores.TextoSuave, modifier = Modifier.padding(start = 20.dp).size(24.dp))
+                Icon(Icons.Outlined.Timeline, null, tint = Cores.TextoSuave, modifier = Modifier.padding(start = 20.dp).size(24.dp))
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text("Distância viagem", color = Cores.Texto, fontSize = 15.sp)
                     Row(verticalAlignment = Alignment.Bottom) { Text(viagem?.distanciaKm?.let { "%.1f".format(BR, it) } ?: "—", color = Cores.Texto, fontSize = 32.sp, fontWeight = FontWeight.Bold); Text(" km", color = Cores.TextoSuave, fontSize = 16.sp, modifier = Modifier.padding(bottom = 5.dp)) }
@@ -477,15 +508,15 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
         }
         // Coluna lateral.
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Column(Modifier.weight(1.2f).fillMaxWidth().cartaoSuave().padding(14.dp)) {
+            Column(Modifier.weight(1.1f).fillMaxWidth().cartaoSuave().padding(14.dp)) {
                 Text("Ponto de Ignição", color = Cores.Texto, fontSize = 15.sp)
                 DialPremium(((d.avanco ?: 0f) + 10f) / 50f, emptyList(), Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp), menores = 0, espessuraArco = 0.09f) { lado ->
                     Text(d.avanco?.let { "%.0f°".format(BR, it) } ?: "—", color = Cores.Texto, fontSize = (lado.value * 0.26f).sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
                 }
             }
-            Column(Modifier.weight(0.8f).fillMaxWidth().cartaoSuave().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.weight(0.95f).fillMaxWidth().cartaoSuave().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.Center) {
                 Text("Consumo Médio", color = Cores.Texto, fontSize = 15.sp)
-                Row(verticalAlignment = Alignment.Bottom) { Text(n1(d.consumoMedio), color = Cores.Texto, fontSize = 36.sp, fontWeight = FontWeight.Bold, maxLines = 1); Text(" km/l médio", color = Cores.TextoSuave, fontSize = 14.sp, modifier = Modifier.padding(bottom = 5.dp), maxLines = 1) }
+                Row(verticalAlignment = Alignment.Bottom) { Text(n1(d.consumoMedio), color = Cores.Texto, fontSize = 32.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium, maxLines = 1); Text(" km/l médio", color = Cores.TextoSuave, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp), maxLines = 1) }
             }
             Column(Modifier.weight(1f).fillMaxWidth().cartaoSuave().clickable(onClick = aoVerFalhas).padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

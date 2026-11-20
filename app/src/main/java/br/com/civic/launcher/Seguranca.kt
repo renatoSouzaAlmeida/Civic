@@ -165,7 +165,7 @@ class Seguranca private constructor(private val ctx: Context) {
         if (colisao != null) return
         colisaoTeste = teste
         colisao = segundos
-        Voz.obter(ctx).falar("Possível colisão detectada. Toque em estou bem para cancelar.", forcar = true)
+        Voz.obter(ctx).falar("Possível colisão detectada. Toque em estou bem para cancelar.")
         principal.postDelayed(tique, 1_000)
     }
 
@@ -174,7 +174,7 @@ class Seguranca private constructor(private val ctx: Context) {
             val restante = (colisao ?: return) - 1
             if (restante <= 0) { enviarColisao(); return }
             colisao = restante
-            if (restante % 10 == 0) Voz.obter(ctx).falar("Aviso de colisão em $restante segundos.", forcar = true)
+            if (restante % 10 == 0) Voz.obter(ctx).falar("Aviso de colisão em $restante segundos.")
             principal.postDelayed(this, 1_000)
         }
     }
@@ -194,7 +194,7 @@ class Seguranca private constructor(private val ctx: Context) {
         silencioColisaoAte = System.currentTimeMillis() + 5 * 60_000L
         val teste = colisaoTeste
         avisarComLocal("colisao", (if (teste) "🧪 SIMULAÇÃO\n" else "") + "🚨 POSSÍVEL COLISÃO: queda brusca de velocidade e motor desligado, sem confirmação de que está tudo bem.", simulado = teste)
-        Voz.obter(ctx).falar("Aviso enviado.", forcar = true)
+        Voz.obter(ctx).falar("Aviso enviado.")
     }
 
     // ---------- Telegram ----------
