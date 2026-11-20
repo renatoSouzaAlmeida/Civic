@@ -1,4 +1,5 @@
-// Civic Renatin — comandos do bot do Telegram (/onde, /status, /bateria, /consumo, /manutencao, /ajuda).
+// Civic Renatin — comandos do bot do Telegram (/onde, /status, /bateria, /consumo, /manutencao, /resumo, /ajuda)
+// e rotinas agendadas (resumo semanal aos domingos e aviso de chuva onde o carro está parado), chamadas pelo pg_cron.
 // O Telegram chama esta função (webhook). A origem é conferida pelo cabeçalho secreto, e só responde a chats
 // já vinculados a um aparelho (civic_dispositivos.telegram_chat_id). Também faz a vinculação pelo código CIVIC-XXXXX,
 // porque com o webhook ligado o Telegram não entrega mais mensagens pelo getUpdates.
@@ -35,9 +36,91 @@ function ha(iso: string): string {
   return s < 90 ? `há ${Math.round(s)} s` : s < 5400 ? `há ${Math.round(s / 60)} min` : s < 172800 ? `há ${Math.round(s / 3600)} h` : `há ${Math.round(s / 86400)} dias`;
 }
 
-const AJUDA = "🚗 Comandos do Civic Renatin:\n/onde — onde o carro está ou onde parou\n/status — resumo do carro agora\n/bateria — tensão e saúde da bateria\n/consumo — consumo, custo e abastecimentos\n/manutencao — itens vencidos e próximos";
+const AJUDA = "🚗 Comandos do Civic Renatin:\n/onde — posição mais recente e onde parou\n/status — resumo do carro agora\n/bateria — tensão e saúde da bateria\n/consumo — consumo, custo e abastecimentos\n/manutencao — itens vencidos e próximos\n/resumo — resumo dos últimos 7 dias";
+
+async function cronOk(h: string): Promise<boolean> {
+  const j = await consulta("civic_config?chave=eq.cron_secret&select=valor");
+  return j[0]?.valor === h;
+}
+
+/** Um aparelho por chat (o que falou com a nuvem por último), ignorando os sem Telegram. */
+async function aparelhosPorChat(): Promise<{ chat: number; tk: string; nome: string; status: any }[]> {
+  const todos = await consulta("civic_dispositivos?telegram_chat_id=not.is.null&select=token,nome,telegram_chat_id");
+  const porChat = new Map<number, { chat: number; tk: string; nome: string; status: any }>();
+  for (const d of todos) {
+    const st = (await consulta(`civic_status?dispositivo=eq.${d.token}&select=*`))[0];
+    const atual = porChat.get(d.telegram_chat_id);
+    if (!atual || (st && (!atual.status || st.atualizado_em > atual.status.atualizado_em))) porChat.set(d.telegram_chat_id, { chat: d.telegram_chat_id, tk: d.token, nome: d.nome, status: st });
+  }
+  return [...porChat.values()];
+}
+
+async function resumoSemana(tk: string, nome: string): Promise<string> {
+  const desde = new Date(Date.now() - 7 * 86400000).toISOString();
+  const usos = await consulta(`civic_estados?dispositivo=eq.${tk}&registrado_em=gte.${desde}&select=viagem_km,viagem_duracao_s`);
+  const km = usos.reduce((s, x) => s + Number(x.viagem_km ?? 0), 0);
+  const seg = usos.reduce((s, x) => s + Number(x.viagem_duracao_s ?? 0), 0);
+  const abast = await consulta(`civic_abastecimentos_analise?dispositivo=eq.${tk}&order=km.desc&limit=12&select=*`);
+  const semana = abast.filter((x) => x.data >= desde);
+  const gasto = semana.reduce((s, x) => s + Number(x.total_pago ?? 0), 0);
+  const cons = abast.map((x) => Number(x.consumo_km_l)).filter((x) => x > 0);
+  const eventos = await consulta(`civic_eventos?dispositivo=eq.${tk}&criado_em=gte.${desde}&select=tipo`);
+  const ignorar = new Set(["teste", "simulacao", "viagem", "estacionamento", "abastecimento", "freeze"]);
+  const conta: Record<string, number> = {};
+  for (const e of eventos) if (!ignorar.has(e.tipo)) conta[e.tipo] = (conta[e.tipo] ?? 0) + 1;
+  const totalAlertas = Object.values(conta).reduce((s, x) => s + x, 0);
+  const manut = await consulta(`civic_manutencao?dispositivo=eq.${tk}&situacao=in.(Vencido,Proximo)&select=nome,situacao`);
+  const vagas = await consulta(`civic_estacionamentos?dispositivo=eq.${tk}&data=gte.${desde}&select=endereco`);
+  const freq: Record<string, number> = {};
+  for (const v of vagas) if (v.endereco) freq[v.endereco] = (freq[v.endereco] ?? 0) + 1;
+  const topo = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 2);
+  return `📊 Resumo da semana — ${nome}\n` +
+    `🛣️ ${num(km, 0)} km em ${usos.length} uso(s) · ${Math.floor(seg / 3600)} h ${Math.round((seg % 3600) / 60)} min ao volante\n` +
+    `⛽ Consumo médio ${cons.length ? num(cons.reduce((s, x) => s + x, 0) / cons.length) + " km/l" : "—"} · gasto na semana R$ ${num(gasto, 2)} (${semana.length} abastecimento(s))\n` +
+    `🚨 Alertas: ${totalAlertas ? totalAlertas + " (" + Object.entries(conta).map(([k, v]) => `${k} ${v}`).join(", ") + ")" : "nenhum"}\n` +
+    `🛠️ Manutenção: ${manut.length ? manut.map((m) => (m.situacao === "Vencido" ? "🔴 " : "🟡 ") + m.nome).join(", ") : "tudo em dia"}` +
+    (topo.length ? `\n📍 Mais frequentes: ${topo.map(([e, n]) => `${e} (${n}x)`).join("; ")}` : "");
+}
+
+async function resumoSemanalTodos() {
+  for (const a of await aparelhosPorChat()) await responder(a.chat, await resumoSemana(a.tk, a.nome));
+}
+
+/** Avisa quando vai chover (próximas horas) onde o carro está parado. Um aviso por vaga. */
+async function chuvaNaVaga() {
+  for (const a of await aparelhosPorChat()) {
+    if (a.status?.motor_ligado) continue;
+    const v = (await consulta(`civic_estacionamentos?dispositivo=eq.${a.tk}&order=data.desc&limit=1&select=*`))[0];
+    if (!v || Date.now() - new Date(v.data).getTime() > 18 * 3600000) continue;
+    const ja = await consulta(`civic_avisos_chuva?dispositivo=eq.${a.tk}&vaga_data=eq.${encodeURIComponent(v.data)}&select=vaga_data`);
+    if (ja.length) continue;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${v.lat}&longitude=${v.lon}&hourly=precipitation_probability,precipitation&forecast_hours=4&timezone=America%2FSao_Paulo`).then((x) => x.json()).catch(() => null);
+    const h = r?.hourly;
+    if (!h) continue;
+    for (let i = 0; i < Math.min(3, h.time.length); i++) {
+      if ((h.precipitation_probability?.[i] ?? 0) >= 60 || (h.precipitation?.[i] ?? 0) >= 0.5) {
+        const hora = String(h.time[i]).substring(11, 13);
+        await responder(a.chat, `🌧️ Deve chover onde seu carro está parado${v.endereco ? " (" + v.endereco + ")" : ""} por volta das ${hora}h (${h.precipitation_probability?.[i] ?? "?"}% de chance). Confira vidros e teto solar.`);
+        await fetch(`${URL_BASE}/rest/v1/civic_avisos_chuva`, { method: "POST", headers: { ...db, Prefer: "resolution=ignore-duplicates,return=minimal" }, body: JSON.stringify({ dispositivo: a.tk, vaga_data: v.data }) });
+        break;
+      }
+    }
+  }
+}
 
 Deno.serve(async (req) => {
+  // Rotinas agendadas (pg_cron → pg_net): autenticadas pelo segredo guardado em civic_config.
+  const cron = req.headers.get("x-civic-cron");
+  if (cron) {
+    if (req.method !== "POST" || !(await cronOk(cron))) return new Response("proibido", { status: 403 });
+    // deno-lint-ignore no-explicit-any
+    const corpo: any = await req.json().catch(() => ({}));
+    try {
+      if (corpo.acao === "resumo_semanal") await resumoSemanalTodos();
+      else if (corpo.acao === "chuva_vaga") await chuvaNaVaga();
+    } catch (_) { /* tenta de novo na próxima execução */ }
+    return new Response("ok");
+  }
   if (req.method !== "POST" || !BOT) return new Response("ok");
   if (req.headers.get("x-telegram-bot-api-secret-token") !== (await segredo())) return new Response("proibido", { status: 403 });
   // deno-lint-ignore no-explicit-any
@@ -72,16 +155,19 @@ Deno.serve(async (req) => {
     if (cmd === "/start" || cmd === "/ajuda" || cmd === "/help") { await responder(chat, AJUDA); return new Response("ok"); }
 
     if (cmd === "/onde") {
-      if (status?.motor_ligado && status.lat != null) {
-        await responder(chat, `📍 O carro está ligado (${num(status.vel, 0)} km/h), posição ${ha(status.atualizado_em)}.\n🗺️ https://maps.google.com/?q=${status.lat},${status.lon}`);
-        await telegram("sendLocation", { chat_id: chat, latitude: status.lat, longitude: status.lon });
-      } else {
-        const v = (await consulta(`civic_estacionamentos?dispositivo=eq.${tk}&order=data.desc&limit=1&select=*`))[0];
-        if (!v) await responder(chat, "Ainda não há vaga registrada.");
-        else {
-          await responder(chat, `🅿️ Parado desde ${fmtData(v.data)} (${ha(v.data)})${v.endereco ? "\n" + v.endereco : ""}${v.idade_gps_s > 600 ? "\n⚠️ A posição pode estar defasada (GPS de " + Math.round(v.idade_gps_s / 60) + " min antes)." : ""}\n🗺️ https://maps.google.com/?q=${v.lat},${v.lon}`);
-          await telegram("sendLocation", { chat_id: chat, latitude: v.lat, longitude: v.lon });
-        }
+      // Compara a posição mais recente do carro (GPS ou rede, enviada pelo status) com a última vaga e mostra a mais nova.
+      const v = (await consulta(`civic_estacionamentos?dispositivo=eq.${tk}&order=data.desc&limit=1&select=*`))[0];
+      const posAtual = status?.lat != null ? { lat: status.lat, lon: status.lon, em: status.atualizado_em } : null;
+      const usarAtual = posAtual && (!v || new Date(posAtual.em).getTime() >= new Date(v.data).getTime());
+      if (usarAtual && posAtual) {
+        const fonte = status.posicao_fonte === "rede" ? "pela rede (aproximada)" : "por GPS";
+        await responder(chat, `📍 ${status.motor_ligado ? "O carro está ligado (" + num(status.vel, 0) + " km/h)" : "Última posição do carro"}, ${fonte}, ${ha(posAtual.em)}.\n🗺️ https://maps.google.com/?q=${posAtual.lat},${posAtual.lon}` +
+          (v ? `\n🅿️ Última vaga registrada: ${fmtData(v.data)} (${ha(v.data)})${v.endereco ? " · " + v.endereco : ""}` : ""));
+        await telegram("sendLocation", { chat_id: chat, latitude: posAtual.lat, longitude: posAtual.lon });
+      } else if (!v) await responder(chat, "Ainda não há posição nem vaga registrada.");
+      else {
+        await responder(chat, `🅿️ Parado desde ${fmtData(v.data)} (${ha(v.data)})${v.endereco ? "\n" + v.endereco : ""}${v.idade_gps_s > 600 ? "\n⚠️ A posição pode estar defasada (GPS de " + Math.round(v.idade_gps_s / 60) + " min antes)." : ""}\n🗺️ https://maps.google.com/?q=${v.lat},${v.lon}`);
+        await telegram("sendLocation", { chat_id: chat, latitude: v.lat, longitude: v.lon });
       }
     } else if (cmd === "/status") {
       const e = (await consulta(`civic_estados?dispositivo=eq.${tk}&order=registrado_em.desc&limit=1&select=*`))[0];
@@ -118,6 +204,8 @@ Deno.serve(async (req) => {
           `Último abastecimento: ${fmtData(a[0].data)} · ${num(a[0].litros)} l${a[0].aguardando_valor ? " · aguardando o valor pago" : ""}\n` +
           `Abastecimentos registrados: ${a.length}${a.length === 8 ? "+" : ""}`);
       }
+    } else if (cmd === "/resumo") {
+      await responder(chat, await resumoSemana(tk, nome));
     } else if (cmd === "/manutencao") {
       const m = await consulta(`civic_manutencao?dispositivo=eq.${tk}&situacao=in.(Vencido,Proximo)&select=nome,situacao,ultimo_km,ultima_data&order=situacao`);
       await responder(chat, m.length ? "🛠️ Manutenção:\n" + m.map((x) => `${x.situacao === "Vencido" ? "🔴" : "🟡"} ${x.nome}${x.ultima_data ? " (última em " + fmtData(x.ultima_data).slice(0, 5) + ")" : ""}`).join("\n") : "🛠️ Nada vencido nem próximo. Tudo em dia.");

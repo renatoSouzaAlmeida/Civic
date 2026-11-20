@@ -125,6 +125,7 @@ fun TelaConfig() {
                 BotaoPilula("Testar alerta falado", Icons.Filled.Notifications, Modifier.fillMaxWidth()) {
                     br.com.civic.launcher.Voz.obter(ctx).falar("Teste do alerta falado do Civic Renatin.", forcar = true)
                 }
+                BotaoPilula("Abrir modo HUD (velocidade espelhada)", Icons.Filled.Speed, Modifier.fillMaxWidth()) { Hud.aberto = true }
                 BotaoPilula("Testar possível colisão (10 s)", Icons.Filled.Layers, Modifier.fillMaxWidth()) {
                     br.com.civic.launcher.Seguranca.obter(ctx).testarColisao()
                 }

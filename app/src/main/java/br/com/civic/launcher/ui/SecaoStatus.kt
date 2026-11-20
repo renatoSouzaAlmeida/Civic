@@ -125,6 +125,11 @@ fun SecaoStatusApp() {
             else ItemStatus("Bluetooth", NivelStatus.Erro, "Sem permissão de dispositivos próximos (o OBD não conecta)", "Permitir", detalhesApp)
         )
         add(
+            if (!br.com.civic.launcher.ComandoVoz.obter(ctx).disponivel()) ItemStatus("Comando de voz", NivelStatus.Atencao, "Sem serviço de reconhecimento de voz neste aparelho (instale o Google ou um app de voz)")
+            else if (!permitido(Manifest.permission.RECORD_AUDIO)) ItemStatus("Comando de voz", NivelStatus.Info, "Disponível; a permissão do microfone é pedida ao tocar no microfone da barra do topo")
+            else ItemStatus("Comando de voz", NivelStatus.Ok, "Pronto: toque no microfone da barra do topo")
+        )
+        add(
             if (Voz.obter(ctx).pronto) ItemStatus("Voz dos alertas", NivelStatus.Ok, "Síntese de voz pronta")
             else ItemStatus("Voz dos alertas", NivelStatus.Atencao, "Síntese de voz indisponível: instale uma voz em português nas configurações do Android")
         )

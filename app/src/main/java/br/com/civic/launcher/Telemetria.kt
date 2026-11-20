@@ -35,6 +35,8 @@ class Telemetria private constructor(private val ctx: Context) {
     private var ultimoPonto = 0L
     private var ultimoStatus = 0L
     private var posicao: Location? = null
+    private var fonteRede = false
+    private var ultimoGps = 0L
     private var velocidade = 0f
     private var tensao: Float? = null
     private var enviando = false
@@ -90,8 +92,13 @@ class Telemetria private constructor(private val ctx: Context) {
     }
 
     /** A cada posição de GPS: guarda um ponto do trajeto a cada 15 s (com o motor ligado ou andando). */
+    /** Posição pela rede (Wi-Fi/antenas), usada no status só quando o GPS não dá sinal há mais de 5 min (ex.: tablet em casa). */
+    fun posicaoRede(local: Location) {
+        if (System.currentTimeMillis() - ultimoGps > 5 * 60_000L) { posicao = local; fonteRede = true; velocidade = 0f }
+    }
+
     fun posicao(local: Location) {
-        posicao = local
+        posicao = local; fonteRede = false; ultimoGps = System.currentTimeMillis()
         velocidade = if (local.hasSpeed()) local.speed * 3.6f else 0f
         val agora = System.currentTimeMillis()
         if ((motorLigado || velocidade > 3f) && agora - ultimoPonto >= 15_000) {
@@ -132,7 +139,7 @@ class Telemetria private constructor(private val ctx: Context) {
         if (status) {
             ultimoStatus = agora
             val s = JSONObject().put("dispositivo", token).put("atualizado_em", iso(agora)).put("motor_ligado", motorLigado)
-                .put("heartbeat_s", intervalo / 1000).put("viagem", viagem).put("versao_app", versao())
+                .put("posicao_fonte", if (fonteRede) "rede" else "gps").put("heartbeat_s", intervalo / 1000).put("viagem", viagem).put("versao_app", versao())
             posicao?.let { s.put("lat", it.latitude).put("lon", it.longitude).put("vel", Math.round(velocidade * 10) / 10.0) }
             tensao?.let { s.put("tensao", it.toDouble()) }
             nuvem.enviarJson("/rest/v1/civic_status?on_conflict=dispositivo", JSONArray().put(s).toString(), "resolution=merge-duplicates") { fim() }

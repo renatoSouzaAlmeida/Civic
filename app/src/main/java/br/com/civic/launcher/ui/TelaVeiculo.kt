@@ -188,6 +188,8 @@ private fun NovoAbastecimento(v: Veiculo) {
             }
         }
         Text("Dica: para o consumo real, encha o tanque até o desarme da bomba e marque \"Tanque cheio\".", color = Cores.TextoSuave, fontSize = 13.sp)
+        val capacidade = br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current).capacidadeEfetiva
+        BotaoPilula("Simular abastecimento detectado (teste)", Icons.Filled.LocalGasStation, Modifier.fillMaxWidth()) { v.simularAbastecimento(capacidade) }
     }
 }
 
@@ -226,7 +228,29 @@ private fun EtanolOuGasolina(v: Veiculo) {
     var etanol by remember { mutableStateOf("") }
     var gasolina by remember { mutableStateOf("") }
     val (razao, real) = v.razaoEtanolGasolina()
+    val ctx = LocalContext.current
+    var anp by remember { mutableStateOf<br.com.civic.launcher.PrecoAnp?>(null) }
+    var anpMsg by remember { mutableStateOf("Consultando os preços da ANP…") }
+    LaunchedEffect(Unit) {
+        br.com.civic.launcher.Localidade.municipioEstado(ctx) { par ->
+            if (par == null) anpMsg = "Sem localização para consultar a ANP."
+            else br.com.civic.launcher.Nuvem.obter(ctx).precoAnp(par.first, par.second) { r -> anp = r; anpMsg = if (r == null) "Preços da ANP indisponíveis para esta região." else "" }
+        }
+    }
     Secao("Etanol ou gasolina?") {
+        anp?.let { p ->
+            val dd = { s: String -> if (s.length >= 10) s.substring(8, 10) + "/" + s.substring(5, 7) else s }
+            Text(
+                "ANP · ${if (p.fonte == "estado") "média do estado" else p.local.lowercase().replaceFirstChar { it.uppercase() }}: " +
+                    listOfNotNull(p.gasolina?.let { "gasolina ${reais(it)}" }, p.aditivada?.let { "aditivada ${reais(it)}" }, p.etanol?.let { "etanol ${reais(it)}" }).joinToString(" · ") +
+                    " (semana de ${dd(p.semanaInicio)} a ${dd(p.semanaFim)})",
+                color = Cores.Texto, fontSize = 14.sp,
+            )
+            if (p.etanol != null && p.gasolina != null) BotaoPilula("Usar os preços da ANP", Icons.Filled.LocalGasStation, Modifier.fillMaxWidth()) {
+                etanol = Mascara.paraCentavos(p.etanol); gasolina = Mascara.paraCentavos(p.gasolina)
+            }
+        }
+        if (anp == null && anpMsg.isNotEmpty()) Text(anpMsg, color = Cores.TextoSuave, fontSize = 13.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Campo("Etanol (litro)", etanol, Modifier.weight(1f), mascara = Mascara.Moeda) { etanol = it }
             Campo("Gasolina (litro)", gasolina, Modifier.weight(1f), mascara = Mascara.Moeda) { gasolina = it }

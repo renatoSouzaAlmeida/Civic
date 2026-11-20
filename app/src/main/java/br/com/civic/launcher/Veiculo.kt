@@ -116,7 +116,16 @@ class Veiculo private constructor(ctx: Context) {
     }
 
     /** Registra um abastecimento detectado pelo nível do tanque (sem valor pago ainda). */
-    fun adicionarAutomatico(a: Abastecimento) {
+    /** Teste: cria um abastecimento "detectado" (15% → 95%) para ver o aviso e o cadastro. Apague o item depois. */
+    fun simularAbastecimento(capacidade: Int) {
+        val agora = System.currentTimeMillis()
+        adicionarAutomatico(
+            Abastecimento(agora, agora, kmAtual, (95 - 15) / 100f * capacidade, 0f, Combustivel.Gasolina, true, automatico = true, nivelAntes = 15, nivelDepois = 95),
+            teste = true,
+        )
+    }
+
+    fun adicionarAutomatico(a: Abastecimento, teste: Boolean = false) {
         abastecimentos.add(a)
         abastecimentos.sortBy { it.km }
         zerarDistancia()
@@ -125,7 +134,7 @@ class Veiculo private constructor(ctx: Context) {
         val consumo = consumos()[a.id]?.let { " · consumo %.1f km/l".format(br, it) } ?: ""
         nuvem.avisar(
             "abastecimento",
-            "⛽ Abastecimento detectado: ~%.1f l (tanque %d%% → %d%%) · %,d km%s\nInforme o valor pago em Veículo → Abastecimentos.".format(
+            (if (teste) "🧪 TESTE (apague o item no histórico)\n" else "") + "⛽ Abastecimento detectado: ~%.1f l (tanque %d%% → %d%%) · %,d km%s\nInforme o valor pago em Veículo → Abastecimentos.".format(
                 br, a.litros, a.nivelAntes ?: 0, a.nivelDepois ?: 0, a.km, consumo),
         )
         aposMudanca()

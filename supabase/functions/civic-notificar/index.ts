@@ -61,9 +61,30 @@ Deno.serve(async (req) => {
       { command: "bateria", description: "Tensão e saúde da bateria" },
       { command: "consumo", description: "Consumo, custo e abastecimentos" },
       { command: "manutencao", description: "Itens vencidos e próximos" },
+      { command: "resumo", description: "Resumo dos últimos 7 dias" },
       { command: "ajuda", description: "Lista de comandos" },
     ] });
     return resposta({ registrado: !!r?.ok, descricao: r?.description ?? null });
+  }
+
+  // Preço médio da ANP (gasolina, aditivada e etanol) do município; se não houver, a média do estado.
+  if (acao === "preco_anp") {
+    const norm = (t: unknown) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+    const mun = norm(corpo.municipio), uf = norm(corpo.estado);
+    if (!uf) return resposta({ erro: "informe o estado" }, 400);
+    const buscar = async (m: string) => {
+      const r = await fetch(`${URL_BASE}/rest/v1/civic_precos_anp?municipio=eq.${encodeURIComponent(m)}&uf=eq.${encodeURIComponent(uf)}&order=semana_inicio.desc&limit=6&select=*`, { headers: cabecalhosDb });
+      const j = await r.json();
+      if (!Array.isArray(j) || !j.length) return null;
+      return j.filter((x) => x.semana_inicio === j[0].semana_inicio);
+    };
+    let linhas = mun ? await buscar(mun) : null;
+    let fonte = "municipio";
+    if (!linhas) { linhas = await buscar("(ESTADO)"); fonte = "estado"; }
+    if (!linhas) return resposta({ encontrado: false });
+    const p = (nome: string) => linhas!.find((x) => x.produto === nome)?.preco_medio ?? null;
+    return resposta({ encontrado: true, fonte, local: fonte === "municipio" ? mun : uf, semana_inicio: linhas[0].semana_inicio, semana_fim: linhas[0].semana_fim,
+      gasolina: p("GASOLINA COMUM"), aditivada: p("GASOLINA ADITIVADA"), etanol: p("ETANOL HIDRATADO"), postos: linhas[0].postos });
   }
 
   if (acao === "vincular") {

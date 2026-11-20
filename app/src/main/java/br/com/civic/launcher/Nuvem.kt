@@ -17,6 +17,9 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.Executors
 
+/** Preços médios da ANP: gasolina comum, aditivada e etanol (R$/l). [fonte] = "municipio" ou "estado". */
+data class PrecoAnp(val local: String, val fonte: String, val semanaInicio: String, val semanaFim: String, val gasolina: Float?, val aditivada: Float?, val etanol: Float?)
+
 /**
  * Nuvem do carro (Supabase, projeto CasaTechRenatin) + avisos no celular pelo Telegram.
  *
@@ -170,6 +173,14 @@ class Nuvem private constructor(ctx: Context) {
         situacao = if (vinculado) "Vinculado ao Telegram." else "Ainda não vinculado."
         if (vinculado) registrarBot()
     }
+
+    /** Preço médio da ANP (semana mais recente) do município; se não houver, do estado. Null = indisponível. */
+    fun precoAnp(municipio: String, estado: String, aoTerminar: (PrecoAnp?) -> Unit) =
+        funcao(JSONObject().put("acao", "preco_anp").put("municipio", municipio).put("estado", estado)) { r ->
+            if (r == null || !r.optBoolean("encontrado")) { aoTerminar(null); return@funcao }
+            fun f(k: String) = if (r.isNull(k)) null else r.optDouble(k).toFloat()
+            aoTerminar(PrecoAnp(r.optString("local"), r.optString("fonte"), r.optString("semana_inicio"), r.optString("semana_fim"), f("gasolina"), f("aditivada"), f("etanol")))
+        }
 
     /** Liga os comandos do bot (/onde, /status, /bateria, /consumo, /manutencao). No máximo uma vez por dia. */
     private fun registrarBot() {

@@ -63,6 +63,9 @@ class Sensores(context: Context) {
     private val telefonia = ctx.getSystemService(TelephonyManager::class.java)
     private var rodando = false
     private var ultimaLocalizacao: Location? = null
+    /** Posição pela rede (Wi-Fi/antenas): serve ao clima quando não há GPS (ex.: tablet parado em casa). Não alimenta velocidade nem trajeto. */
+    private var ultimaRede: Location? = null
+    private val prefsClima = ctx.getSharedPreferences("sensores", Context.MODE_PRIVATE)
     private var proximoClima = 0L
 
     // Todos os métodos são implementados: em Android < 11 eles são abstratos.
@@ -74,6 +77,14 @@ class Sensores(context: Context) {
             LocalEstacionamento.obter(ctx).registrarPosicao(local) // guarda o último sinal de GPS
             Telemetria.obter(ctx).posicao(local)
         }
+        override fun onProviderEnabled(provider: String) {}
+        override fun onProviderDisabled(provider: String) {}
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+    }
+
+    private val ouvinteRede = object : LocationListener {
+        override fun onLocationChanged(local: Location) { ultimaRede = local; Telemetria.obter(ctx).posicaoRede(local) }
         override fun onProviderEnabled(provider: String) {}
         override fun onProviderDisabled(provider: String) {}
         @Suppress("OVERRIDE_DEPRECATION")
@@ -94,6 +105,7 @@ class Sensores(context: Context) {
         runCatching {
             gps.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1_000L, 0f, ouvinte, Looper.getMainLooper())
         }
+        runCatching { gps.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 60_000L, 0f, ouvinteRede, Looper.getMainLooper()) }
         ciclo.run()
     }
 
@@ -101,6 +113,7 @@ class Sensores(context: Context) {
         rodando = false
         principal.removeCallbacks(ciclo)
         runCatching { gps.removeUpdates(ouvinte) }
+        runCatching { gps.removeUpdates(ouvinteRede) }
     }
 
     private fun atualizarRede() {
@@ -135,13 +148,23 @@ class Sensores(context: Context) {
 
     private fun buscarClima() {
         proximoClima = System.currentTimeMillis() + 15 * 60_000L
-        val local = ultimaLocalizacao ?: runCatching { gps.getLastKnownLocation(LocationManager.GPS_PROVIDER) }.getOrNull()
-        // Sem GPS ainda: usa Brasília como padrão.
-        val lat = local?.latitude ?: -15.79
-        val lon = local?.longitude ?: -47.88
-        val temLocal = local != null
+        // Onde o aparelho está agora: GPS, posição pela rede, última conhecida do sistema ou do app. Sem nada disso,
+        // tenta pelo IP da internet; o último local usado fica guardado. Nunca assume uma cidade fixa.
+        val local = ultimaLocalizacao ?: ultimaRede ?: LocalEstacionamento.obter(ctx).posicaoRecente()
         thread(name = "clima") {
             try {
+                var lat: Double; var lon: Double; val nomeLocal: String
+                if (local != null) {
+                    lat = local.latitude; lon = local.longitude; nomeLocal = nomeDoLocal(lat, lon)
+                } else {
+                    val ip = localizacaoPorIp()
+                    if (ip != null) { lat = ip.second; lon = ip.third; nomeLocal = ip.first }
+                    else if (prefsClima.contains("clima_lat")) {
+                        lat = prefsClima.getString("clima_lat", "0")!!.toDouble(); lon = prefsClima.getString("clima_lon", "0")!!.toDouble()
+                        nomeLocal = prefsClima.getString("clima_nome", "Local anterior")!!
+                    } else throw IllegalStateException("sem localização")
+                }
+                prefsClima.edit().putString("clima_lat", lat.toString()).putString("clima_lon", lon.toString()).putString("clima_nome", nomeLocal).apply()
                 val url = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
                     "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,precipitation" +
                     "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
@@ -156,7 +179,7 @@ class Sensores(context: Context) {
                 val atual = json.getJSONObject("current")
                 val dia = json.getJSONObject("daily")
                 val resultado = ClimaUi(
-                    local = if (temLocal) nomeDoLocal(lat, lon) else "Brasília, DF",
+                    local = nomeLocal,
                     temperatura = atual.getDouble("temperature_2m").roundToInt(),
                     maxima = dia.getJSONArray("temperature_2m_max").getDouble(0).roundToInt(),
                     minima = dia.getJSONArray("temperature_2m_min").getDouble(0).roundToInt(),
@@ -195,6 +218,21 @@ class Sensores(context: Context) {
             }
         }
         return if (agoraMm >= 0.1) "Chovendo agora" else "Sem chuva nas próximas 12 h (máx. $maior%)"
+    }
+
+    /** Localização aproximada pelo IP (cidade): (nome, latitude, longitude), ou null sem internet/serviço. */
+    private fun localizacaoPorIp(): Triple<String, Double, Double>? {
+        fun consulta(endereco: String): JSONObject? = runCatching {
+            val con = (URL(endereco).openConnection() as HttpURLConnection).apply { connectTimeout = 8_000; readTimeout = 8_000 }
+            if (con.responseCode != 200) null else JSONObject(con.inputStream.bufferedReader().use { it.readText() })
+        }.getOrNull()
+        consulta("https://ipwho.is/")?.takeIf { it.optBoolean("success", false) }?.let {
+            return Triple((it.optString("city").ifEmpty { it.optString("region") }) + " (aprox.)", it.getDouble("latitude"), it.getDouble("longitude"))
+        }
+        consulta("https://ipapi.co/json/")?.takeIf { it.has("latitude") }?.let {
+            return Triple(it.optString("city", "Local aproximado") + " (aprox.)", it.getDouble("latitude"), it.getDouble("longitude"))
+        }
+        return null
     }
 
     /** Bairro ou cidade da posição atual (geocodificador do Android); se não houver, "Local atual". */

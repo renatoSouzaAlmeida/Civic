@@ -52,6 +52,9 @@ class Configuracoes private constructor(ctx: Context) {
     /** Vigia total: avisa no Telegram toda partida do motor (para quando o carro ficar parado em local de risco). */
     var vigiaTotal by mutableStateOf(prefs.getBoolean("vigia_total", false))
         private set
+    /** Modo HUD espelhado (para refletir no para-brisa). Segurar a tela no HUD alterna. */
+    var hudEspelhado by mutableStateOf(prefs.getBoolean("hud_espelhado", true))
+        private set
     var enderecoCasa by mutableStateOf(prefs.getString("endereco_casa", "") ?: "")
         private set
     var enderecoTrabalho by mutableStateOf(prefs.getString("endereco_trabalho", "") ?: "")
@@ -77,6 +80,7 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarCapacidade(v: String) { capacidadeTanque = v.filter { it.isDigit() }.take(3).toIntOrNull() ?: 0; prefs.edit().putInt("capacidade_tanque", capacidadeTanque).apply() }
     fun salvarVoz(v: Boolean) { vozAlertas = v; prefs.edit().putBoolean("voz_alertas", v).apply() }
     fun salvarVigia(v: Boolean) { vigiaTotal = v; prefs.edit().putBoolean("vigia_total", v).apply() }
+    fun salvarHudEspelhado(v: Boolean) { hudEspelhado = v; prefs.edit().putBoolean("hud_espelhado", v).apply() }
     fun salvarMapa(v: MapaPreferido) { mapa = v; gravar("mapa", v.name) }
     fun salvarEstiloMenu(v: EstiloMenu) { estiloMenu = v; gravar("estilo_menu", v.name) }
     fun salvarEnderecoCasa(v: String) { enderecoCasa = v; gravar("endereco_casa", v) }

@@ -22,9 +22,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Comando de voz curto (botão do microfone). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Permite descobrir/abrir Waze e Spotify (Android 11+). -->
     <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
         <package android:name="com.waze" />
         <package android:name="com.spotify.music" />
         <package android:name="com.google.android.apps.maps" />

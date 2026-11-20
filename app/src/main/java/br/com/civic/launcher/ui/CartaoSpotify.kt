@@ -40,9 +40,6 @@ import br.com.civic.launcher.MusicaUi
 import br.com.civic.launcher.abrirSpotify
 import kotlinx.coroutines.delay
 
-private val GradienteSpotify = Brush.linearGradient(listOf(Color(0xFF86BBFF), Color(0xFF5B97FF), Color(0xFF3A6FE0)))
-private val VeuSpotify = Brush.verticalGradient(listOf(Color(0x00000000), Color(0x59153C94)))
-private val BrancoSuave = Color(0x3DFFFFFF)
 
 @Composable
 fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
@@ -50,9 +47,10 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
     val m = monitor.estado
 
     BoxWithConstraints(
-        modifier.clip(FormaCartao).background(GradienteSpotify).clickable { ctx.abrirSpotify() }
+        // Mesma cor de fundo do cartão do veículo, com um degradê azul bem claro por cima.
+        modifier.clip(FormaCartao).background(Cores.Cartao).border(1.dp, Cores.Borda, FormaCartao).clickable { ctx.abrirSpotify() }
     ) {
-        Box(Modifier.fillMaxSize().background(VeuSpotify))
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Cores.Destaque.copy(alpha = 0.34f), Cores.Destaque.copy(alpha = 0.08f), Cores.Destaque.copy(alpha = 0.18f)))))
         val compacto = maxHeight < 300.dp
         val abrirAcesso = {
             val abriu = runCatching {
@@ -73,10 +71,10 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
                 ) {
                     Capa(m, if (compacto) 76.dp else 108.dp)
                     Column {
-                        Text("Spotify", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Spotify", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                         Text(
                             if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Nada tocando",
-                            color = Color.White, fontSize = if (compacto) 22.sp else 28.sp, fontWeight = FontWeight.ExtraBold,
+                            color = Cores.Texto, fontSize = if (compacto) 22.sp else 28.sp, fontWeight = FontWeight.ExtraBold,
                             maxLines = 2, overflow = TextOverflow.Ellipsis,
                         )
                         Text(
@@ -85,12 +83,12 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
                                 m.temSessao -> m.artista
                                 else -> "Toque para abrir"
                             },
-                            color = Color.White.copy(alpha = 0.85f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            color = Cores.TextoSuave, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
                 if (m.temSessao && m.duracao > 0) {
-                    BarraProgresso(m, mostrarTempos = false, trilho = Color(0x4DFFFFFF), progresso = Color.White)
+                    BarraProgresso(m, mostrarTempos = false, trilho = Cores.Chip, progresso = Cores.Destaque)
                 }
             }
             Row(
@@ -98,12 +96,12 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
                 horizontalArrangement = Arrangement.spacedBy(if (compacto) 22.dp else 32.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                BotaoRedondo(Icons.Filled.SkipPrevious, if (compacto) 48.dp else 60.dp, BrancoSuave, Color.White) { monitor.anterior() }
+                BotaoRedondo(Icons.Filled.SkipPrevious, if (compacto) 48.dp else 60.dp, Cores.Chip, Cores.Texto) { monitor.anterior() }
                 BotaoRedondo(
                     if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    if (compacto) 60.dp else 76.dp, Color.White, Color(0xFF111111),
+                    if (compacto) 60.dp else 76.dp, Cores.Destaque, Color.White,
                 ) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
-                BotaoRedondo(Icons.Filled.SkipNext, if (compacto) 48.dp else 60.dp, BrancoSuave, Color.White) { monitor.proxima() }
+                BotaoRedondo(Icons.Filled.SkipNext, if (compacto) 48.dp else 60.dp, Cores.Chip, Cores.Texto) { monitor.proxima() }
             }
         }
     }
@@ -115,7 +113,7 @@ private fun Capa(m: MusicaUi, tamanho: Dp) {
     if (m.capa != null) {
         Image(
             m.capa.asImageBitmap(), null,
-            Modifier.size(tamanho).clip(forma).border(2.dp, Color(0x59FFFFFF), forma),
+            Modifier.size(tamanho).clip(forma).border(2.dp, Cores.Borda, forma),
             contentScale = ContentScale.Crop,
         )
     } else {

@@ -95,6 +95,7 @@ fun HomeScreen(
 
     ModalNovaVersao(atualizador)
     AlertaColisao()
+    if (Hud.aberto) ModoHud(obd, sensores)
 }
 
 /** Hora e data à esquerda, nome do app ao centro e situação (versão, OBD, conexões, tema) à direita. */
@@ -154,6 +155,8 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                     },
                     "Tema: ${modoTema.rotulo}", tint = Cores.Destaque, modifier = Modifier.toqueSuave(aoAlternarTema).size(26.dp),
                 )
+                BotaoVoz()
+                Icon(Icons.Filled.Speed, "Modo HUD", tint = Cores.Destaque, modifier = Modifier.toqueSuave { Hud.aberto = true }.size(26.dp))
                 Sininho()
             }
         }
@@ -249,6 +252,21 @@ private fun ModalNovaVersao(atualizador: Atualizador) {
             },
         )
     }
+}
+
+/** Microfone da barra do topo: pede a permissão uma vez e escuta um comando curto. */
+@Composable
+private fun BotaoVoz() {
+    val ctx = LocalContext.current
+    val voz = remember { br.com.civic.launcher.ComandoVoz.obter(ctx) }
+    val pedir = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok -> if (ok) voz.ouvir() }
+    Icon(
+        Icons.Filled.Mic, "Comando de voz", tint = if (voz.ouvindo) Cores.Vermelho else Cores.Destaque,
+        modifier = Modifier.toqueSuave {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) voz.ouvir()
+            else pedir.launch(android.Manifest.permission.RECORD_AUDIO)
+        }.size(26.dp),
+    )
 }
 
 /** Sininho do topo: contador vermelho de não lidas; ao tocar, abre a lista de notificações. */
