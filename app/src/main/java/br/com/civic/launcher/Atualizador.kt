@@ -96,7 +96,7 @@ class Atualizador(private val ctx: Context) {
             temp.renameTo(destino)
         }
         arquivoPronto = destino
-        publicar(EstadoAtualizacao.Pronta(versao, versaoAtual.substringBeforeLast('.', "0.3") + ".$codigo"))
+        publicar(EstadoAtualizacao.Pronta(versao, versao))
         CentralNotificacoes.obter(ctx).registrarUmaVez("versao_$versao", "versao", "⬆️ Nova versão $versao pronta para instalar. Toque na versão no topo para atualizar.")
     }
 

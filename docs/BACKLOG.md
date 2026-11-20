@@ -1,5 +1,7 @@
 # Backlog — Civic Renatin
 
+> **Marco 1.0.0:** quando todos os itens abaixo estiverem concluídos, a versão do app sobe para 1.0.0 (ver `versao.properties` e CLAUDE.md). Nenhuma parte da versão passa de 99.
+
 Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marque como feito).
 
 ## OBD

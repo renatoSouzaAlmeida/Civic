@@ -16,7 +16,8 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = codigoVersao
-        versionName = "0.3.$codigoVersao"
+        // O nome (MAIOR.MENOR.PATCH, nenhuma parte acima de 99) é calculado no CI a partir de versao.properties.
+        versionName = (project.findProperty("versionNameCI") as String?) ?: "0.0.$codigoVersao"
     }
 
     // Chave de assinatura fixa (obrigatória para a atualização automática funcionar):

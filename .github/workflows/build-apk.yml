@@ -21,8 +21,18 @@ jobs:
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Calcular a versão (nunca passa de 99 em nenhuma parte)
+        run: |
+          source versao.properties
+          n=$(( ${{ github.run_number }} - RUN_BASE ))
+          total=$(( MAIOR * 10000 + MENOR * 100 + PATCH + n ))
+          if [ "$total" -gt 999999 ]; then echo "::error::A versão passou de 99.99.99"; exit 1; fi
+          VERSAO="$(( total / 10000 )).$(( total / 100 % 100 )).$(( total % 100 ))"
+          echo "VERSAO=$VERSAO" >> "$GITHUB_ENV"
+          echo "Versão deste build: $VERSAO"
+
       - name: Compilar APK de teste (debug)
-        run: ./gradlew assembleDebug --no-daemon -PversionCodeCI=${{ github.run_number }}
+        run: ./gradlew assembleDebug --no-daemon -PversionCodeCI=${{ github.run_number }} -PversionNameCI=${{ env.VERSAO }}
 
       - name: Nomear o APK de teste
         run: |
@@ -45,7 +55,7 @@ jobs:
 
       - name: Compilar release assinado
         if: github.ref == 'refs/heads/main' && env.TEM_CHAVE == 'true'
-        run: ./gradlew assembleRelease --no-daemon -PversionCodeCI=${{ github.run_number }}
+        run: ./gradlew assembleRelease --no-daemon -PversionCodeCI=${{ github.run_number }} -PversionNameCI=${{ env.VERSAO }}
 
       - name: Publicar Release (o app lê esta Release para se atualizar)
         if: github.ref == 'refs/heads/main' && env.TEM_CHAVE == 'true'
@@ -55,7 +65,7 @@ jobs:
           mkdir -p release
           cp app/build/outputs/apk/release/*.apk release/Civic-Renatin.apk
           gh release create "build-${{ github.run_number }}" release/Civic-Renatin.apk \
-            --title "0.3.${{ github.run_number }}" \
+            --title "${{ env.VERSAO }}" \
             --notes "Versão automática gerada a partir da main." --latest
 
       - name: Aviso quando falta a chave

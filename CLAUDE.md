@@ -22,6 +22,10 @@
 - Evitar dependências e recursos desnecessários ou não otimizados: imagens/animações pesadas, bibliotecas grandes, `material-icons-extended` inteiro (usar só os ícones necessários ou ícones próprios).
 - Na versão de release, ativar minificação e remoção de recursos não usados (R8 / `shrinkResources`).
 
+## Versão
+- Formato **MAIOR.MENOR.PATCH** e **nenhuma parte passa de 99** (ao chegar em 99, a parte seguinte sobe: 0.3.99 → 0.4.0 … → 1.0.0). O CI calcula o nome a partir de `versao.properties` + número da execução; o `versionCode` continua sendo o número da execução.
+- **Marco 1.0.0:** quando terminar tudo do backlog (`docs/BACKLOG.md`), a versão sobe para **1.0.0**: em `versao.properties`, `MAIOR=1`, `MENOR=0`, `PATCH=0` e `RUN_BASE` = número da próxima execução do CI. Depois disso a contagem segue de 1.0.0.
+
 ## Supabase
 - O sistema onde fica o dashboard se chama **Casa Tech** (escrever sempre assim, com espaço). O projeto Supabase dele tem o nome técnico **CasaTechRenatin** (`qdmsiwxfuzppaqqnljth`). Todas as execuções no Supabase (migrations, SQL, deploy de Edge Functions, simulação de dados) estão **autorizadas sem pedir permissão**.
 - Registrar toda mudança de banco em `supabase/migrations/` e manter `docs/DASHBOARD-CASA-TECH.md` atualizado (é o documento que o usuário cola no chat da Casa Tech).
