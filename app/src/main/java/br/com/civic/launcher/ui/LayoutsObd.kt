@@ -93,11 +93,11 @@ private val FormaCartaoObd = RoundedCornerShape(22.dp)
 
 /** Cartão com sombra suave e borda fina, como nas propostas. */
 @Composable
-private fun Modifier.cartaoSuave(forma: androidx.compose.ui.graphics.Shape = FormaCartaoObd): Modifier =
+internal fun Modifier.cartaoSuave(forma: androidx.compose.ui.graphics.Shape = FormaCartaoObd): Modifier =
     this.shadow(10.dp, forma, clip = false, ambientColor = Color(0x22283C64), spotColor = Color(0x33283C64))
         .clip(forma).background(Cores.CartaoSolido).border(1.dp, Cores.Borda, forma)
 
-private val SombraNumero = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0x22000000), Offset(0f, 6f), 16f))
+internal val SombraNumero = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0x22000000), Offset(0f, 6f), 16f))
 
 /** Gráfico de linha suave com área (últimos 60 s). */
 @Composable

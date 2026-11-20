@@ -22,6 +22,13 @@ import br.com.civic.launcher.obd.ObdMonitor
 fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= maxHeight) {
+          val config = br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current)
+          Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SeletorLayoutHome()
+            when (config.layoutHome) {
+            br.com.civic.launcher.LayoutHome.Caixas -> HomeCaixas(monitor, sensores, obd)
+            br.com.civic.launcher.LayoutHome.Painel -> HomePainel(monitor, sensores, obd)
+            br.com.civic.launcher.LayoutHome.Padrao ->
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 CartaoCarro(obd, Modifier.weight(1f).fillMaxHeight())
                 // Mapa do mesmo tamanho do Spotify; embaixo dele, os dados rápidos (km/h, km/l, combustível…).
@@ -34,6 +41,8 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                     DuasCaixas(sensores, obd, Modifier.weight(1.2f).fillMaxWidth())
                 }
             }
+            }
+          }
         } else {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 CartaoCarro(obd, Modifier.fillMaxWidth().height(330.dp))
