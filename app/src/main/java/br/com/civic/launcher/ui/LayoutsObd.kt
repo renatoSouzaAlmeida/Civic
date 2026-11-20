@@ -387,20 +387,20 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                 SetaObd(d, esquerda = false, tamanho = 32.dp)
             }
             DialPremium(vel / 200f, (0..10).map { (it * 20).toString() }, Modifier.weight(1f).fillMaxWidth(), menores = 1) { lado ->
-                Column(Modifier.align(Alignment.Center).offset(y = -lado * 0.08f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.22f).sp, lineHeight = (lado.value * 0.22f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
+                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.24f).sp, lineHeight = (lado.value * 0.24f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
                     Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.065f).sp)
                 }
-                // Conta-giros dentro do velocímetro, na abertura de baixo do arco (como na proposta).
-                Column(
-                    Modifier.align(Alignment.BottomCenter).offset(y = lado * 0.04f).width(lado * 0.54f).cartaoSuave(RoundedCornerShape(lado * 0.07f)).padding(vertical = lado * 0.02f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("RPM", color = Cores.TextoSuave, fontSize = (lado.value * 0.04f).sp)
-                    DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(lado * 0.30f), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f) { l2 ->
-                        Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = (l2.value * 0.24f).sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center).offset(y = l2 * 0.08f))
+            }
+            // Conta-giros fora do velocímetro, num cartão próprio logo abaixo.
+            Row(Modifier.fillMaxWidth().cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(78.dp), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f)
+                Column {
+                    Text("RPM", color = Cores.TextoSuave, fontSize = 13.sp)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = 34.sp, fontWeight = FontWeight.Medium)
+                        Text(" x1000 rpm", color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
                     }
-                    Text("x1000 rpm", color = Cores.TextoSuave, fontSize = (lado.value * 0.035f).sp)
                 }
             }
         }
