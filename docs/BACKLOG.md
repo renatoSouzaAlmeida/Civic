@@ -47,14 +47,14 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] **Possível colisão** — queda de 30 km/h ou mais em até 3 s (partindo de 35+) seguida do motor apagando: contagem de 30 s com "Estou bem"; sem resposta, manda aviso e localização ao Telegram. Botão de teste (10 s) em Config.
 - [x] **Movimento suspeito** — partida do motor em horário em que o carro nunca é usado (aprende com as últimas 60 partidas) e "Vigia total" opcional (toda partida avisa).
 
-### OBD (engenharia do motor)
-- [x] **Monitores de prontidão** (modo 01, PID 01) — mostra quantos monitores de emissões estão prontos e quais faltam (aparece em Config. > Status do app). Falta ainda o aviso ativo de "códigos apagados há pouco tempo".
-- [ ] **Freeze frame** (modo 02) — guarda rpm, temperatura, carga e velocidade quando surge um código de falha.
-- [ ] **Saúde do termostato** — tempo para chegar a 80 °C comparado ao histórico (termostato preso aberto).
-- [ ] **Sondas lambda e catalisador** (PIDs 0114/0115) — frequência de oscilação para explicar o P0420.
-- [ ] **Dreno de bateria** — tensão ao desligar x tensão na próxima partida (consumo parasita).
-- [ ] **Marcha lenta irregular** — variação do rpm parado e contadores de falha de ignição (modo 06).
-- [ ] **Temperatura do fluido do câmbio** (PID Honda, modo 22) — experimental.
+### OBD (engenharia do motor) — feitos, faltam validar no carro (ver docs/VALIDACAO.md)
+- [x] **Monitores de prontidão** (modo 01, PID 01) — mostra quantos monitores de emissões estão prontos e quais faltam (aparece em Config. > Status do app). O aviso de "códigos apagados" também foi feito (PID 0131).
+- [x] **Freeze frame** — pronto, falta validar no carro: guardado automaticamente quando surge um código novo (modo 02), com aviso no Telegram; lista em OBD > Falhas.
+- [x] **Saúde do termostato** — pronto, falta validar no carro: mede sozinho o tempo até 80 °C em partidas a frio (até 45 °C); avisa se demorar mais de 1,6x o normal ou não chegar a 80 °C em 25 min.
+- [x] **Sondas lambda e catalisador** — pronto, falta validar no carro: botão "Testar catalisador (45 s)" em OBD > Falhas; compara a oscilação da sonda de antes e de depois (usa 0114 ou 0124 e 0115).
+- [x] **Dreno de bateria** — pronto, falta validar no carro: compara a tensão ao desligar (1 h depois) com a da próxima partida; avisa se a queda passar de 20 mV/h ou se estiver abaixo de 12,2 V depois de 6 h parado.
+- [x] **Marcha lenta irregular** — pronto, falta validar no carro: mede sozinha com o carro parado e quente (desvio acima de 45 rpm ou faixa acima de 180 rpm, 3 vezes seguidas avisa). Modo 06 em botão, com resultado bruto por teste.
+- [x] **Temperatura do fluido do câmbio** — pronto, falta validar no carro: PID personalizado (cabeçalho, comando, bytes, multiplicador e deslocamento) em OBD > Falhas; alerta a partir de 110 °C. Depende de descobrir o PID certo do Civic.
 
 ### Integrações e notificações
 - [ ] **Comandos no bot do Telegram** — /onde, /status, /bateria, /consumo respondendo com dados do Supabase.

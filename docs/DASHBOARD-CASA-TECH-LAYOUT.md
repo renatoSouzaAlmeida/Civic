@@ -32,6 +32,10 @@ Mapa com as vagas dos últimos 14 dias, ranking de **locais mais frequentes** (c
 - **Insights em texto:** nível médio do tanque ao abastecer (reserva), aditivada x comum (km/l e custo por km, com aviso de poucas amostras), abastecimentos aguardando valor, autonomia estimada por tanque. Gráfico do nível do tanque antes de cada abastecimento.
 - **Tabela:** data, km, litros, tanque antes → depois, preço/l, total pago (ou selo **Aguardando valor**), km rodados, dias, consumo, tipo (Comum/Aditivada), registro (Automático/Manual). Fonte: view `civic_abastecimentos_analise`.
 
+### Saúde do motor (sugestão: aba "Saúde" ou bloco na visão geral)
+Cartões com semáforo (verde/âmbar/vermelho) e tendência, a partir da série de `civic_estados`:
+**Termostato** (`termostato_s` em minutos; alerta se subir muito acima da mediana) · **Catalisador** (`catalisador_razao`, faixas 0,35 e 0,65) · **Marcha lenta** (`marcha_lenta_desvio`, limite 45 rpm) · **Dreno de bateria** (`dreno_v_h`, limite 0,02 V/h) · **Câmbio** (`temp_cambio`, alerta a 110 °C) · **Códigos apagados** (`km_desde_apagar`; valor baixo = apagado há pouco, sem vistoria) · **Freeze frames** (`freeze_frames`: lista por código com rpm, velocidade, temperatura e carga no instante da falha).
+
 ### Manutenção
 Tabela do plano: item, intervalo, última vez (data · km), situação (Em dia / Próximo / Vencido / Sem registro) e **barra de uso do intervalo**. Itens vencidos e sem registro no topo.
 

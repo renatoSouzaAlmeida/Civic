@@ -29,6 +29,8 @@ class EstadoCarro private constructor(private val ctx: Context) {
     private var luzMotor = false
     private var codigos: List<String> = emptyList()
     private var pendentes: List<String> = emptyList()
+    private var kmApagar: Int? = null
+    private var tempCambio: Int? = null
     private var velMax = 0
     private var rpmMax = 0
 
@@ -47,6 +49,7 @@ class EstadoCarro private constructor(private val ctx: Context) {
             d.tensao?.let { tensao = it }; d.tempMotor?.let { tempMotor = it }; d.tempAdmissao?.let { tempAdmissao = it }
             d.nivelCombustivel?.let { nivelCombustivel = it }; d.consumoMedio?.let { consumoMedio = it }
             d.stft?.let { stft = it }; d.ltft?.let { ltft = it }
+            d.kmDesdeApagar?.let { kmApagar = it }; d.tempCambio?.let { tempCambio = it }
             luzMotor = d.luzMotor; codigos = d.codigos; pendentes = d.codigosPendentes
             velMax = maxOf(velMax, d.velocidade ?: 0); rpmMax = maxOf(rpmMax, d.rpm ?: 0)
         }
@@ -78,6 +81,18 @@ class EstadoCarro private constructor(private val ctx: Context) {
         ltft?.let { o.put("ltft", it.toDouble()) }
         o.put("luz_motor", luzMotor).put("dtc", JSONArray(codigos)).put("dtc_pendentes", JSONArray(pendentes))
         o.put("vel_max", velMax).put("rpm_max", rpmMax)
+        kmApagar?.let { o.put("km_desde_apagar", it) }
+        tempCambio?.let { o.put("temp_cambio", it) }
+        runCatching {
+            val dg = br.com.civic.launcher.obd.DiagnosticoAvancado.obter(ctx)
+            dg.aquecimentos.firstOrNull { it.segundos != null }?.segundos?.let { o.put("termostato_s", it) }
+            dg.catalisador?.razao?.let { o.put("catalisador_razao", it) }
+            dg.marchaLenta?.let { o.put("marcha_lenta_desvio", it.desvio) }
+            dg.ultimaTaxaDreno()?.let { o.put("dreno_v_h", it) }
+            if (dg.freezeFrames.isNotEmpty()) o.put("freeze_frames", JSONArray(dg.freezeFrames.take(5).map { f ->
+                JSONObject().put("codigo", f.codigo).put("em", iso(f.em)).put("itens", JSONObject().also { m -> f.itens.forEach { p -> m.put(p.first, p.second) } })
+            }))
+        }
         ComputadorBordo.obter(ctx).let { cb ->
             (cb.atual ?: cb.historico.lastOrNull())?.let { v ->
                 o.put("viagem_km", v.distanciaKm).put("viagem_duracao_s", v.duracaoMs / 1000).put("viagem_vel_media", v.velMedia)

@@ -438,3 +438,13 @@ begin
 end;
 $$;
 revoke all on function public.civic_simular(integer) from public, anon, authenticated;
+
+-- ===== Aplicada em 20/11/2026 como "civic_diagnostico_avancado" =====
+alter table public.civic_estados
+  add column termostato_s integer,
+  add column catalisador_razao numeric,
+  add column marcha_lenta_desvio numeric,
+  add column dreno_v_h numeric,
+  add column km_desde_apagar integer,
+  add column temp_cambio integer,
+  add column freeze_frames jsonb;
