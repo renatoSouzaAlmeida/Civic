@@ -172,55 +172,18 @@ private fun PontoPiscando() {
 
 @Composable
 private fun Versao(atualizador: Atualizador, compacto: Boolean) {
-    val tamanho = if (compacto) 11.sp else 14.sp
-    when (val e = atualizador.estado) {
-        is EstadoAtualizacao.Pronta -> Row(
-            Modifier.clickable { atualizador.instalar() },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            PontoPiscando()
-            Text(
-                "Nova versão ${e.versao} · Instalar", color = Cores.Vermelho,
-                fontSize = if (compacto) 13.sp else 16.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-            )
-        }
-        is EstadoAtualizacao.Baixando -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PontoPiscando()
-            Text("Baixando ${e.versao}…", color = Cores.Vermelho, fontSize = tamanho, fontWeight = FontWeight.SemiBold, maxLines = 1)
-        }
-        else -> {
-            val (situacao, cor) = when (atualizador.situacao) {
-                SituacaoVersao.Atualizado -> "✓ Atualizado" to Cores.Ok
-                SituacaoVersao.Indisponivel -> "sem verificação" to Cores.TextoSuave
-                SituacaoVersao.Verificando -> "verificando…" to Cores.TextoSuave
-            }
-            // Tocar força uma nova verificação.
-            Text(
-                "v${atualizador.versaoAtual} · $situacao", color = cor, fontSize = tamanho, maxLines = 1,
-                modifier = Modifier.clickable { atualizador.verificar() },
-            )
-        }
+    val tamanho = if (compacto) 12.sp else 15.sp
+    val laranja = Color(0xFFFF8A1F)
+    val e = atualizador.estado
+    // Só o número da versão e um sinal: verde com ✔️ (em dia) ou laranja com 🔄️ (há versão nova). Tocar no laranja instala.
+    val (sinal, cor) = when {
+        e is EstadoAtualizacao.Pronta || e is EstadoAtualizacao.Baixando -> "🔄️" to laranja
+        atualizador.situacao == SituacaoVersao.Atualizado -> "✔️" to Cores.Ok
+        else -> "" to Cores.TextoSuave
     }
-}
-
-/** Contagem de "possível colisão": ou toca em "Estou bem", ou o aviso com a localização vai para o Telegram. */
-@Composable
-private fun AlertaColisao() {
-    val ctx = LocalContext.current
-    val seg = remember { br.com.civic.launcher.Seguranca.obter(ctx) }
-    val s = seg.colisao ?: return
-    AlertDialog(
-        onDismissRequest = {},
-        title = { Text("🚨 Possível colisão detectada", fontWeight = FontWeight.Bold, color = Cores.Vermelho) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("$s", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = Cores.Vermelho)
-                Text("Se não tocar em \"Estou bem\", a sua localização será enviada para o Telegram.", fontSize = 18.sp)
-            }
-        },
-        confirmButton = { TextButton(onClick = { seg.cancelarColisao() }) { Text("Estou bem", fontSize = 24.sp, fontWeight = FontWeight.Bold) } },
-        dismissButton = { TextButton(onClick = { seg.enviarColisaoAgora() }) { Text("Pedir ajuda agora", fontSize = 18.sp) } },
+    Text(
+        "v${atualizador.versaoAtual} $sinal".trim(), color = cor, fontSize = tamanho, fontWeight = FontWeight.SemiBold, maxLines = 1,
+        modifier = Modifier.clickable { if (e is EstadoAtualizacao.Pronta) atualizador.instalar() else if (e !is EstadoAtualizacao.Baixando) atualizador.verificar() },
     )
 }
 
