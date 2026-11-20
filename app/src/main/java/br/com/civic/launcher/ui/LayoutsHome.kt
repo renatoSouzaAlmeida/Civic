@@ -102,7 +102,16 @@ private fun CaixaCarro(obd: ObdMonitor, modifier: Modifier) {
         FotoCarro(Modifier.fillMaxSize(), 0.62f)
         Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
             TituloCarro()
-            ChipsCarro(obd.dados)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Setas e farol, como no painel do carro.
+                Row(Modifier.fillMaxWidth().cartaoSuave(RoundedCornerShape(18.dp)).padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    SetaObd(obd.dados, esquerda = true, tamanho = 30.dp)
+                    FarolObd(obd.dados, 24.dp)
+                    SetaObd(obd.dados, esquerda = false, tamanho = 30.dp)
+                }
+                ChipsCarro(obd.dados)
+            }
         }
     }
 }
@@ -174,7 +183,7 @@ fun HomePainel(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
             }
             GradeLeituras(d, Modifier.weight(1.05f).fillMaxWidth())
         }
-        PainelCentral(d, vel, Modifier.weight(1.15f).fillMaxHeight())
+        ModuloVelocidade(d, vel, Modifier.weight(1.15f).fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             MapaCompacto(sensores, Modifier.weight(1.1f).fillMaxWidth())
             SpotifyLinha(monitor, Modifier.weight(1f).fillMaxWidth())
@@ -234,95 +243,6 @@ private fun Celula(icone: ImageVector?, valor: String, unidade: String, rotulo: 
             if (unidade.isNotEmpty()) Text(unidade, color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
         Text(rotulo, color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** Velocidade grande em cima; meia-lua de RPM com o giro no meio; barra de RPM embaixo. */
-@Composable
-private fun PainelCentral(d: DadosObd, vel: Float, modifier: Modifier) {
-    val destaque = Cores.Destaque
-    val vazio = Cores.SegVazio
-    val vermelho = Cores.Vermelho
-    val rpm = d.rpm ?: 0
-    val situacao = when {
-        (d.tempMotor ?: 0) >= 105 -> "motor quente"
-        rpm >= 6000 -> "giro alto"
-        d.rpm == null -> "sem OBD"
-        else -> "normal"
-    }
-    Column(modifier.cartaoSuave(RoundedCornerShape(26.dp)).padding(horizontal = 18.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        // Velocidade
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("${vel.toInt()}", color = Cores.Texto, fontSize = 64.sp, lineHeight = 64.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, style = SombraNumero)
-            Text("km/h", color = Cores.Texto, fontSize = 20.sp, modifier = Modifier.padding(bottom = 8.dp))
-        }
-        Text(situacao, color = if (situacao == "normal") Cores.TextoSuave else Cores.Vermelho, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        // Meia-lua de RPM
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-            val largura = minOf(maxWidth, maxHeight * 2f)
-            Canvas(Modifier.width(largura).height(largura / 2f)) {
-                val segmentos = 60
-                val ligados = (rpm / 8000f * segmentos).toInt()
-                val r = size.width / 2f
-                val c = Offset(size.width / 2f, size.height)
-                val externo = r * 0.97f
-                val interno = r * 0.80f
-                for (i in 0 until segmentos) {
-                    val t = (i + 0.5f) / segmentos
-                    val ang = Math.toRadians(180.0 + 180.0 * t)
-                    val zonaVermelha = t >= 6500f / 8000f
-                    val cor = when {
-                        i < ligados -> if (zonaVermelha) vermelho else destaque.copy(alpha = 0.55f + 0.45f * t)
-                        zonaVermelha -> vermelho.copy(alpha = 0.25f)
-                        else -> vazio
-                    }
-                    drawLine(cor,
-                        Offset(c.x + interno * cos(ang).toFloat(), c.y + interno * sin(ang).toFloat()),
-                        Offset(c.x + externo * cos(ang).toFloat(), c.y + externo * sin(ang).toFloat()),
-                        strokeWidth = r * 0.028f, cap = StrokeCap.Round)
-                }
-                // Arco fino por dentro, para dar acabamento
-                drawArc(destaque.copy(alpha = 0.35f), 180f, 180f, false,
-                    Offset(c.x - r * 0.74f, c.y - r * 0.74f), androidx.compose.ui.geometry.Size(r * 1.48f, r * 1.48f),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f))
-                // Marcador da zona vermelha
-                val angV = Math.toRadians(180.0 + 180.0 * 6500 / 8000)
-                drawCircle(vermelho, r * 0.025f, Offset(c.x + r * 1.0f * cos(angV).toFloat(), c.y + r * 1.0f * sin(angV).toFloat()))
-            }
-            Column(Modifier.width(largura).padding(bottom = 2.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("RPM", color = Cores.TextoSuave, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(if (d.rpm == null) "—" else "%,d".format(BR, rpm).replace(",", "."), color = Cores.Texto,
-                    fontSize = (largura.value * 0.13f).coerceIn(28f, 56f).sp, lineHeight = (largura.value * 0.13f).coerceIn(28f, 56f).sp,
-                    fontWeight = FontWeight.ExtraBold, maxLines = 1, style = SombraNumero)
-                Row(Modifier.fillMaxWidth().padding(horizontal = largura * 0.2f), verticalAlignment = Alignment.CenterVertically) {
-                    val reserva = (d.nivelCombustivel ?: 100) <= 15
-                    Icon(Icons.Outlined.LocalGasStation, null, tint = Cores.TextoSuave, modifier = Modifier.size(20.dp))
-                    Text(if (d.rpm != null && rpm > 0) "motor ligado" else "motor desligado", color = Cores.TextoSuave, fontSize = 12.sp,
-                        modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Icon(Icons.Filled.LocalGasStation, null, tint = if (reserva) Cores.Vermelho else Cores.TextoSuave.copy(alpha = 0.4f), modifier = Modifier.size(20.dp))
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        // Barra de RPM com temperatura e farol
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("RPM", color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Icon(Icons.Outlined.Thermostat, null, tint = if ((d.tempMotor ?: 0) >= 105) Cores.Vermelho else Cores.Destaque, modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(18.dp))
-            LuzEspia(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_farol), d.farol, Color(0xFF22C55E), tamanho = 24.dp)
-            Text(d.tempMotor?.let { "$it °C" } ?: "—", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.fillMaxWidth().height(22.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            val segmentos = 34
-            val ligados = (rpm / 8000f * segmentos).toInt()
-            for (i in 0 until segmentos) {
-                Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(3.dp))
-                    .background(if (i < ligados) Cores.Destaque else Cores.SegVazio))
-            }
-        }
-        Spacer(Modifier.height(6.dp))
     }
 }
 

@@ -183,15 +183,46 @@ private fun DialPremium(
     }
 }
 
+
+/** Velocímetro com setas e farol em cima e o conta-giros num cartão próprio embaixo (layout Modular do OBD). */
+@Composable
+internal fun ModuloVelocidade(d: DadosObd, vel: Float, modifier: Modifier = Modifier) {
+    Column(modifier.cartaoSuave(RoundedCornerShape(26.dp)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Velocidade", color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            SetaObd(d, esquerda = true, tamanho = 32.dp)
+            FarolObd(d, 24.dp)
+            SetaObd(d, esquerda = false, tamanho = 32.dp)
+        }
+        DialPremium(vel / 200f, (0..10).map { (it * 20).toString() }, Modifier.weight(1f).fillMaxWidth(), menores = 1) { lado ->
+            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.24f).sp, lineHeight = (lado.value * 0.24f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
+                Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.065f).sp)
+            }
+        }
+        // Conta-giros fora do velocímetro, num cartão próprio logo abaixo.
+        Row(Modifier.fillMaxWidth().cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(78.dp), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f)
+            Column {
+                Text("RPM", color = Cores.TextoSuave, fontSize = 13.sp)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = 34.sp, fontWeight = FontWeight.Medium)
+                    Text(" x1000 rpm", color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+                }
+            }
+        }
+    }
+}
+
 /** Setas (piscam quando ligadas; pisca-alerta acende as duas) e farol, com as luzes-espia do painel. */
 @Composable
-private fun SetaObd(d: DadosObd, esquerda: Boolean, tamanho: Dp) {
+internal fun SetaObd(d: DadosObd, esquerda: Boolean, tamanho: Dp) {
     val ativa = if (d.alerta == true) true else if (esquerda) d.setaEsquerda else d.setaDireita
     LuzEspia(painterResource(br.com.civic.launcher.R.drawable.ic_seta), ativa, Color(0xFF22C55E), piscar = true, espelhar = !esquerda, tamanho = tamanho)
 }
 
 @Composable
-private fun FarolObd(d: DadosObd, tamanho: Dp) {
+internal fun FarolObd(d: DadosObd, tamanho: Dp) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LuzEspia(painterResource(br.com.civic.launcher.R.drawable.ic_farol), d.farol, Color(0xFF22C55E), tamanho = tamanho)
         Text(when (d.farol) { true -> "farol ligado"; false -> "farol desligado"; null -> "farol" }, color = Cores.TextoSuave, fontSize = 13.sp)
@@ -382,32 +413,8 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
     val cb = remember { br.com.civic.launcher.ComputadorBordo.obter(ctx) }
     val viagem = cb.atual
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        // Velocidade e conta-giros.
-        Column(Modifier.weight(1.12f).fillMaxHeight().cartaoSuave(RoundedCornerShape(26.dp)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Velocidade", color = Cores.Texto, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                SetaObd(d, esquerda = true, tamanho = 32.dp)
-                FarolObd(d, 24.dp)
-                SetaObd(d, esquerda = false, tamanho = 32.dp)
-            }
-            DialPremium(vel / 200f, (0..10).map { (it * 20).toString() }, Modifier.weight(1f).fillMaxWidth(), menores = 1) { lado ->
-                Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${vel.toInt()}", color = Cores.Texto, fontSize = (lado.value * 0.24f).sp, lineHeight = (lado.value * 0.24f).sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, maxLines = 1, style = SombraNumero)
-                    Text("km/h", color = Cores.TextoSuave, fontSize = (lado.value * 0.065f).sp)
-                }
-            }
-            // Conta-giros fora do velocímetro, num cartão próprio logo abaixo.
-            Row(Modifier.fillMaxWidth().cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                DialPremium((d.rpm ?: 0) / 9000f, listOf("0", "2", "4", "6", "8"), Modifier.size(78.dp), zonaVermelhaDesde = 0.8f, menores = 1, espessuraArco = 0.09f)
-                Column {
-                    Text("RPM", color = Cores.TextoSuave, fontSize = 13.sp)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text("%.1f".format(BR, (d.rpm ?: 0) / 1000f), color = Cores.Texto, fontSize = 34.sp, fontWeight = FontWeight.Medium)
-                        Text(" x1000 rpm", color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
-                    }
-                }
-            }
-        }
+        // Velocidade e conta-giros (mesmo módulo usado na Tela Início, layout Painel).
+        ModuloVelocidade(d, vel, Modifier.weight(1.12f).fillMaxHeight())
         // Cartões de indicadores.
         Column(Modifier.weight(2.3f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
