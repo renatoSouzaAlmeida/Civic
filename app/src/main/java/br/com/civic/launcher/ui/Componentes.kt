@@ -87,7 +87,8 @@ fun MiniCartao(
 ) {
     Cartao(modifier) {
         BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp)) {
-            val tamanho = ((maxHeight.value - 20f) * 0.62f).coerceIn(18f, 38f).sp
+            // Com uma segunda linha de apoio, sobra menos altura para o número grande.
+            val tamanho = ((maxHeight.value - 20f - (if (!apoio2.isNullOrEmpty()) 18f else 0f)) * 0.62f).coerceIn(18f, 38f).sp
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 Row(
                     Modifier.fillMaxWidth().weight(1f),
@@ -104,7 +105,7 @@ fun MiniCartao(
                     }
                 }
                 Text(apoio, color = Cores.TextoSuave, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (!apoio2.isNullOrEmpty()) Text(apoio2, color = if (corApoio2 == Color.Unspecified) Cores.TextoSuave else corApoio2, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (!apoio2.isNullOrEmpty()) Text(apoio2, color = if (corApoio2 == Color.Unspecified) Cores.TextoSuave else corApoio2, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
