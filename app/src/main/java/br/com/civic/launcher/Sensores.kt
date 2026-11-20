@@ -27,8 +27,11 @@ data class ConectividadeUi(
 )
 
 enum class CondicaoClima(val texto: String) {
-    Limpo("Céu limpo"), Nublado("Nublado"), Chuva("Chuva"), Tempestade("Tempestade")
+    Limpo("Céu limpo"), Parcial("Parcialmente nublado"), Nublado("Nublado"), Chuva("Chuva"), Tempestade("Tempestade")
 }
+
+/** Uma hora da previsão: rótulo ("Agora", "09"), temperatura, condição e chance de chuva (%). */
+data class HoraClima(val rotulo: String, val temperatura: Int, val condicao: CondicaoClima, val chuva: Int)
 
 data class ClimaUi(
     val local: String, val temperatura: Int, val maxima: Int, val minima: Int, val condicao: CondicaoClima,
@@ -36,6 +39,8 @@ data class ClimaUi(
     val chuva: String = "", val chovendo: Boolean = false,
     /** Quando o app consultou a previsão (ms). */
     val atualizadoEm: Long = 0L,
+    val sensacao: Int = 0, val umidade: Int = 0, val vento: Int = 0, val chuvaHoje: Int = 0,
+    val horas: List<HoraClima> = emptyList(),
 )
 
 /** Velocidade (GPS), sinal da rede, Wi-Fi, Bluetooth e clima. Tudo sem depender do OBD. */
@@ -138,8 +143,9 @@ class Sensores(context: Context) {
         thread(name = "clima") {
             try {
                 val url = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
-                    "&current=temperature_2m,weather_code,precipitation&daily=temperature_2m_max,temperature_2m_min" +
-                    "&hourly=precipitation_probability,precipitation&forecast_hours=12" +
+                    "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,precipitation" +
+                    "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+                    "&hourly=temperature_2m,weather_code,precipitation_probability,precipitation&forecast_hours=12" +
                     "&timezone=auto&forecast_days=1"
                 val con = (URL(url).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15_000
@@ -158,6 +164,11 @@ class Sensores(context: Context) {
                     chuva = textoChuva(json, atual.optDouble("precipitation", 0.0)),
                     chovendo = atual.optDouble("precipitation", 0.0) >= 0.1,
                     atualizadoEm = System.currentTimeMillis(),
+                    sensacao = atual.optDouble("apparent_temperature", atual.getDouble("temperature_2m")).roundToInt(),
+                    umidade = atual.optInt("relative_humidity_2m", 0),
+                    vento = atual.optDouble("wind_speed_10m", 0.0).roundToInt(),
+                    chuvaHoje = dia.optJSONArray("precipitation_probability_max")?.optInt(0, 0) ?: 0,
+                    horas = horasDaPrevisao(json),
                 )
                 principal.post { clima = resultado }
             } catch (_: Exception) {
@@ -194,8 +205,19 @@ class Sensores(context: Context) {
             ?.let { it.subLocality ?: it.locality }
     }.getOrNull() ?: "Local atual"
 
+    /** As próximas horas da previsão (a primeira é "Agora"), no máximo 6, de 1 em 1 hora. */
+    private fun horasDaPrevisao(json: JSONObject): List<HoraClima> = runCatching {
+        val h = json.getJSONObject("hourly")
+        val t = h.getJSONArray("time"); val temp = h.getJSONArray("temperature_2m"); val cod = h.getJSONArray("weather_code")
+        val prob = h.optJSONArray("precipitation_probability")
+        (0 until minOf(6, t.length())).map { i ->
+            HoraClima(if (i == 0) "Agora" else t.getString(i).substring(11, 13), temp.getDouble(i).roundToInt(), condicao(cod.getInt(i)), prob?.optInt(i, 0) ?: 0)
+        }
+    }.getOrDefault(emptyList())
+
     private fun condicao(codigo: Int) = when (codigo) {
         0, 1 -> CondicaoClima.Limpo
+        2 -> CondicaoClima.Parcial
         2, 3, 45, 48 -> CondicaoClima.Nublado
         95, 96, 99 -> CondicaoClima.Tempestade
         else -> CondicaoClima.Chuva

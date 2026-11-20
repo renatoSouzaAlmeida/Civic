@@ -30,8 +30,8 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                     CartaoSinais(sensores, obd, Modifier.weight(1f).fillMaxWidth())
                 }
                 Column(Modifier.weight(1.1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    CartaoSpotify(monitor, Modifier.weight(1.15f).fillMaxWidth())
-                    DuasCaixas(sensores, obd, Modifier.weight(1f).fillMaxWidth())
+                    CartaoSpotify(monitor, Modifier.weight(1.0f).fillMaxWidth())
+                    DuasCaixas(sensores, obd, Modifier.weight(1.2f).fillMaxWidth())
                 }
             }
         } else {
@@ -40,7 +40,7 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                 CartaoWaze(sensores, obd, Modifier.fillMaxWidth().height(260.dp))
                 CartaoSinais(sensores, obd, Modifier.fillMaxWidth().height(220.dp))
                 CartaoSpotify(monitor, Modifier.fillMaxWidth().height(320.dp))
-                DuasCaixas(sensores, obd, Modifier.fillMaxWidth().height(300.dp))
+                DuasCaixas(sensores, obd, Modifier.fillMaxWidth().height(380.dp))
             }
         }
     }
@@ -53,29 +53,12 @@ private fun DuasCaixas(sensores: Sensores, obd: ObdMonitor, modifier: Modifier) 
     val c = sensores.conectividade
     val clima = sensores.clima
     Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            if (clima != null) {
-                val (icone, cor) = when (clima.condicao) {
-                    CondicaoClima.Limpo -> Icons.Filled.WbSunny to Cores.Amarelo
-                    CondicaoClima.Nublado -> Icons.Filled.Cloud to Cores.TextoSuave
-                    CondicaoClima.Chuva -> Icons.Filled.WaterDrop to Cores.Waze
-                    CondicaoClima.Tempestade -> Icons.Filled.Bolt to Cores.Amarelo
-                }
-                val hora = remember(clima.atualizadoEm) { java.text.SimpleDateFormat("HH:mm", java.util.Locale("pt", "BR")).format(java.util.Date(clima.atualizadoEm)) }
-                MiniCartao(
-                    clima.local, icone, cor, "${clima.temperatura}", "°C",
-                    "${clima.condicao.texto} · ${clima.maxima}° / ${clima.minima}° · atualizado ${hora}",
-                    Modifier.weight(1f).fillMaxWidth(),
-                    apoio2 = clima.chuva.ifEmpty { null },
-                    corApoio2 = if (clima.chovendo || clima.chuva.startsWith("Chuva")) Cores.Waze else Cores.Ok,
-                )
-            } else {
-                MiniCartao("Clima", Icons.Filled.WbSunny, Cores.TextoSuave, "—", "", "Precisa de internet", Modifier.weight(1f).fillMaxWidth())
-            }
+            CartaoClima(clima, Modifier.weight(3.4f).fillMaxWidth())
             MiniCartao(
                 if (c.rede.isNotEmpty()) "Rede ${c.rede}" else "Rede", Icons.Filled.SignalCellularAlt, Cores.Destaque,
                 c.percentual?.toString() ?: "—", if (c.percentual != null) "%" else "",
                 listOf(c.operadora, c.dbm?.let { "$it dBm" }).filterNotNull().filter { it.isNotEmpty() }.joinToString(" · ").ifEmpty { "Sem rede" },
-                Modifier.weight(1f).fillMaxWidth(),
+                Modifier.weight(0.8f).fillMaxWidth(),
             )
 
     }

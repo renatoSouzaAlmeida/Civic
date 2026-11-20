@@ -286,6 +286,7 @@ private fun BotaoPequeno(icone: ImageVector, descricao: String, aoTocar: () -> U
 @Composable
 private fun iconeClima(c: CondicaoClima): Pair<ImageVector, Color> = when (c) {
     CondicaoClima.Limpo -> Icons.Filled.WbSunny to Cores.Amarelo
+    CondicaoClima.Parcial -> Icons.Filled.WbSunny to Cores.Amarelo
     CondicaoClima.Nublado -> Icons.Filled.Cloud to Cores.TextoSuave
     CondicaoClima.Chuva -> Icons.Filled.WaterDrop to Cores.Waze
     CondicaoClima.Tempestade -> Icons.Filled.Bolt to Cores.Amarelo

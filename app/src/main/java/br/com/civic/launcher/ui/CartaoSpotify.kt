@@ -40,8 +40,8 @@ import br.com.civic.launcher.MusicaUi
 import br.com.civic.launcher.abrirSpotify
 import kotlinx.coroutines.delay
 
-private val GradienteSpotify = Brush.linearGradient(listOf(Color(0xFF4D9BFF), Color(0xFF2563EB), Color(0xFF15367F)))
-private val VeuSpotify = Brush.verticalGradient(listOf(Color(0x0D000000), Color(0x800A0A28)))
+private val GradienteSpotify = Brush.linearGradient(listOf(Color(0xFF86BBFF), Color(0xFF5B97FF), Color(0xFF3A6FE0)))
+private val VeuSpotify = Brush.verticalGradient(listOf(Color(0x00000000), Color(0x59153C94)))
 private val BrancoSuave = Color(0x3DFFFFFF)
 
 @Composable
