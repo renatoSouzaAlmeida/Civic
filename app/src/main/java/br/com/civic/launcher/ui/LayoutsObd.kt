@@ -135,14 +135,18 @@ private fun DialPremium(
 ) {
     val trilho = Cores.SegVazio; val suave = Cores.TextoSuave; val verm = Cores.Vermelho
     val azul = Cores.Destaque; val azulClaro = Color(0xFF6FB3FF); val face = Cores.CartaoSolido; val borda = Cores.Borda
+    // Aura da moldura: branca no tema escuro; azulada no claro (o branco some no fundo claro).
+    val escuro = LocalPaleta.current.escuro
+    val aura = if (escuro) Color.White else Color(0xFF4F8DF5)
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val lado = minOf(maxWidth, maxHeight)
-        Box(Modifier.size(lado).shadow(18.dp, CircleShape, clip = false, ambientColor = Color(0x22283C64), spotColor = Color(0x44283C64)).clip(CircleShape)
+        Box(Modifier.size(lado).shadow(18.dp, CircleShape, clip = false,
+                ambientColor = if (escuro) Color(0x22283C64) else Color(0x553B82F6), spotColor = if (escuro) Color(0x44283C64) else Color(0x773B82F6)).clip(CircleShape)
             .background(Brush.radialGradient(listOf(face, face, borda.copy(alpha = 0.55f)))), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
                 val c = Offset(size.width / 2, size.height / 2); val raio = size.minDimension / 2
                 // Moldura.
-                drawCircle(Brush.linearGradient(listOf(Color.White, borda, Color.White), Offset(0f, 0f), Offset(size.width, size.height)), raio - raio * 0.02f, c, style = Stroke(raio * 0.04f))
+                drawCircle(Brush.linearGradient(listOf(aura, if (escuro) borda else aura.copy(alpha = 0.35f), aura), Offset(0f, 0f), Offset(size.width, size.height)), raio - raio * 0.02f, c, style = Stroke(raio * 0.04f))
                 val esp = raio * espessuraArco; val rArco = raio * 0.86f
                 val canto = Offset(c.x - rArco, c.y - rArco); val tam = Size(rArco * 2, rArco * 2)
                 drawArc(trilho.copy(alpha = 0.7f), 135f, 270f, false, canto, tam, style = Stroke(esp, cap = StrokeCap.Round))
