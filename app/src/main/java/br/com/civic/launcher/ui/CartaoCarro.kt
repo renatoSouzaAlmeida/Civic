@@ -36,7 +36,7 @@ import br.com.civic.launcher.obd.ObdMonitor
 @Composable
 internal fun FotoCarro(modifier: Modifier, fracaoAltura: Float) {
     val config = Configuracoes.obter(LocalContext.current)
-    val fit = config.imagemCarro == ImagemCarro.Fit
+    val fit = config.imagemCarro != ImagemCarro.Civic // Fit e City usam a foto/ajuste do segundo carro até a foto própria do City chegar
     Box(modifier) {
         BoxWithConstraints(Modifier.fillMaxWidth().fillMaxHeight(fracaoAltura)) {
             Image(

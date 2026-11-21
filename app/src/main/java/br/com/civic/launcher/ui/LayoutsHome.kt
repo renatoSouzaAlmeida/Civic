@@ -331,7 +331,7 @@ private fun MapaCompacto(sensores: Sensores, modifier: Modifier) {
 
 /** Spotify em linha: logo, título e controles (prev, play, next). */
 @Composable
-private fun SpotifyLinha(monitor: MediaMonitor, modifier: Modifier) {
+internal fun SpotifyLinha(monitor: MediaMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
     val m = monitor.estado
     Row(modifier.cartaoSuave().clickable { ctx.abrirSpotify() }.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -370,7 +370,7 @@ private fun Redondo(icone: ImageVector, tamanho: androidx.compose.ui.unit.Dp, fu
 
 /** Clima: bairro e hora no alto; ícone, temperatura e detalhes na mesma linha. Tocar abre a previsão. */
 @Composable
-private fun ClimaLinha(clima: ClimaUi?, modifier: Modifier) {
+internal fun ClimaLinha(clima: ClimaUi?, modifier: Modifier) {
     var aberto by remember { mutableStateOf(false) }
     if (aberto) ModalClima { aberto = false }
     Column(modifier.cartaoSuave().clickable { aberto = true }.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.SpaceEvenly) {

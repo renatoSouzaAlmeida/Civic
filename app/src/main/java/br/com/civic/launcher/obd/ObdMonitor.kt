@@ -614,7 +614,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
         if (arGs == null && suporta(0x0B)) {
             val mapKpa = consultar("010B")?.firstOrNull()
             if (mapKpa != null) {
-                val cilindrada = if (br.com.civic.launcher.Configuracoes.obter(ctx).imagemCarro == br.com.civic.launcher.ImagemCarro.Fit) 0.0015 else 0.0018
+                val cilindrada = if (br.com.civic.launcher.Configuracoes.obter(ctx).imagemCarro != br.com.civic.launcher.ImagemCarro.Civic) 0.0015 else 0.0018
                 val kelvin = (d.tempAdmissao ?: 30) + 273.15
                 arGs = mapKpa * 1000.0 * cilindrada * 0.80 * (rpm / 120.0) * 28.97 / (8.314 * kelvin) // eficiência volumétrica ~80%
             }

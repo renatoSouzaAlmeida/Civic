@@ -29,9 +29,9 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
                 SeletorLayoutHome()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (config.layoutHome) {
-                        br.com.civic.launcher.LayoutHome.Caixas -> HomeCaixasCompacta(monitor, sensores, obd)
-                        br.com.civic.launcher.LayoutHome.Painel -> HomePainelCompacta(monitor, sensores, obd)
-                        br.com.civic.launcher.LayoutHome.Padrao -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        br.com.civic.launcher.LayoutHome.Caixas, br.com.civic.launcher.LayoutHome.NovaLinha -> HomeCaixasCompacta(monitor, sensores, obd)
+                        br.com.civic.launcher.LayoutHome.Painel, br.com.civic.launcher.LayoutHome.Esportiva -> HomePainelCompacta(monitor, sensores, obd)
+                        br.com.civic.launcher.LayoutHome.Padrao, br.com.civic.launcher.LayoutHome.Ousada -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 CartaoCarro(obd, Modifier.weight(1.25f).fillMaxWidth())
                                 CartaoSinais(sensores, obd, Modifier.weight(1f).fillMaxWidth())
@@ -51,6 +51,9 @@ fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
             when (config.layoutHome) {
             br.com.civic.launcher.LayoutHome.Caixas -> HomeCaixas(monitor, sensores, obd)
             br.com.civic.launcher.LayoutHome.Painel -> HomePainel(monitor, sensores, obd)
+            br.com.civic.launcher.LayoutHome.Ousada -> HomeOusada(monitor, sensores, obd)
+            br.com.civic.launcher.LayoutHome.Esportiva -> HomeEsportiva(monitor, sensores, obd)
+            br.com.civic.launcher.LayoutHome.NovaLinha -> HomeNovaLinha(monitor, sensores, obd)
             br.com.civic.launcher.LayoutHome.Padrao ->
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 CartaoCarro(obd, Modifier.weight(1f).fillMaxHeight())

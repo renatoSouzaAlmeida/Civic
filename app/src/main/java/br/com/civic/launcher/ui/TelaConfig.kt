@@ -48,6 +48,7 @@ fun TelaConfig() {
             Secao("Identidade") {
                 Campo("Nome do app (aparece no topo)", config.nomeApp) { config.salvarNomeApp(it) }
                 Campo("Nome do carro", config.nomeCarro) { config.salvarNomeCarro(it) }
+                Campo("Seu nome (para a saudação da Tela Início)", config.nomeUsuario) { config.salvarNomeUsuario(it) }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Campo("Modelo", config.modelo, Modifier.weight(1f)) { config.salvarModelo(it) }
                     Campo("Ano", config.ano, Modifier.weight(0.6f), KeyboardType.Number) { config.salvarAno(it.filter { c -> c.isDigit() }.take(4)) }
