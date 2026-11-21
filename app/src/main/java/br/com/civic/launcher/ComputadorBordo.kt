@@ -140,7 +140,8 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         if (limite > 0 && vel > limite + 2) { if (!excessoAtivo && agora - ultimoExcesso > 30_000) { v = v.copy(excessos = v.excessos + 1); ultimoExcesso = agora }; excessoAtivo = true }
         else if (vel < limite - 5) excessoAtivo = false
         // Consumo da viagem (só com OBD): litros = km / (km/l instantâneo).
-        consumoInst?.takeIf { comObd && it > 1f && km > 0 }?.let { v = v.copy(consKm = v.consKm + km, consLitros = v.consLitros + km / it) }
+        val ci = consumoInst
+        if (comObd && ci != null && ci > 1f && km > 0) v = v.copy(consKm = v.consKm + km, consLitros = v.consLitros + km / ci)
         ultimaAmostra = agora
         if (andando || ligado) ultimaAtividade = agora
         atual = v

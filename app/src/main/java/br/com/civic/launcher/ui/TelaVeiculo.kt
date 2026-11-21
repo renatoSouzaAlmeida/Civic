@@ -232,7 +232,7 @@ private fun CartaoConducao(v: br.com.civic.launcher.Viagem, andando: Boolean, an
     val cor = if (nota != null) corNota(nota) else Cores.TextoSuave
     val vazio = Cores.SegVazio
     val tempo = if (andando) maxOf(v.duracaoMs, agora - v.inicio) else v.duracaoMs
-    val br = BR
+    val loc = BR
     Secao("Resumo da condução") {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Box(Modifier.size(112.dp), contentAlignment = Alignment.Center) {
@@ -251,7 +251,7 @@ private fun CartaoConducao(v: br.com.civic.launcher.Viagem, andando: Boolean, an
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (nota != null) Text(br.com.civic.launcher.Viagem.rotuloNota(nota), color = cor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text(if (andando) "Viagem em andamento" else "Viagem concluída", color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Text("%.1f km".format(br, v.distanciaKm), color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text("%.1f km".format(loc, v.distanciaKm), color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
                 Text(br.com.civic.launcher.ComputadorBordo.duracao(tempo) + " de condução", color = Cores.TextoSuave, fontSize = 14.sp)
                 if (nota == null) Text("A nota aparece depois de 0,5 km.", color = Cores.TextoSuave, fontSize = 12.sp)
             }
@@ -264,13 +264,13 @@ private fun CartaoConducao(v: br.com.civic.launcher.Viagem, andando: Boolean, an
         linha("Acelerações bruscas", "${v.aceleracoes}")
         linha("Excessos de velocidade", if (br.com.civic.launcher.Configuracoes.obter(LocalContext.current).limiteVelocidade > 0) "${v.excessos}" else "desligado")
         linha("RPM elevado", if (v.comObd) (if (v.rpmAlto == 1) "1 ocorrência" else "${v.rpmAlto} ocorrências") else "— (sem OBD)")
-        linha("Consumo médio", v.consumoMedio?.let { "%.1f km/l".format(br, it) } ?: "— (sem OBD)")
-        linha("Velocidade média / máxima", "%.0f / %d km/h".format(br, v.velMedia, v.velMaxima))
+        linha("Consumo médio", v.consumoMedio?.let { "%.1f km/l".format(loc, it) } ?: "— (sem OBD)")
+        linha("Velocidade média / máxima", "%.0f / %d km/h".format(loc, v.velMedia, v.velMaxima))
         if (nota != null && anteriores.isNotEmpty()) {
             val media = anteriores.average()
             val dif = nota - media.toInt()
             Text(
-                "Média das últimas ${anteriores.size} viagens: %.0f. ".format(br, media) + when { dif > 2 -> "Esta ficou $dif pontos acima."; dif < -2 -> "Esta ficou ${-dif} pontos abaixo."; else -> "Esta ficou na média." },
+                "Média das últimas ${anteriores.size} viagens: %.0f. ".format(loc, media) + when { dif > 2 -> "Esta ficou $dif pontos acima."; dif < -2 -> "Esta ficou ${-dif} pontos abaixo."; else -> "Esta ficou na média." },
                 color = Cores.TextoSuave, fontSize = 13.sp,
             )
         }
