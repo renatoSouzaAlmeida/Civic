@@ -30,6 +30,10 @@ enum class TipoAlerta(
     MotorFrio("Motor frio", Gravidade.Dica, 3_000, 0, 5 * 60_000L),
     Fadiga("Hora de uma pausa", Gravidade.Aviso, 0, 3 * 3_600_000L, 30 * 60_000L),
     CambioQuente("Câmbio quente", Gravidade.Aviso, 30_000, 3 * 3_600_000L, 15 * 60_000L),
+    /** Passou do limite de velocidade configurado por tempo suficiente (não vai ao Telegram). */
+    Velocidade("Velocidade acima do limite", Gravidade.Aviso, 0, 0, 2 * 60_000L),
+    /** O adaptador parou de responder com o carro andando (dados do motor desatualizados). */
+    ObdSemResposta("Adaptador OBD sem resposta", Gravidade.Aviso, 0, 30 * 60_000L, 10 * 60_000L),
 }
 
 data class Alerta(val tipo: TipoAlerta, val mensagem: String)
@@ -50,9 +54,20 @@ class AlertasMotor private constructor(private val ctx: Context) {
     private val br = Locale("pt", "BR")
     /** Condições calculadas fora do OBD (ex.: fadiga, pela Segurança). */
     private val externas = java.util.concurrent.ConcurrentHashMap<TipoAlerta, String>()
-    fun definirExterna(tipo: TipoAlerta, mensagem: String?) { if (mensagem == null) externas.remove(tipo) else externas[tipo] = mensagem }
+    /**
+     * Define/limpa uma condição externa. Reavalia na hora com os últimos dados do OBD: sem OBD (ou com o adaptador caído)
+     * nenhuma leitura nova chega, e sem isso a faixa e a voz desses alertas nunca apareceriam.
+     */
+    fun definirExterna(tipo: TipoAlerta, mensagem: String?) {
+        val mudou = if (mensagem == null) externas.remove(tipo) != null else externas.put(tipo, mensagem) != mensagem
+        if (mudou) avaliar(ultimosDados, ultimaDemo)
+    }
+
+    private var ultimosDados = DadosObd()
+    private var ultimaDemo = false
 
     fun avaliar(d: DadosObd, demonstracao: Boolean, agora: Long = System.currentTimeMillis()) {
+        ultimosDados = d; ultimaDemo = demonstracao
         val rpm = d.rpm ?: 0
         val ligado = rpm > 400
         val temp = d.tempMotor

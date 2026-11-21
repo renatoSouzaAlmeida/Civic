@@ -32,3 +32,8 @@ create policy civic_viagem_inserir on public.civic_viagens for insert to anon wi
 create policy civic_viagem_atualizar on public.civic_viagens for update to anon using (dispositivo = public.civic_token()) with check (dispositivo = public.civic_token());
 create policy civic_dash_viagens on public.civic_viagens for select to authenticated using (dispositivo in (select public.civic_meus_dispositivos()));
 alter publication supabase_realtime add table public.civic_viagens;
+
+-- ===== Aplicada em 21/11/2026 como "civic_viagens_excesso" =====
+alter table public.civic_viagens
+  add column excesso_max_kmh integer,   -- maior velocidade acima do limite configurado
+  add column excesso_s integer;         -- tempo total acima do limite (segundos)

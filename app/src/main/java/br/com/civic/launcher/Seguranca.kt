@@ -46,6 +46,9 @@ class Seguranca private constructor(private val ctx: Context) {
 
     private var ultimoTempo = 0L
     private var ultimaObd = 0L
+    private var obdComMotorEm = 0L
+    private var movendoSemObdDesde = 0L
+    private var paradoSemObdDesde = 0L
 
     // Fadiga
     private var dirigindoDesde = 0L
@@ -55,8 +58,10 @@ class Seguranca private constructor(private val ctx: Context) {
     fun amostra(d: DadosObd, demonstracao: Boolean) {
         if (demonstracao) return
         val agora = System.currentTimeMillis()
-        ultimaObd = agora
+        // Só conta como "OBD respondendo" se veio leitura de verdade (ao cair, o monitor manda um registro vazio).
+        if (d.rpm != null || d.velocidade != null) ultimaObd = agora
         val rpm = d.rpm ?: 0
+        if (rpm > 400) obdComMotorEm = agora
         val vel = (d.velocidade ?: 0).toFloat()
         val girando = rpm > 400
         controlarMotor(girando, agora)
@@ -99,9 +104,32 @@ class Seguranca private constructor(private val ctx: Context) {
      */
     fun amostraGps(velKmh: Float) {
         val agora = System.currentTimeMillis()
+        verificarPerdaObd(velKmh, agora)
         if (agora - ultimaObd < 5_000L) return
         if (velKmh >= 3f) { condicao(velKmh, agora); fadiga(velKmh, agora) }
         else { janela.clear(); fadiga(0f, agora) }
+    }
+
+    /**
+     * Adaptador OBD parou de responder COM O CARRO ANDANDO. Andar a 15 km/h ou mais descarta "ignição desligada"
+     * (o motor não desliga rodando), então não confunde falha do adaptador com motor desligado. Só vale se o adaptador
+     * já tinha dado leitura com o motor ligado nos últimos 10 min (quem nunca usa OBD, como o Fit, não recebe o aviso).
+     */
+    private fun verificarPerdaObd(velKmh: Float, agora: Long) {
+        val alertas = AlertasMotor.obter(ctx)
+        val semObd = agora - ultimaObd > 10_000L
+        if (!semObd) { movendoSemObdDesde = 0L; paradoSemObdDesde = 0L; alertas.definirExterna(TipoAlerta.ObdSemResposta, null); return }
+        if (agora - obdComMotorEm > 10 * 60_000L) return
+        if (velKmh >= 15f) {
+            paradoSemObdDesde = 0L
+            if (movendoSemObdDesde == 0L) movendoSemObdDesde = agora
+            if (agora - movendoSemObdDesde >= 10_000L)
+                alertas.definirExterna(TipoAlerta.ObdSemResposta, "O adaptador OBD parou de responder com o carro em movimento. Os dados do motor ficaram desatualizados; confira o adaptador.")
+        } else if (velKmh < 3f) {
+            // Parado por 3 min sem o adaptador: some o aviso (ignição desligada ou adaptador desplugado).
+            if (paradoSemObdDesde == 0L) paradoSemObdDesde = agora
+            else if (agora - paradoSemObdDesde >= 180_000L) alertas.definirExterna(TipoAlerta.ObdSemResposta, null)
+        }
     }
 
     private fun usoIncomum(agora: Long) {

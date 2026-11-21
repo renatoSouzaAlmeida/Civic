@@ -9,6 +9,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.json.JSONArray
 import org.json.JSONObject
+import br.com.civic.launcher.obd.AlertasMotor
+import br.com.civic.launcher.obd.TipoAlerta
 import java.util.Locale
 
 /** Uma viagem: do carro começar a andar (ou o motor ligar) até ficar 5 min parado/desligado. */
@@ -25,6 +27,9 @@ data class Viagem(
     val aceleracoes: Int = 0,
     val excessos: Int = 0,
     val rpmAlto: Int = 0,
+    /** Maior velocidade acima do limite (km/h) e tempo total acima dele (ms). */
+    val excessoMaxKmh: Int = 0,
+    val excessoMs: Long = 0,
     /** Consumo medido na viagem (só com OBD): quilômetros e litros acumulados. */
     val consKm: Double = 0.0,
     val consLitros: Double = 0.0,
@@ -46,7 +51,7 @@ data class Viagem(
     }
 
     fun resumoConducao(): String? = nota?.let {
-        "condução $it/100 ($frenagens frenagens, $aceleracoes acelerações" + (if (excessos > 0) ", $excessos excessos de velocidade" else "") + (if (comObd) ", $rpmAlto RPM elevado" else "") + ")"
+        "condução $it/100 ($frenagens frenagens, $aceleracoes acelerações" + (if (excessos > 0) ", $excessos excessos de velocidade (máx. $excessoMaxKmh km/h)" else "") + (if (comObd) ", $rpmAlto RPM elevado" else "") + ")"
     }
 
     companion object {
@@ -73,6 +78,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
     private var rpmAltoAtivo = false
     private var ultimoRpmAlto = 0L
     private var excessoAtivo = false
+    private var acimaDesde = 0L
     private var ultimoExcesso = 0L
     private var consumoInst: Float? = null
 
@@ -115,7 +121,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         var v = atual
         if (v != null && v.demonstracao != demonstracao) { finalizar(); v = null }
         if (v == null) {
-            if (!andando && !ligado) return
+            if (!andando && !ligado) { AlertasMotor.obter(ctx).definirExterna(TipoAlerta.Velocidade, null); return }
             val p = runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull()
             v = Viagem(inicio = agora, fim = agora, demonstracao = demonstracao, latIni = p?.latitude, lonIni = p?.longitude)
             ultimaAmostra = agora
@@ -135,10 +141,21 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         // RPM elevado (4.500 rpm ou mais): conta uma ocorrência por subida, com 10 s entre ocorrências.
         if (rpm >= 4_500) { if (!rpmAltoAtivo && agora - ultimoRpmAlto > 10_000) { v = v.copy(rpmAlto = v.rpmAlto + 1); ultimoRpmAlto = agora }; rpmAltoAtivo = true }
         else if (rpm < 4_000) rpmAltoAtivo = false
-        // Excesso de velocidade: passou do limite configurado (uma ocorrência por vez, com 30 s entre elas).
+        // Excesso de velocidade: acima do limite (+2 km/h de tolerância) por 5 s seguidos conta uma ocorrência (30 s entre elas);
+        // registra a maior velocidade e o tempo total acima do limite, e mostra a faixa com voz.
         val limite = Configuracoes.obter(ctx).limiteVelocidade
-        if (limite > 0 && vel > limite + 2) { if (!excessoAtivo && agora - ultimoExcesso > 30_000) { v = v.copy(excessos = v.excessos + 1); ultimoExcesso = agora }; excessoAtivo = true }
-        else if (vel < limite - 5) excessoAtivo = false
+        if (limite > 0 && vel > limite + 2) {
+            if (acimaDesde == 0L) acimaDesde = agora
+            if (excessoAtivo) v = v.copy(excessoMs = v.excessoMs + dt)
+            v = v.copy(excessoMaxKmh = maxOf(v.excessoMaxKmh, vel.toInt()))
+            if (!excessoAtivo && agora - acimaDesde >= 5_000L && agora - ultimoExcesso > 30_000L) {
+                v = v.copy(excessos = v.excessos + 1); ultimoExcesso = agora; excessoAtivo = true
+                AlertasMotor.obter(ctx).definirExterna(TipoAlerta.Velocidade, "Reduza a velocidade: o limite configurado é de $limite km/h.")
+            }
+        } else if (limite == 0 || vel < limite - 5) {
+            acimaDesde = 0L; excessoAtivo = false
+            AlertasMotor.obter(ctx).definirExterna(TipoAlerta.Velocidade, null)
+        }
         // Consumo da viagem (só com OBD): litros = km / (km/l instantâneo).
         val ci = consumoInst
         if (comObd && ci != null && ci > 1f && km > 0) v = v.copy(consKm = v.consKm + km, consLitros = v.consLitros + km / ci)
@@ -176,7 +193,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             val eFim = if (v.latFim != null && v.lonFim != null) runCatching { le.endereco(v.latFim, v.lonFim) }.getOrNull() else null
             val o = JSONObject().put("inicio", iso(v.inicio)).put("fim", iso(v.fim)).put("distancia_km", Math.round(v.distanciaKm * 100) / 100.0)
                 .put("duracao_s", v.duracaoMs / 1000).put("em_movimento_s", v.emMovimentoMs / 1000).put("vel_media", Math.round(v.velMedia * 10) / 10.0)
-                .put("vel_max", v.velMaxima).put("frenagens", v.frenagens).put("aceleracoes", v.aceleracoes).put("excessos", v.excessos)
+                .put("vel_max", v.velMaxima).put("frenagens", v.frenagens).put("aceleracoes", v.aceleracoes).put("excessos", v.excessos).put("excesso_max_kmh", v.excessoMaxKmh).put("excesso_s", v.excessoMs / 1000)
                 .put("fonte", if (v.comObd) "obd" else "gps").put("simulado", v.demonstracao).put("versao_app", runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?")
             if (v.comObd) { o.put("rpm_max", v.rpmMaximo).put("rpm_alto", v.rpmAlto) }
             v.consumoMedio?.let { o.put("consumo_km_l", Math.round(it * 10) / 10.0) }
@@ -258,13 +275,14 @@ class ComputadorBordo private constructor(private val ctx: Context) {
 
     private fun paraJson(v: Viagem) = JSONObject().put("ini", v.inicio).put("fim", v.fim).put("km", v.distanciaKm)
         .put("mov", v.emMovimentoMs).put("vmax", v.velMaxima).put("rpm", v.rpmMaximo).put("demo", v.demonstracao)
+        .put("exm", v.excessoMaxKmh).put("exs", v.excessoMs)
         .put("fren", v.frenagens).put("acel", v.aceleracoes).put("exc", v.excessos).put("rpma", v.rpmAlto)
         .put("ck", v.consKm).put("cl", v.consLitros).put("obd", v.comObd)
         .apply { v.latIni?.let { put("lai", it) }; v.lonIni?.let { put("loi", it) }; v.latFim?.let { put("laf", it) }; v.lonFim?.let { put("lof", it) } }
 
     private fun deJson(o: JSONObject) = Viagem(
         o.getLong("ini"), o.getLong("fim"), o.getDouble("km"), o.getLong("mov"), o.getInt("vmax"), o.getInt("rpm"), o.optBoolean("demo"),
-        o.optInt("fren"), o.optInt("acel"), o.optInt("exc"), o.optInt("rpma"), o.optDouble("ck", 0.0), o.optDouble("cl", 0.0), o.optBoolean("obd"),
+        o.optInt("fren"), o.optInt("acel"), o.optInt("exc"), o.optInt("rpma"), o.optInt("exm"), o.optLong("exs"), o.optDouble("ck", 0.0), o.optDouble("cl", 0.0), o.optBoolean("obd"),
         if (o.has("lai")) o.getDouble("lai") else null, if (o.has("loi")) o.getDouble("loi") else null,
         if (o.has("laf")) o.getDouble("laf") else null, if (o.has("lof")) o.getDouble("lof") else null,
     )

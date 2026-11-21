@@ -57,7 +57,8 @@ fun BannerAlerta(modifier: Modifier = Modifier, compacto: Boolean = false) {
         TipoAlerta.Alternador, TipoAlerta.BateriaFraca -> rememberVectorPainter(Icons.Filled.BatteryAlert)
         TipoAlerta.FarolDesligado -> painterResource(R.drawable.ic_farol)
         TipoAlerta.MotorFrio -> rememberVectorPainter(Icons.Filled.AcUnit)
-        TipoAlerta.Fadiga, TipoAlerta.CambioQuente -> rememberVectorPainter(Icons.Filled.Warning)
+        TipoAlerta.Fadiga, TipoAlerta.CambioQuente, TipoAlerta.ObdSemResposta -> rememberVectorPainter(Icons.Filled.Warning)
+        TipoAlerta.Velocidade -> rememberVectorPainter(Icons.Filled.Speed)
     }
     val pulso = if (a.tipo.gravidade == Gravidade.Critico) {
         pulsar(1f, 0.35f, 500)
