@@ -46,6 +46,7 @@ fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
                     Aba("Falhas (DTC)", iconeRes = R.drawable.ic_motor),
                     Aba("Bateria", Icons.Filled.BatteryChargingFull),
                     Aba("Mistura", Icons.Filled.Tune),
+                    Aba("Saúde", Icons.Filled.CheckCircle),
                 ),
                 aba, Modifier.weight(1f),
             ) { aba = it }
@@ -54,7 +55,8 @@ fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
             when (aba) {
                 0 -> TelaFalhas(obd)
                 1 -> TelaBateria(obd)
-                else -> TelaMistura(obd)
+                2 -> TelaMistura(obd)
+                else -> TelaSaude(obd)
             }
         }
     }
