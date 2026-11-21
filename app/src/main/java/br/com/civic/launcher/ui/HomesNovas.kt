@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -302,4 +303,4 @@ fun HomeNovaLinha(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
 }
 
 private fun Modifier.sombraCaixaNova(): Modifier =
-    androidx.compose.ui.draw.shadow(10.dp, FormaCartao, clip = false, ambientColor = Color(0x22283C64), spotColor = Color(0x33283C64))
+    this.then(Modifier.shadow(10.dp, FormaCartao, clip = false, ambientColor = Color(0x22283C64), spotColor = Color(0x33283C64)))
