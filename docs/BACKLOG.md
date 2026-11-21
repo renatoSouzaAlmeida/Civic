@@ -42,7 +42,7 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 ## Propostas de engenharia (por área)
 Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista por decisão do dono.
 
-### Segurança e direção (primeira leva — feitasvalidado no carro em 21/11/2026)
+### Segurança e direção (primeira leva — validada no carro em 21/11/2026)
 - [x] **Alertas falados** — voz em português para alertas de aviso e críticos (superaquecimento, alternador, falha, fadiga). Liga/desliga em Config. > Segurança.
 - [x] **Fadiga** — 2 h sem pausa de 15 min, ou dirigindo de madrugada (0h–5h por 30 min): faixa + voz + Telegram.
 - [x] **Frenagem e aceleração bruscas** — contadas pela variação da velocidade do OBD; nota de condução 0–100 no resumo da viagem (Telegram).
