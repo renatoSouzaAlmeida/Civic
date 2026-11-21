@@ -115,3 +115,11 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 ## Honda Fit
 - [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
   (Fit: Android 12, 1280x720, 4 GB de RAM, 8 núcleos; o launcher já rodava bem, o modo leve é reserva para aparelhos mais simples.)
+
+## Novas propostas (pós-1.0.0, a implementar) — detalhes em `docs/RECURSOS.md`
+- [ ] **Driving Score completo** — cartão "Resumo da condução" (anel com a nota, selo, km, minutos, frenagens, acelerações, RPM elevado, consumo médio), nota guardada por viagem, comparação entre viagens e envio à Casa Tech.
+- [ ] **Geofence** — áreas permitidas (raio em torno de Casa, Trabalho ou ponto escolhido) com aviso ao sair e ao entrar; funciona por GPS (vale para o Fit).
+- [ ] **Alerta de excesso de velocidade** — limite configurável, voz + faixa + Telegram, contagem por viagem que entra na nota.
+- [ ] **Alerta de desconexão do OBD** — hoje o app detecta a queda mas não avisa; falta faixa, voz, Telegram em movimento e reconexão visível.
+- [ ] **Botão SOS** — localização e dados do veículo para vários contatos cadastrados, com confirmação de 5 s.
+- [ ] **Aviso de local desconhecido** — aprender as vagas de costume e avisar quando o carro parar ou andar fora delas (GPS).
