@@ -36,7 +36,7 @@ import br.com.civic.launcher.obd.ObdMonitor
 @Composable
 internal fun FotoCarro(modifier: Modifier, fracaoAltura: Float) {
     val config = Configuracoes.obter(LocalContext.current)
-    val fit = config.imagemCarro != ImagemCarro.Civic // Fit e City usam a foto/ajuste do segundo carro até a foto própria do City chegar
+    val fit = config.imagemCarro == ImagemCarro.Fit
     Box(modifier) {
         BoxWithConstraints(Modifier.fillMaxWidth().fillMaxHeight(fracaoAltura)) {
             Image(
@@ -75,17 +75,19 @@ internal fun TituloCarro() {
 
 /** Placa no estilo Mercosul: faixa azul "BRASIL" em cima e os caracteres pretos em fundo branco. */
 @Composable
-internal fun PlacaMercosul(texto: String, largura: androidx.compose.ui.unit.Dp = 132.dp) {
+internal fun PlacaMercosul(texto: String, largura: androidx.compose.ui.unit.Dp = 132.dp, altura: androidx.compose.ui.unit.Dp? = null) {
     val k = largura.value / 132f
     val forma = androidx.compose.foundation.shape.RoundedCornerShape((6 * k).dp)
     Column(
-        Modifier.width(largura).clip(forma).background(Color.White)
+        Modifier.width(largura).then(if (altura != null) Modifier.height(altura) else Modifier).clip(forma).background(Color.White)
             .border((1.5f * k).coerceAtLeast(1f).dp, Color(0xFF1F2937), forma),
     ) {
         Box(Modifier.fillMaxWidth().height((12 * k).dp).background(Color(0xFF1D4ED8)), contentAlignment = Alignment.Center) {
             Text("BRASIL", color = Color.White, fontSize = (8 * k).sp, lineHeight = (9 * k).sp, fontWeight = FontWeight.Bold, letterSpacing = (1 * k).sp, maxLines = 1)
         }
-        Text(
+        if (altura != null) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+            Text(texto, color = Color(0xFF111111), fontSize = ((altura.value - 12 * k) * 0.66f).sp, lineHeight = ((altura.value - 12 * k) * 0.7f).sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (1.5f * k).sp, maxLines = 1, softWrap = false)
+        } else Text(
             texto, color = Color(0xFF111111), fontSize = (20 * k).sp, lineHeight = (22 * k).sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (1.5f * k).sp,
             modifier = Modifier.fillMaxWidth().padding(vertical = (2 * k).dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
         )

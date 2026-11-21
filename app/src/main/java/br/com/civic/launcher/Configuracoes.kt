@@ -5,7 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
-enum class ImagemCarro(val rotulo: String) { Civic("Civic"), Fit("Fit"), City("City") }
+enum class ImagemCarro(val rotulo: String) { Civic("Civic"), Fit("Fit") }
 
 /** Layout da tela do OBD: o atual e três propostas para comparar (a escolha final será feita em uso). */
 enum class LayoutObd(val rotulo: String) { Atual("Esportivo"), Cockpit("Cockpit"), Modular("Modular") }
@@ -53,7 +53,7 @@ class Configuracoes private constructor(ctx: Context) {
     /** Capacidade do tanque em litros; 0 = padrão do carro (Civic 56 l, Fit 45 l). Usada para estimar os litros pelo nível. */
     var capacidadeTanque by mutableStateOf(prefs.getInt("capacidade_tanque", 0))
         private set
-    val capacidadeEfetiva: Int get() = if (capacidadeTanque > 0) capacidadeTanque else when (imagemCarro) { ImagemCarro.Fit -> 45; ImagemCarro.City -> 40; else -> 56 }
+    val capacidadeEfetiva: Int get() = if (capacidadeTanque > 0) capacidadeTanque else if (imagemCarro == ImagemCarro.Fit) 45 else 56
     /** Alertas falados (voz) nos avisos do motor, fadiga e colisão. */
     var vozAlertas by mutableStateOf(prefs.getBoolean("voz_alertas", true))
         private set

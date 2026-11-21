@@ -124,13 +124,18 @@ fun HomeOusada(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         // Cena do carro: fundo com brilho, saudação, luzes e a foto com a placa no para-choque.
         Box(Modifier.weight(2.1f).fillMaxHeight().clip(RoundedCornerShape(28.dp))) {
-            Canvas(Modifier.fillMaxSize()) {
-                drawRect(Brush.verticalGradient(listOf(if (escuro) Color(0xFF0B1424) else Color(0xFFEAF1FB), if (escuro) Color(0xFF05080F) else Color(0xFFF6F9FE))))
-                // Brilho do chão e feixe de luz, como na proposta.
-                drawRect(Brush.horizontalGradient(listOf(Color.Transparent, brilho.copy(alpha = if (escuro) 0.55f else 0.25f), Color.Transparent)), Offset(0f, size.height * 0.62f), androidx.compose.ui.geometry.Size(size.width, size.height * 0.012f))
-                drawCircle(Brush.radialGradient(listOf(brilho.copy(alpha = if (escuro) 0.28f else 0.16f), Color.Transparent), center = Offset(size.width * 0.55f, size.height * 0.62f), radius = size.width * 0.5f), size.width * 0.5f, Offset(size.width * 0.55f, size.height * 0.62f))
+            val recorte = cenaEhRecorte()
+            if (recorte) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawRect(Brush.verticalGradient(listOf(Color(0xFFEAF1FB), Color(0xFFF6F9FE))))
+                    drawRect(Brush.horizontalGradient(listOf(Color.Transparent, brilho.copy(alpha = 0.25f), Color.Transparent)), Offset(0f, size.height * 0.80f), androidx.compose.ui.geometry.Size(size.width, size.height * 0.010f))
+                }
+                CenaCarro(Modifier.fillMaxSize().padding(top = 170.dp, start = 24.dp, end = 24.dp, bottom = 24.dp))
+            } else {
+                // Cena escura em tela cheia; o carro fica na parte de baixo e a saudação sobre o fundo escuro do alto.
+                Box(Modifier.fillMaxSize().background(Color(0xFF050B14)))
+                CenaCarro(Modifier.fillMaxSize(), cortar = true, viesX = -0.2f, viesY = 0.9f)
             }
-            FotoCarro(Modifier.fillMaxSize().padding(top = 150.dp), 1f)
             Column(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Filled.Home, null, tint = Cores.Destaque, modifier = Modifier.size(22.dp)); Text("Início", color = Cores.Destaque, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -181,6 +186,17 @@ private fun Texto2(valor: String, rotulo: String, modifier: Modifier) {
     }
 }
 
+/** Título do carro sobre a foto: branco com sombra na cena escura, escuro no recorte claro. */
+@Composable
+private fun TituloCena() {
+    val config = Configuracoes.obter(LocalContext.current)
+    val cor = if (cenaEhRecorte()) Cores.Texto else Color.White
+    Column {
+        Text(config.nomeCarro, color = cor.copy(alpha = 0.9f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(config.modeloEAno, color = cor, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 // 2) ESPORTIVA: grade escura — carro e navegação | Spotify, leituras e luzes | clima e consumo
 // ---------------------------------------------------------------------------------------------
@@ -194,8 +210,9 @@ fun HomeEsportiva(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.weight(1.45f).fillMaxWidth().cartaoSuave()) {
-                FotoCarro(Modifier.fillMaxSize(), 1f)
-                Column(Modifier.fillMaxSize().padding(18.dp)) { TituloCarro() }
+                if (cenaEhRecorte()) CenaCarro(Modifier.fillMaxSize().padding(top = 90.dp, start = 10.dp, end = 10.dp, bottom = 12.dp))
+                else { Box(Modifier.fillMaxSize().background(Color(0xFF050B14))); CenaCarro(Modifier.fillMaxSize(), cortar = true, viesX = -0.15f, viesY = 0.9f) }
+                Column(Modifier.fillMaxSize().padding(18.dp)) { TituloCena() }
             }
             CartaoNavegacaoApps(Modifier.weight(0.75f).fillMaxWidth())
         }
@@ -255,10 +272,13 @@ fun HomeNovaLinha(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     val f = d.falhas
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         Box(Modifier.weight(0.95f).fillMaxHeight().cartaoSuave(RoundedCornerShape(28.dp))) {
-            FotoCarro(Modifier.fillMaxSize(), 1f)
+            val recorte = cenaEhRecorte()
+            if (recorte) CenaCarro(Modifier.fillMaxSize().padding(top = 130.dp, bottom = 40.dp, start = 4.dp, end = 4.dp))
+            else { Box(Modifier.fillMaxSize().background(Color(0xFF050B14))); CenaCarro(Modifier.fillMaxSize(), cortar = false) }
             Column(Modifier.fillMaxSize().padding(22.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(config.nomeCarro.ifBlank { "Seu carro" }, color = Cores.Texto, fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(config.modeloEAno, color = Cores.Texto, fontSize = 26.sp, maxLines = 1)
+                val cor = if (recorte) Cores.Texto else Color.White
+                Text(config.nomeCarro.ifBlank { "Seu carro" }, color = cor, fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(config.modeloEAno, color = cor, fontSize = 26.sp, maxLines = 1)
             }
         }
         Column(Modifier.weight(2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(18.dp)) {
