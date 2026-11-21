@@ -95,6 +95,19 @@ fun HomeCaixas(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
     }
 }
 
+/** Meia tela (tela dividida): duas colunas; o mapa já está do outro lado, então não há cartão de navegação. */
+@Composable
+fun HomeCaixasCompacta(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
+    Row(Modifier.fillMaxSize().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(EspacoCaixas)) {
+        CaixaCarro(obd, Modifier.weight(1f).fillMaxHeight())
+        Column(Modifier.weight(1.1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(EspacoCaixas)) {
+            CaixaResumoObd(obd, Modifier.weight(1.5f).fillMaxWidth())
+            CartaoSpotify(monitor, Modifier.weight(1f).fillMaxWidth().sombraCaixa())
+            CartaoClima(sensores.clima, Modifier.weight(0.9f).fillMaxWidth().sombraCaixa())
+        }
+    }
+}
+
 /** Foto do carro, nome, placa e situação, numa caixa só. */
 @Composable
 private fun CaixaCarro(obd: ObdMonitor, modifier: Modifier) {
@@ -188,6 +201,29 @@ fun HomePainel(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
             MapaCompacto(sensores, Modifier.weight(1.1f).fillMaxWidth())
             SpotifyLinha(monitor, Modifier.weight(1f).fillMaxWidth())
             ClimaLinha(sensores.clima, Modifier.weight(0.9f).fillMaxWidth())
+        }
+    }
+}
+
+/** Meia tela: velocímetro grande de um lado; carro e leituras do outro; Spotify e clima embaixo. */
+@Composable
+fun HomePainelCompacta(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
+    val d = obd.dados
+    val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
+    Column(Modifier.fillMaxSize().padding(2.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.weight(1.8f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            VelocimetroDividido(d, vel, Modifier.weight(1.1f).fillMaxHeight())
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.weight(1f).fillMaxWidth().cartaoSuave()) {
+                    FotoCarro(Modifier.fillMaxSize(), 1f)
+                    Column(Modifier.fillMaxSize().padding(14.dp)) { TituloCarro() }
+                }
+                GradeLeituras(d, Modifier.weight(1.2f).fillMaxWidth())
+            }
+        }
+        Row(Modifier.weight(0.8f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SpotifyLinha(monitor, Modifier.weight(1f).fillMaxHeight())
+            ClimaLinha(sensores.clima, Modifier.weight(1f).fillMaxHeight())
         }
     }
 }

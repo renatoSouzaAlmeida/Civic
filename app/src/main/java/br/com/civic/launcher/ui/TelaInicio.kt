@@ -20,8 +20,31 @@ import br.com.civic.launcher.obd.ObdMonitor
  */
 @Composable
 fun TelaInicio(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
+    val dividida = emTelaDividida()
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (maxWidth >= maxHeight) {
+        if (dividida) {
+            // Meia tela (tela dividida com o mapa): versões compactas de cada layout.
+            val config = br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current)
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SeletorLayoutHome()
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when (config.layoutHome) {
+                        br.com.civic.launcher.LayoutHome.Caixas -> HomeCaixasCompacta(monitor, sensores, obd)
+                        br.com.civic.launcher.LayoutHome.Painel -> HomePainelCompacta(monitor, sensores, obd)
+                        br.com.civic.launcher.LayoutHome.Padrao -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                CartaoCarro(obd, Modifier.weight(1.25f).fillMaxWidth())
+                                CartaoSinais(sensores, obd, Modifier.weight(1f).fillMaxWidth())
+                            }
+                            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                CartaoSpotify(monitor, Modifier.weight(1.15f).fillMaxWidth())
+                                CartaoClima(sensores.clima, Modifier.weight(1f).fillMaxWidth())
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (maxWidth >= maxHeight) {
           val config = br.com.civic.launcher.Configuracoes.obter(androidx.compose.ui.platform.LocalContext.current)
           Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SeletorLayoutHome()

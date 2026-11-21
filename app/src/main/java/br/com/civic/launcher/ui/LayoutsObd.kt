@@ -271,7 +271,7 @@ internal fun CartaoDiagnostico(d: DadosObd, modifier: Modifier = Modifier, aoVer
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalhas: () -> Unit) {
+fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: Boolean = false, aoVerFalhas: () -> Unit) {
     val d = obd.dados
     val ctx = LocalContext.current
     val config = remember { Configuracoes.obter(ctx) }
@@ -281,7 +281,7 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val altura = maxHeight
             // Os mostradores ficam abaixo dos cartões de música e diagnóstico (66 dp + folga).
-            val gauge = minOf(maxHeight - 84.dp, maxWidth * 0.255f)
+            val gauge = minOf(maxHeight - 84.dp, maxWidth * (if (compacto) 0.31f else 0.255f))
             // Paisagem: morros suaves no horizonte e uma estrada larga em perspectiva (asfalto, bordas e faixas tracejadas).
             val asfalto = Cores.SegVazio; val morro = Cores.Destaque
             Canvas(Modifier.fillMaxSize()) {
@@ -323,7 +323,10 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                 drawRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0f), Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0f)), startY = hz - size.height * 0.08f, endY = hz + size.height * 0.10f),
                     Offset(0f, hz - size.height * 0.08f), Size(size.width, size.height * 0.18f))
             }
-            Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (compacto) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MiniMusica(monitor, Modifier.weight(1.5f).height(66.dp))
+                CartaoDiagnostico(d, Modifier.weight(1f).height(66.dp), aoVerFalhas)
+            } else Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniMusica(monitor, Modifier.width(360.dp).height(66.dp))
                 CartaoDiagnostico(d, Modifier.width(210.dp).height(66.dp), aoVerFalhas)
             }
@@ -360,26 +363,37 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                 Text(if (v.kmAtual > 0) "Total %,d km".format(BR, v.kmAtual) else "Total — km", color = Cores.TextoSuave, fontSize = 16.sp)
             }
         }
-        // Faixa de indicadores.
-        Row(Modifier.fillMaxWidth().height(86.dp).cartaoSuave().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            val itens = listOf(
-                Triple("Temp. Motor", n0(d.tempMotor) to "°C", Icons.Outlined.Thermostat), Triple("Temp. Admissão", n0(d.tempAdmissao) to "°C", Icons.Outlined.DeviceThermostat),
-                Triple("Tensão", n1(d.tensao) to "V", Icons.Outlined.BatteryChargingFull), Triple("Combustível", n0(d.nivelCombustivel) to "%", Icons.Outlined.LocalGasStation),
-                Triple("Carga Motor", n0(d.carga) to "%", Icons.Outlined.Memory), Triple("MAP", n0(d.map) to "kPa", Icons.Outlined.Speed),
-                Triple("Avanço", (d.avanco?.let { "%.0f".format(BR, it) } ?: "—") to "°", Icons.Outlined.Tune),
-            )
-            itens.forEachIndexed { i, (rot, vu, ic) ->
-                if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight(0.55f).background(Cores.Borda))
-                Row(Modifier.weight(1f).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(ic, null, tint = Cores.TextoSuave, modifier = Modifier.size(28.dp))
-                    Column {
-                        Text(rot, color = Cores.TextoSuave, fontSize = 13.sp, maxLines = 1)
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(vu.first, color = Cores.Texto, fontSize = 28.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                            Text(" ${vu.second}", color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp), maxLines = 1)
-                        }
+        // Faixa de indicadores. Em meia tela vira uma grade de 2 linhas com nomes curtos (senão os números ficam cortados).
+        fun rot(longo: String, curto: String) = if (compacto) curto else longo
+        val itens = listOf(
+            Triple(rot("Temp. Motor", "Motor"), n0(d.tempMotor) to "°C", Icons.Outlined.Thermostat), Triple(rot("Temp. Admissão", "Ar"), n0(d.tempAdmissao) to "°C", Icons.Outlined.DeviceThermostat),
+            Triple("Tensão", n1(d.tensao) to "V", Icons.Outlined.BatteryChargingFull), Triple(rot("Combustível", "Tanque"), n0(d.nivelCombustivel) to "%", Icons.Outlined.LocalGasStation),
+            Triple(rot("Carga Motor", "Carga"), n0(d.carga) to "%", Icons.Outlined.Memory), Triple("MAP", n0(d.map) to "kPa", Icons.Outlined.Speed),
+            Triple("Avanço", (d.avanco?.let { "%.0f".format(BR, it) } ?: "—") to "°", Icons.Outlined.Tune),
+        )
+        @Composable fun celula(rotulo: String, vu: Pair<String, String>, ic: ImageVector, modifier: Modifier) {
+            Row(modifier.padding(horizontal = if (compacto) 6.dp else 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compacto) 6.dp else 10.dp)) {
+                Icon(ic, null, tint = linha, modifier = Modifier.size(if (compacto) 22.dp else 28.dp))
+                Column {
+                    Text(rotulo, color = Cores.TextoSuave, fontSize = if (compacto) 12.sp else 13.sp, maxLines = 1, softWrap = false)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(vu.first, color = Cores.Texto, fontSize = if (compacto) 22.sp else 28.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                        Text(" ${vu.second}", color = Cores.TextoSuave, fontSize = if (compacto) 11.sp else 13.sp, modifier = Modifier.padding(bottom = 4.dp), maxLines = 1, softWrap = false)
                     }
                 }
+            }
+        }
+        if (compacto) Column(Modifier.fillMaxWidth().cartaoSuave().padding(vertical = 4.dp)) {
+            itens.chunked(4).forEach { grupo ->
+                Row(Modifier.fillMaxWidth().height(58.dp), verticalAlignment = Alignment.CenterVertically) {
+                    grupo.forEach { (rotulo, vu, ic) -> celula(rotulo, vu, ic, Modifier.weight(1f)) }
+                    repeat(4 - grupo.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        } else Row(Modifier.fillMaxWidth().height(86.dp).cartaoSuave().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            itens.forEachIndexed { i, (rotulo, vu, ic) ->
+                if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight(0.55f).background(Cores.Borda))
+                celula(rotulo, vu, ic, Modifier.weight(1f))
             }
         }
     }
@@ -405,13 +419,14 @@ private fun CartaoMetrica(titulo: String, icone: ImageVector, valor: String, uni
 }
 
 @Composable
-fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalhas: () -> Unit) {
+fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: Boolean = false, aoVerFalhas: () -> Unit) {
     val d = obd.dados
     val ctx = LocalContext.current
     val series = remember { SeriesObd.obter() }
     @Suppress("UNUSED_VARIABLE") val tique = series.versao
     val cb = remember { br.com.civic.launcher.ComputadorBordo.obter(ctx) }
     val viagem = cb.atual
+    if (compacto) { ModularCompacto(obd, monitor, vel, aoVerFalhas); return }
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         // Velocidade e conta-giros (mesmo módulo usado na Tela Início, layout Painel).
         ModuloVelocidade(d, vel, Modifier.weight(1.12f).fillMaxHeight())
@@ -462,6 +477,63 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalha
                 Text(if (d.luzMotor) "Luz de injeção acesa" else if ((d.rpm ?: 0) > 400) "Pronto para dirigir" else "Motor desligado", color = if (d.luzMotor) Cores.Amarelo else Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
             MiniMusicaVertical(monitor, Modifier.weight(1f).fillMaxWidth())
+        }
+    }
+}
+
+/** Cartão de leitura para meia tela: título curto, número médio e um detalhe fino (nada quebra linha). */
+@Composable
+private fun CartaoMetricaCompacta(titulo: String, icone: ImageVector, valor: String, unidade: String, modifier: Modifier = Modifier, rodape: @Composable ColumnScope.() -> Unit) {
+    Column(modifier.cartaoSuave().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(icone, null, tint = Cores.TextoSuave, modifier = Modifier.size(18.dp))
+            Text(titulo, color = Cores.Texto, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+        }
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(valor, color = Cores.Texto, fontSize = 28.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+            Text(" $unidade", color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.padding(bottom = 4.dp), maxLines = 1, softWrap = false)
+        }
+        rodape()
+    }
+}
+
+/**
+ * Modular em meia tela: velocímetro com RPM à esquerda, seis cartões de leitura em duas colunas à direita,
+ * consumo e viagem embaixo e o Spotify com o diagnóstico no pé. Mesmo visual de cartões da versão em tela cheia.
+ */
+@Composable
+private fun ModularCompacto(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, aoVerFalhas: () -> Unit) {
+    val d = obd.dados
+    val ctx = LocalContext.current
+    val series = remember { SeriesObd.obter() }
+    @Suppress("UNUSED_VARIABLE") val tique = series.versao
+    val viagem = remember { br.com.civic.launcher.ComputadorBordo.obter(ctx) }.atual
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.weight(1.6f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ModuloVelocidade(d, vel, Modifier.weight(1f).fillMaxHeight())
+            Column(Modifier.weight(1.25f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CartaoMetricaCompacta("Motor", Icons.Outlined.Thermostat, n0(d.tempMotor), "°C", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tempMotor"), Cores.Destaque, Modifier.fillMaxWidth().height(16.dp)) }
+                    CartaoMetricaCompacta("Ar", Icons.Outlined.DeviceThermostat, n0(d.tempAdmissao), "°C", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tempAdmissao"), Cores.Destaque, Modifier.fillMaxWidth().height(16.dp)) }
+                }
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CartaoMetricaCompacta("Tensão", Icons.Outlined.BatteryChargingFull, n1(d.tensao), "V", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("tensao"), Cores.Ok, Modifier.fillMaxWidth().height(16.dp)) }
+                    CartaoMetricaCompacta("Tanque", Icons.Outlined.LocalGasStation, n0(d.nivelCombustivel), "%", Modifier.weight(1f).fillMaxHeight()) { BarraFina((d.nivelCombustivel ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 8.dp) }
+                }
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CartaoMetricaCompacta("Carga", Icons.Outlined.Memory, n0(d.carga), "%", Modifier.weight(1f).fillMaxHeight()) { BarraFina((d.carga ?: 0) / 100f, Cores.Destaque, Modifier.fillMaxWidth(), 8.dp) }
+                    CartaoMetricaCompacta("MAP", Icons.Outlined.Speed, n0(d.map), "kPa", Modifier.weight(1f).fillMaxHeight()) { Sparkline(series.serie("map"), Cores.Destaque, Modifier.fillMaxWidth().height(16.dp)) }
+                }
+            }
+        }
+        Row(Modifier.weight(0.45f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CartaoMetricaCompacta("Consumo médio", Icons.Outlined.Speed, n1(d.consumoMedio), "km/l", Modifier.weight(1f).fillMaxHeight()) {}
+            CartaoMetricaCompacta("Média da viagem", Icons.Outlined.Timeline, viagem?.velMedia?.let { "%.0f".format(BR, it) } ?: "—", "km/h", Modifier.weight(1f).fillMaxHeight()) {}
+            CartaoMetricaCompacta("Distância", Icons.Outlined.Timeline, viagem?.distanciaKm?.let { "%.1f".format(BR, it) } ?: "—", "km", Modifier.weight(1f).fillMaxHeight()) {}
+        }
+        Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniMusica(monitor, Modifier.weight(1.5f).fillMaxHeight())
+            CartaoDiagnostico(d, Modifier.weight(1f).fillMaxHeight(), aoVerFalhas)
         }
     }
 }
