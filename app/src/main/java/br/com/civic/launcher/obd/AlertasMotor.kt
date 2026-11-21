@@ -32,6 +32,8 @@ enum class TipoAlerta(
     CambioQuente("Câmbio quente", Gravidade.Aviso, 30_000, 3 * 3_600_000L, 15 * 60_000L),
     /** Passou do limite de velocidade configurado por tempo suficiente (não vai ao Telegram). */
     Velocidade("Velocidade acima do limite", Gravidade.Aviso, 0, 0, 2 * 60_000L),
+    /** Entrou ou saiu de uma área do geofence (faixa azul por 20 s; o Telegram é tratado pelo próprio geofence). */
+    Geofence("Geofence", Gravidade.Dica, 0, 0, 30_000L),
     /** O adaptador parou de responder com o carro andando (dados do motor desatualizados). */
     ObdSemResposta("Adaptador OBD sem resposta", Gravidade.Aviso, 0, 30 * 60_000L, 10 * 60_000L),
 }

@@ -53,6 +53,11 @@ class Configuracoes private constructor(ctx: Context) {
     /** Alertas falados (voz) nos avisos do motor, fadiga e colisão. */
     var vozAlertas by mutableStateOf(prefs.getBoolean("voz_alertas", true))
         private set
+    /** Geofence: avisar no Telegram e/ou mostrar a faixa quando o carro sai ou entra de uma área. */
+    var geofenceTelegram by mutableStateOf(prefs.getBoolean("geofence_telegram", true))
+        private set
+    var geofenceFaixa by mutableStateOf(prefs.getBoolean("geofence_faixa", true))
+        private set
     /** Limite de velocidade (km/h) para contar excessos na viagem; 0 = não contar. */
     var limiteVelocidade by mutableStateOf(prefs.getInt("limite_velocidade", 110))
         private set
@@ -89,6 +94,8 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarModoLeve(v: Boolean) { modoLeve = v; prefs.edit().putBoolean("modo_leve", v).apply() }
     fun salvarCapacidade(v: String) { capacidadeTanque = v.filter { it.isDigit() }.take(3).toIntOrNull() ?: 0; prefs.edit().putInt("capacidade_tanque", capacidadeTanque).apply() }
     fun salvarVoz(v: Boolean) { vozAlertas = v; prefs.edit().putBoolean("voz_alertas", v).apply() }
+    fun salvarGeofenceTelegram(v: Boolean) { geofenceTelegram = v; prefs.edit().putBoolean("geofence_telegram", v).apply() }
+    fun salvarGeofenceFaixa(v: Boolean) { geofenceFaixa = v; prefs.edit().putBoolean("geofence_faixa", v).apply() }
     fun salvarLimiteVelocidade(v: Int) { limiteVelocidade = v; prefs.edit().putInt("limite_velocidade", v).apply() }
     fun salvarVigia(v: Boolean) { vigiaTotal = v; prefs.edit().putBoolean("vigia_total", v).apply() }
     fun salvarHudEspelhado(v: Boolean) { hudEspelhado = v; prefs.edit().putBoolean("hud_espelhado", v).apply() }

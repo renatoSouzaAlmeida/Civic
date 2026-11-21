@@ -206,7 +206,8 @@ class Nuvem private constructor(ctx: Context) {
      * Envia um aviso ao celular (se ligado). Fica registrado em civic_eventos e, por padrão,
      * também no sininho do topo do app.
      */
-    fun avisar(tipo: String, mensagem: String, forcar: Boolean = false, registrarNoSino: Boolean = true) {
+    fun avisar(tipo: String, mensagem: String, forcar: Boolean = false, registrarNoSino: Boolean = true,
+        /** Resposta da nuvem: (enviado ao Telegram, vinculado, sem conexão). */ aoResponder: ((Boolean, Boolean, Boolean) -> Unit)? = null) {
         if (registrarNoSino && tipo != "teste") central.registrar(tipo, mensagem)
         if (!avisosLigados && !forcar) return
         funcao(JSONObject().put("acao", "enviar").put("tipo", tipo).put("mensagem", mensagem)) { r ->
@@ -216,6 +217,7 @@ class Nuvem private constructor(ctx: Context) {
                 !r.optBoolean("vinculado") -> "Vincule o Telegram primeiro."
                 else -> "Não foi possível enviar."
             }
+            aoResponder?.invoke(r?.optBoolean("enviado") == true, r?.optBoolean("vinculado") == true, r == null)
         }
     }
 

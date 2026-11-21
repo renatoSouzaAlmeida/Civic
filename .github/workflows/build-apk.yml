@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: ["**"]
+    # Mudança só de documentação ou de banco não é versão nova do app (evita atualização à toa na multimídia).
+    paths-ignore: ["docs/**", "supabase/**", "**.md"]
   workflow_dispatch:
 
 permissions:

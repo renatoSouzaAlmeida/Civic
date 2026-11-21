@@ -140,6 +140,8 @@ fun TelaConfig() {
                 }
                 Text("Fadiga, frenagens/acelerações bruscas, excessos de velocidade e a nota de condução funcionam pelo GPS (inclusive com CarPlay ou Android Auto na frente e sem OBD). RPM elevado, consumo e colisão usam o OBD.", color = Cores.TextoSuave, fontSize = 13.sp)
             }
+            SecaoGeofence()
+            SecaoSos()
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     MapaPreferido.entries.forEach { m ->

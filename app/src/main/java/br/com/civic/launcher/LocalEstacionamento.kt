@@ -12,12 +12,13 @@ import android.os.Looper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 import java.util.concurrent.Executors
 
 /** Onde o carro foi estacionado: posição, hora, idade da posição (quando foi o último sinal de GPS) e endereço. */
-data class Estacionamento(val lat: Double, val lon: Double, val data: Long, val idadePosicaoMs: Long, val endereco: String?)
+data class Estacionamento(val lat: Double, val lon: Double, val data: Long, val idadePosicaoMs: Long, val endereco: String?, val desconhecido: Boolean = false)
 
 /**
  * "Onde parei o carro": quando o motor desliga (ou o adaptador OBD perde a energia com a ignição)
@@ -113,7 +114,10 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         val anterior = atual
         // Mesma vaga de antes (menos de 100 m e menos de 30 min): não repete o aviso automático.
         if (!manual && anterior != null && agora - anterior.data < 10 * 60_000 && distancia(anterior.lat, anterior.lon, local.latitude, local.longitude) < 100f) return true
-        val novo = Estacionamento(local.latitude, local.longitude, agora, idade, null)
+        // Local desconhecido: depois de 5 vagas aprendidas, estacionar a mais de 250 m de todas (e fora das áreas do geofence) avisa.
+        val desconhecido = !manual && vagaDesconhecida(local.latitude, local.longitude)
+        guardarVaga(local.latitude, local.longitude, agora)
+        val novo = Estacionamento(local.latitude, local.longitude, agora, idade, null, desconhecido)
         atual = novo
         gravar(novo)
         viajando = false
@@ -132,7 +136,7 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     private fun avisar(e: Estacionamento, manual: Boolean = false, simulado: Boolean = false) {
         val minutos = e.idadePosicaoMs / 60_000
         val idade = if (minutos >= 10) "\n⚠️ Último sinal de GPS há $minutos min: a posição pode estar um pouco defasada." else ""
-        val texto = (if (simulado) "🧪 SIMULAÇÃO\n" else "") + "🅿️ Carro estacionado" + (e.endereco?.let { " em $it" } ?: "") +
+        val texto = (if (simulado) "🧪 SIMULAÇÃO\n" else "") + (if (e.desconhecido) "❓ LOCAL DESCONHECIDO: o carro nunca ficou estacionado por aqui.\n" else "") + "🅿️ Carro estacionado" + (e.endereco?.let { " em $it" } ?: "") +
             "\n📍 %.5f, %.5f".format(Locale.US, e.lat, e.lon) +
             "\n🗺️ https://maps.google.com/?q=%.6f,%.6f".format(Locale.US, e.lat, e.lon) + idade
         Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual, simulado)
@@ -163,6 +167,20 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         prefs.edit().putString("ultimo_gps", JSONObject().put("lat", local.latitude).put("lon", local.longitude).put("t", agora).toString()).apply()
     }
     private var ultimoGravado = 0L
+
+    /** Vagas já usadas (as últimas 80), para aprender os lugares de costume. */
+    private fun vagas(): JSONArray = runCatching { JSONArray(prefs.getString("vagas", "[]")) }.getOrDefault(JSONArray())
+    private fun guardarVaga(lat: Double, lon: Double, t: Long) {
+        val a = vagas(); a.put(JSONObject().put("lat", lat).put("lon", lon).put("t", t))
+        val n = JSONArray(); for (i in maxOf(0, a.length() - 80) until a.length()) n.put(a.get(i))
+        prefs.edit().putString("vagas", n.toString()).apply()
+    }
+    private fun vagaDesconhecida(lat: Double, lon: Double): Boolean {
+        val a = vagas()
+        if (a.length() < 5) return false // ainda aprendendo
+        for (i in 0 until a.length()) a.getJSONObject(i).let { if (distancia(it.getDouble("lat"), it.getDouble("lon"), lat, lon) <= 250f) return false }
+        return !runCatching { Geofence.obter(ctx).dentroDeAlgumaArea(lat, lon) }.getOrDefault(false)
+    }
 
     @Suppress("DEPRECATION")
     fun endereco(lat: Double, lon: Double): String? = runCatching {

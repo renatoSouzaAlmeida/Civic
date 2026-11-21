@@ -25,6 +25,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Comando de voz curto (botão do microfone). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- SOS: SMS aos contatos de emergência (só se a multimídia tiver telefonia) -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <!-- Permite descobrir/abrir Waze e Spotify (Android 11+). -->
     <queries>

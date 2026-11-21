@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -97,6 +98,7 @@ fun HomeScreen(
     ModalNovaVersao(atualizador)
     ModalSemInternet()
     AlertaColisao()
+    DialogosSos()
     if (Hud.aberto) ModoHud(obd, sensores)
 }
 
@@ -165,6 +167,7 @@ private fun BarraTopo(sensores: Sensores, atualizador: Atualizador, obd: ObdMoni
                     tint = if (config.vozAlertas) Cores.Destaque else Cores.TextoSuave,
                     modifier = Modifier.toqueSuave { config.salvarVoz(!config.vozAlertas) }.size(26.dp),
                 )
+                BotaoSos()
                 BotaoVoz()
                 Sininho()
             }
@@ -311,4 +314,42 @@ private fun Sininho() {
             },
         )
     }
+}
+
+
+/** Botão vermelho SOS na barra do topo: abre a contagem de 5 s (com Cancelar) e depois envia. */
+@Composable
+private fun BotaoSos() {
+    val ctx = LocalContext.current
+    val sos = remember { br.com.civic.launcher.Sos.obter(ctx) }
+    Box(
+        Modifier.toqueSuave { sos.acionar() }.clip(RoundedCornerShape(8.dp)).background(Color(0xFFDC2626)).padding(horizontal = 9.dp, vertical = 3.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text("SOS", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold) }
+}
+
+/** Contagem do SOS e, depois, o resultado do envio (só diz "enviado" quando houver confirmação). */
+@Composable
+private fun DialogosSos() {
+    val ctx = LocalContext.current
+    val sos = remember { br.com.civic.launcher.Sos.obter(ctx) }
+    val s = sos.contagem
+    if (s != null) AlertDialog(
+        onDismissRequest = {},
+        title = { Text("🆘 SOS", fontWeight = FontWeight.Bold, color = Cores.Vermelho) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("$s", fontSize = 56.sp, fontWeight = FontWeight.ExtraBold, color = Cores.Vermelho)
+                Text("Em $s s a sua localização e os dados do carro serão enviados aos seus contatos. Toque em Cancelar se foi sem querer.", fontSize = 18.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = { sos.cancelar() }) { Text("Cancelar", fontSize = 24.sp, fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = { sos.enviarAgora() }) { Text("Enviar agora", fontSize = 18.sp) } },
+    ) else if (sos.mostrandoResultado) AlertDialog(
+        onDismissRequest = { sos.mostrandoResultado = false },
+        title = { Text("Resultado do SOS", fontWeight = FontWeight.Bold) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { sos.resultado.forEach { Text(it, fontSize = 17.sp) } } },
+        confirmButton = { TextButton(onClick = { sos.mostrandoResultado = false }) { Text("Fechar", fontSize = 20.sp, fontWeight = FontWeight.Bold) } },
+        dismissButton = { TextButton(onClick = { sos.tentarNovamente() }) { Text("Tentar de novo", fontSize = 18.sp) } },
+    )
 }
