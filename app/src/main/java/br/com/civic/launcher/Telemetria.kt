@@ -60,6 +60,7 @@ class Telemetria private constructor(private val ctx: Context) {
         override fun run() {
             // Sem OBD: 5 min parado depois de andar = carro desligado.
             if (porGps && motorLigado && System.currentTimeMillis() - ultimoMovimento >= 5 * 60_000L) desligouSemObd()
+            runCatching { Nuvem.obter(ctx).reenviarPendentes() } // avisos que ficaram sem internet
             runCatching { Tpms.obter(ctx).sincronizar() } // liga/desliga a procura de sensores conforme a chave em Config.
             runCatching { ComputadorBordo.obter(ctx).enviarPendentes() } // viagens que ficaram sem internet
             enviar(); principal.postDelayed(this, 30_000)

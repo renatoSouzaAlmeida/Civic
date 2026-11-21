@@ -79,6 +79,8 @@ class VigiaService : Service() {
         ligarGps()
         // Os objetos abaixo vivem no processo; só garantimos que existem.
         Telemetria.obter(this)
+        // Com o CarPlay/Android Auto na frente (ou sem abrir o launcher) o OBD também precisa conectar e ler.
+        runCatching { br.com.civic.launcher.obd.ObdMonitor.obter(this).iniciar() }
         return START_STICKY
     }
 

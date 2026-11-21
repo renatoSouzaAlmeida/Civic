@@ -119,6 +119,12 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 
 > **Validação (21/11/2026):** o dono confirmou que tudo que estava marcado como "falta validar no carro" (inclusive condução por GPS no Fit, Driving Score, excesso de velocidade e aviso de OBD sem resposta) foi validado.
 
+## Correções de 21/11/2026 (relato do Fit: aviso de estacionamento não chegou)
+- **Início automático (Fit/CarPlay):** o Vigia (GPS, estacionamento, telemetria) só iniciava ao abrir a tela do launcher; no Fit o CarPlay abre direto e nada era monitorado. Agora um `BootReceiver` liga o Vigia ao ligar o aparelho e depois de atualizar o app, e o Vigia também inicia o OBD.
+- **Fila de avisos sem internet:** avisos (estacionamento, alertas, SOS) que falham por falta de internet ficam guardados e são reenviados (a cada 30 s), com a observação "enviado com atraso".
+- **Banco (RLS):** gravações de `civic_ignicao`, `civic_posicoes`, `civic_estados`, `civic_viagens` e `civic_areas` voltavam 401 (faltava a regra de leitura das próprias linhas); por isso a Casa Tech só tinha dados simulados. Corrigido; os dados guardados nos aparelhos sobem na próxima conexão.
+- **Pendente de apuração:** o Fit (versão 1.1.4, segundo o dono) não aparece no banco com versão 1.1.x; verificar se tem internet própria. A junção dos aparelhos duplicados no banco (script de limpeza) aguarda confirmação.
+
 ## Decisões tomadas por padrão (21/11/2026, "execute o restante")
 O dono pediu para executar o que faltava sem responder às perguntas; foram adotadas as recomendações abaixo (reversíveis; diga se quiser outra):
 - **P-1 CI:** mudanças só em `docs/`, `supabase/` e `.md` **não geram versão** (feito em `build-apk.yml` e CLAUDE.md).

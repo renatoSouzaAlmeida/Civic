@@ -261,7 +261,42 @@ class Nuvem private constructor(ctx: Context) {
                 val (status, texto) = http("POST", "/functions/v1/civic-notificar", corpo.toString())
                 if (status in 200..299) runCatching { JSONObject(texto) }.getOrNull() else null
             }
+            // Sem internet na hora: guarda o aviso (estacionamento, alertas, SOS...) e envia quando a conexão voltar.
+            if (r == null && corpo.optString("acao") in ACOES_NA_FILA) guardarPendente(corpo)
             principal.post { aoTerminar(r) }
+        }
+    }
+
+    // ---------- fila de avisos sem internet ----------
+
+    private fun lerFilaAvisos(): JSONArray = runCatching { JSONArray(prefs.getString("fila_avisos", "[]")) }.getOrDefault(JSONArray())
+
+    private fun guardarPendente(corpo: JSONObject) {
+        val a = lerFilaAvisos()
+        a.put(JSONObject().put("c", corpo).put("t", System.currentTimeMillis()))
+        val n = JSONArray(); for (i in maxOf(0, a.length() - 30) until a.length()) n.put(a.get(i))
+        prefs.edit().putString("fila_avisos", n.toString()).apply()
+    }
+
+    /** Envia os avisos que ficaram sem internet (chamado a cada 30 s pela telemetria). Avisos com mais de 48 h são descartados. */
+    fun reenviarPendentes() {
+        fila.execute {
+            val a = lerFilaAvisos()
+            if (a.length() == 0) return@execute
+            val restantes = JSONArray()
+            var parou = false
+            val agora = System.currentTimeMillis()
+            for (i in 0 until a.length()) {
+                val item = a.getJSONObject(i)
+                if (parou) { restantes.put(item); continue }
+                val idade = agora - item.getLong("t")
+                if (idade > 48 * 3_600_000L) continue
+                val c = JSONObject(item.getJSONObject("c").toString())
+                if (idade > 120_000L) c.put("mensagem", "⏱️ Enviado com atraso (${idade / 60_000} min): estava sem internet.\n" + c.optString("mensagem"))
+                val ok = garantirCadastro() && http("POST", "/functions/v1/civic-notificar", c.toString()).first in 200..299
+                if (!ok) { parou = true; restantes.put(item) }
+            }
+            prefs.edit().putString("fila_avisos", restantes.toString()).apply()
         }
     }
 
@@ -286,6 +321,7 @@ class Nuvem private constructor(ctx: Context) {
         }.getOrDefault(-1 to "")
 
     companion object {
+        private val ACOES_NA_FILA = setOf("enviar", "localizacao")
         private const val URL_SUPABASE = "https://qdmsiwxfuzppaqqnljth.supabase.co"
         private const val CHAVE_PUBLICA = "sb_publishable_ltZaPMAa7lm4dNbB5xZvLw_2NUhvVDE"
 

@@ -61,3 +61,13 @@ create policy civic_dash_areas on public.civic_areas for select to authenticated
 -- TPMS (opcional, desligado por padrão no app): último estado dos pneus, em jsonb:
 -- {"DE":{"psi":32.1,"c":28.5,"bat":90,"em":1763700000000},"DD":...,"TE":...,"TD":...}  (DE/DD/TE/TD = dianteiro/traseiro, esquerdo/direito)
 alter table public.civic_estados add column pneus jsonb;
+
+-- ===== Aplicada em 21/11/2026 como "civic_anon_ler_proprias_linhas" =====
+-- CORREÇÃO IMPORTANTE: o app grava com "on_conflict ... ignore/merge-duplicates"; o PostgREST precisa enxergar a linha (RETURNING/conflito),
+-- então cada aparelho precisa poder LER as próprias linhas (só as do próprio token). Sem isso as gravações voltavam 401 e NUNCA chegaram ao banco:
+-- civic_ignicao, civic_posicoes, civic_estados, civic_viagens e civic_areas.
+create policy civic_ign_ler on public.civic_ignicao for select to anon using (dispositivo = public.civic_token());
+create policy civic_pos_ler on public.civic_posicoes for select to anon using (dispositivo = public.civic_token());
+create policy civic_estado_ler on public.civic_estados for select to anon using (dispositivo = public.civic_token());
+create policy civic_viagem_ler on public.civic_viagens for select to anon using (dispositivo = public.civic_token());
+create policy civic_area_ler on public.civic_areas for select to anon using (dispositivo = public.civic_token());
