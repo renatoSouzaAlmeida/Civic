@@ -6,8 +6,9 @@
 //   { acao: "info" }                    -> nome do bot e se o aparelho já está vinculado
 //   { acao: "vincular" }                -> procura o código do aparelho nas mensagens do bot e grava o chat
 //   { acao: "enviar", tipo, mensagem }  -> registra o evento e envia ao Telegram (se vinculado)
-//   { acao: "localizacao", tipo, mensagem, lat, lon, data?, endereco?, idade_gps_s?, origem? }
+//   { acao: "localizacao", tipo, mensagem, lat, lon, data?, endereco?, idade_gps_s?, origem?, desconhecido? }
 //       -> envia o texto e o pino do mapa (onde parei o carro) e grava no histórico civic_estacionamentos
+//          (desconhecido = true quando o carro estacionou fora dos lugares de costume)
 
 const URL_BASE = Deno.env.get("SUPABASE_URL")!;
 const CHAVE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -150,6 +151,7 @@ Deno.serve(async (req) => {
         endereco: corpo.endereco ? String(corpo.endereco).slice(0, 300) : null,
         idade_gps_s: Number.isFinite(idade) && idade >= 0 ? Math.round(idade) : null,
         origem: ["manual", "simulado"].includes(String(corpo.origem)) ? String(corpo.origem) : "auto",
+        desconhecido: corpo.desconhecido === true,
       }),
     }).then((x) => x.ok).catch(() => false);
     return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: gravou });

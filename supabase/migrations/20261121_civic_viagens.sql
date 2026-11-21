@@ -86,3 +86,54 @@ create or replace view public.civic_veiculos with (security_invoker = false) as
   select d.token as dispositivo, d.nome, d.criado_em, s.aparelho, s.android_versao, s.nome_carro, s.versao_app, s.atualizado_em as ultimo_sinal
   from public.civic_dispositivos d left join public.civic_status s on s.dispositivo = d.token
   where d.token in (select public.civic_meus_dispositivos());
+
+-- ===== Aplicada em 21/11/2026 como "civic_evolucao_1_2_analise" =====
+-- 1) Vínculo automático: todo aparelho novo fica visível aos usuários do dashboard (e os que já existiam foram vinculados).
+create or replace function public.civic_vincular_dispositivo_novo() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.token not like 'simulado-%' then
+    insert into public.civic_acessos (user_id, dispositivo)
+      select distinct a.user_id, new.token from public.civic_acessos a
+    on conflict do nothing;
+  end if;
+  return new;
+end $$;
+revoke all on function public.civic_vincular_dispositivo_novo() from public, anon, authenticated;
+create trigger civic_vincular_novo after insert on public.civic_dispositivos
+  for each row execute function public.civic_vincular_dispositivo_novo();
+insert into public.civic_acessos (user_id, dispositivo)
+  select distinct a.user_id, d.token from public.civic_acessos a cross join public.civic_dispositivos d
+  where d.token not like 'simulado-%' on conflict do nothing;
+
+-- 2) Eventos (SOS, geofence, colisão) em tempo real.
+alter publication supabase_realtime add table public.civic_eventos;
+
+-- 3) Estacionamento em local desconhecido como campo próprio (a função civic-notificar v10 grava).
+alter table public.civic_estacionamentos add column desconhecido boolean not null default false;
+
+-- 4) Visões de análise (security_invoker: respeitam o RLS de quem consulta).
+create view public.civic_viagens_comparativo with (security_invoker = true) as
+  select v.*,
+    round(avg(v.nota) over (partition by v.dispositivo order by v.inicio rows between 10 preceding and 1 preceding), 1) as nota_media_anteriores,
+    v.nota - round(avg(v.nota) over (partition by v.dispositivo order by v.inicio rows between 10 preceding and 1 preceding))::int as nota_vs_media,
+    rank() over (partition by v.dispositivo order by v.nota desc nulls last) as ranking_nota,
+    count(*) over (partition by v.dispositivo) as total_viagens
+  from public.civic_viagens v;
+
+create view public.civic_viagens_semanal with (security_invoker = true) as
+  select dispositivo, date_trunc('week', inicio at time zone 'America/Sao_Paulo')::date as semana,
+    count(*) as viagens, round(sum(distancia_km), 1) as km, round(sum(duracao_s) / 3600.0, 1) as horas,
+    round(avg(nota), 1) as nota_media, sum(frenagens) as frenagens, sum(aceleracoes) as aceleracoes, sum(excessos) as excessos,
+    round(avg(consumo_km_l), 1) as consumo_medio, max(vel_max) as vel_max, bool_and(simulado) as so_simulado
+  from public.civic_viagens group by dispositivo, date_trunc('week', inicio at time zone 'America/Sao_Paulo')::date;
+
+create view public.civic_estados_diario with (security_invoker = true) as
+  select dispositivo, (registrado_em at time zone 'America/Sao_Paulo')::date as dia, count(*) as usos,
+    round(avg(tensao), 2) as tensao_media, round(min(bateria_minima), 2) as bateria_minima, max(temp_motor) as temp_motor_max,
+    round(avg(consumo_medio), 1) as consumo_medio, round(avg(stft), 1) as stft_medio, round(avg(ltft), 1) as ltft_medio,
+    round(avg(termostato_s)) as termostato_s, round(avg(marcha_lenta_desvio), 1) as marcha_lenta_desvio, round(avg(dreno_v_h), 4) as dreno_v_h
+  from public.civic_estados group by dispositivo, (registrado_em at time zone 'America/Sao_Paulo')::date;
+
+grant select on public.civic_viagens_comparativo, public.civic_viagens_semanal, public.civic_estados_diario to authenticated;
+revoke all on public.civic_viagens_comparativo, public.civic_viagens_semanal, public.civic_estados_diario from anon;

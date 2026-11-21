@@ -29,6 +29,14 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
 
+## Visões de análise e ajustes de 21/11/2026 (para a Casa Tech usar)
+- **`civic_viagens_comparativo`** (view): todas as colunas de `civic_viagens` + `nota_media_anteriores` (média das 10 viagens anteriores do mesmo aparelho), `nota_vs_media` (diferença), `ranking_nota` e `total_viagens`. Serve para "esta viagem ficou X pontos acima/abaixo da média" e para o ranking de melhores e piores.
+- **`civic_viagens_semanal`** (view): por aparelho e semana (segunda a domingo, horário de São Paulo): `viagens`, `km`, `horas`, `nota_media`, `frenagens`, `aceleracoes`, `excessos`, `consumo_medio`, `vel_max`, `so_simulado`. Serve para relatórios e a evolução semanal.
+- **`civic_estados_diario`** (view): por aparelho e dia: `usos`, `tensao_media`, `bateria_minima`, `temp_motor_max`, `consumo_medio`, `stft_medio`, `ltft_medio`, `termostato_s`, `marcha_lenta_desvio`, `dreno_v_h`. Serve para as tendências de diagnóstico (alterações persistentes).
+- **`civic_estacionamentos.desconhecido`** (boolean): true quando o carro estacionou fora dos lugares de costume (depois de 5 vagas aprendidas e fora das áreas do geofence). Destacar na lista e no mapa.
+- **Vínculo automático:** todo aparelho novo é vinculado sozinho aos usuários do dashboard (antes 8 de 11 aparelhos ficavam invisíveis). A Casa Tech passa a ver todos os aparelhos reais.
+- **Tempo real:** `civic_eventos` entrou no Realtime (SOS, geofence, colisão, uso incomum chegam na hora). Assine com filtro por `dispositivo` e destaque `tipo = 'sos'`.
+
 ## Como o modo de condução (viagens) é gravado
 O launcher mede a condução **pelo GPS do serviço Vigia**, então vale mesmo com CarPlay ou Android Auto na frente e sem OBD:
 frenagem brusca (queda de 11 km/h por segundo ou mais), aceleração brusca (subida de 9 km/h por segundo ou mais), excesso de velocidade

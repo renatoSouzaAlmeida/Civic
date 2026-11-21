@@ -62,6 +62,8 @@ private fun AbaViagem() {
     val cb = br.com.civic.launcher.ComputadorBordo.obter(LocalContext.current)
     val v = Veiculo.obter(LocalContext.current)
     var limpar by remember { mutableStateOf(false) }
+    // Comparador: toque em duas viagens do histórico (guarda o início de cada uma).
+    var comparar by remember { mutableStateOf(listOf<Long>()) }
     // Atualiza a duração mesmo parado (a viagem só recebe amostras quando há leitura).
     var agora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { agora = System.currentTimeMillis(); kotlinx.coroutines.delay(1_000) } }
@@ -100,9 +102,18 @@ private fun AbaViagem() {
         Secao("Últimas viagens (${cb.historico.size})") {
             if (cb.historico.isEmpty()) Text("As viagens encerradas aparecem aqui.", color = Cores.TextoSuave, fontSize = 15.sp)
             val fmt = remember { SimpleDateFormat("dd/MM HH:mm", BR) }
+            if (cb.historico.size >= 2) Text("Toque em duas viagens para compará-las.", color = Cores.TextoSuave, fontSize = 13.sp)
+            if (comparar.size == 2) {
+                val a = cb.historico.firstOrNull { it.inicio == comparar[0] }
+                val b = cb.historico.firstOrNull { it.inicio == comparar[1] }
+                if (a != null && b != null) ComparacaoViagens(a, b, fmt)
+                TextButton(onClick = { comparar = emptyList() }) { Text("Limpar comparação", fontSize = 15.sp) }
+            }
             cb.historico.forEach { h ->
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Chip).padding(horizontal = 14.dp, vertical = 10.dp),
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (h.inicio in comparar) Cores.Destaque.copy(alpha = 0.2f) else Cores.Chip)
+                        .clickable { comparar = if (h.inicio in comparar) comparar - h.inicio else (comparar + h.inicio).takeLast(2) }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -220,6 +231,36 @@ private fun Resumo(v: Veiculo) {
             Numero("Pendentes de valor", v.abastecimentos.count { it.semValor }.toString(), Modifier.weight(1f))
         }
         if (v.consumoMedio() == null) Text("O consumo aparece a partir do segundo abastecimento com tanque cheio.", color = Cores.TextoSuave, fontSize = 13.sp)
+    }
+}
+
+/** Duas viagens lado a lado; o melhor valor de cada linha fica em verde (maior é melhor na nota e no consumo; menor é melhor nos eventos). */
+@Composable
+private fun ComparacaoViagens(a: br.com.civic.launcher.Viagem, b: br.com.civic.launcher.Viagem, fmt: SimpleDateFormat) {
+    fun maior(x: Double?, y: Double?) = if (x == null || y == null || x == y) 0 else if (x > y) -1 else 1
+    fun menor(x: Int, y: Int) = if (x == y) 0 else if (x < y) -1 else 1
+    @Composable fun linha(rotulo: String, va: String, vb: String, melhor: Int = 0) = Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(rotulo, color = Cores.TextoSuave, fontSize = 14.sp, modifier = Modifier.weight(1.3f))
+        Text(va, color = if (melhor == -1) Cores.Ok else Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(vb, color = if (melhor == 1) Cores.Ok else Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+    }
+    val cb = br.com.civic.launcher.ComputadorBordo
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Chip).padding(12.dp)) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+            Spacer(Modifier.weight(1.3f))
+            Text(fmt.format(Date(a.inicio)), color = Cores.Destaque, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(fmt.format(Date(b.inicio)), color = Cores.Destaque, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        }
+        linha("Distância", "%.1f km".format(BR, a.distanciaKm), "%.1f km".format(BR, b.distanciaKm))
+        linha("Duração", cb.duracao(a.duracaoMs), cb.duracao(b.duracaoMs))
+        linha("Velocidade média", "%.0f km/h".format(BR, a.velMedia), "%.0f km/h".format(BR, b.velMedia))
+        linha("Velocidade máxima", "${a.velMaxima} km/h", "${b.velMaxima} km/h")
+        linha("Consumo", a.consumoMedio?.let { "%.1f km/l".format(BR, it) } ?: "—", b.consumoMedio?.let { "%.1f km/l".format(BR, it) } ?: "—", maior(a.consumoMedio, b.consumoMedio))
+        linha("Nota de condução", a.nota?.let { "$it" } ?: "—", b.nota?.let { "$it" } ?: "—", maior(a.nota?.toDouble(), b.nota?.toDouble()))
+        linha("Frenagens bruscas", "${a.frenagens}", "${b.frenagens}", menor(a.frenagens, b.frenagens))
+        linha("Acelerações bruscas", "${a.aceleracoes}", "${b.aceleracoes}", menor(a.aceleracoes, b.aceleracoes))
+        linha("Excessos de velocidade", "${a.excessos}", "${b.excessos}", menor(a.excessos, b.excessos))
+        linha("RPM elevado", if (a.comObd) "${a.rpmAlto}" else "—", if (b.comObd) "${b.rpmAlto}" else "—", if (a.comObd && b.comObd) menor(a.rpmAlto, b.rpmAlto) else 0)
     }
 }
 

@@ -139,7 +139,7 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         val texto = (if (simulado) "🧪 SIMULAÇÃO\n" else "") + (if (e.desconhecido) "❓ LOCAL DESCONHECIDO: o carro nunca ficou estacionado por aqui.\n" else "") + "🅿️ Carro estacionado" + (e.endereco?.let { " em $it" } ?: "") +
             "\n📍 %.5f, %.5f".format(Locale.US, e.lat, e.lon) +
             "\n🗺️ https://maps.google.com/?q=%.6f,%.6f".format(Locale.US, e.lat, e.lon) + idade
-        Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual, simulado)
+        Nuvem.obter(ctx).avisarLocalizacao(e.lat, e.lon, texto, e.data, e.endereco, e.idadePosicaoMs / 1000, manual, simulado, desconhecido = e.desconhecido)
     }
 
     /** Última posição conhecida (GPS do sistema ou guardada pelo app), para o resumo enviado à nuvem. */
