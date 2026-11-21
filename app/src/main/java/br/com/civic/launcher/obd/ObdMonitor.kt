@@ -113,6 +113,19 @@ class ObdMonitor private constructor(private val ctx: Context) {
     var buscandoLista by mutableStateOf(false)
         private set
 
+    /** Quando o carro respondeu pela última vez a um PID (0 = nunca nesta sessão). Base do estado "sem resposta" e da idade das leituras. */
+    var ultimaRespostaEm by mutableStateOf(0L)
+        private set
+    /** Quando o adaptador desconectou e as últimas leituras de antes disso (mostradas com a idade em vez de virar "—"). */
+    var desconectouEm by mutableStateOf(0L)
+        private set
+    var ultimosDados by mutableStateOf<DadosObd?>(null)
+        private set
+    /** Quando será a próxima tentativa automática de conexão (0 = não há). */
+    var proximaTentativaEm by mutableStateOf(0L)
+        private set
+    private var tentativas = 0
+
     private val principal = Handler(Looper.getMainLooper())
     private val prefs = ctx.getSharedPreferences("obd", Context.MODE_PRIVATE)
     private val trava = Object()
@@ -166,8 +179,13 @@ class ObdMonitor private constructor(private val ctx: Context) {
     }
 
     private fun tentarConectar() {
-        principal.postDelayed({ tentarConectar() }, 15_000)
+        // Backoff: 15 s, 30 s, 60 s e no máximo 2 min entre tentativas enquanto o adaptador não aparece (poupa Bluetooth e bateria
+        // com o carro desligado); volta para 15 s assim que conecta.
+        val intervalo = minOf(15_000L shl tentativas.coerceAtMost(3), 120_000L)
+        proximaTentativaEm = System.currentTimeMillis() + intervalo
+        principal.postDelayed({ tentarConectar() }, intervalo)
         if (demo || estadoReal != EstadoObd.Desconectado) return
+        tentativas++
         val bt = adaptador ?: return
         if (!bt.isEnabled) return
         val salvo = prefs.getString("endereco", null)
@@ -178,7 +196,36 @@ class ObdMonitor private constructor(private val ctx: Context) {
         }
     }
 
+    /**
+     * Situação da leitura em palavras, com a idade dos dados (o adaptador e o carro são coisas diferentes):
+     * conectado e respondendo; conectado mas o carro não responde (ignição desligada ou adaptador sem energia); desconectado.
+     */
+    fun descricaoSituacao(agora: Long = System.currentTimeMillis()): String {
+        fun idade(ms: Long): String { val s = ((agora - ms) / 1000).coerceAtLeast(0); return if (s < 90) "${s} s" else if (s < 5400) "${s / 60} min" else "${s / 3600} h" }
+        return when (estado) {
+            EstadoObd.Demonstracao -> "Modo de demonstração (dados simulados)"
+            EstadoObd.Procurando, EstadoObd.Conectando -> "Procurando ou conectando o adaptador…"
+            EstadoObd.Conectado -> {
+                val calado = ultimaRespostaEm > 0 && agora - ultimaRespostaEm >= 10_000
+                when {
+                    calado -> "Sem resposta há ${idade(ultimaRespostaEm)}: o adaptador está ligado, mas o carro não responde (ignição desligada ou adaptador sem energia). Leituras desatualizadas."
+                    (dados.rpm ?: 0) > 400 -> "Conectado, motor ligado (${dados.rpm} rpm)"
+                    else -> "Conectado, motor desligado"
+                }
+            }
+            EstadoObd.Desconectado -> {
+                val prox = if (proximaTentativaEm > agora) " Nova tentativa em ${(proximaTentativaEm - agora) / 1000 + 1} s." else ""
+                val ult = ultimosDados?.takeIf { desconectouEm > 0 }?.let { u ->
+                    val l = listOfNotNull(u.tempMotor?.let { "motor $it °C" }, u.tensao?.let { "%.1f V".format(java.util.Locale.US, it) }, u.rpm?.takeIf { it > 0 }?.let { "$it rpm" })
+                    if (l.isEmpty()) "" else " Últimas leituras (há ${idade(desconectouEm)}): ${l.joinToString(", ")}."
+                }.orEmpty()
+                "Indisponível: adaptador desconectado (sem energia ou fora de alcance).$ult$prox"
+            }
+        }
+    }
+
     private fun definirReal(novo: EstadoObd) {
+        if (novo == EstadoObd.Conectado) { tentativas = 0; desconectouEm = 0L; ultimaRespostaEm = System.currentTimeMillis() }
         estadoReal = novo
         if (!demo) estado = novo
     }
@@ -264,7 +311,11 @@ class ObdMonitor private constructor(private val ctx: Context) {
                     runCatching { g.close() }
                     if (gatt === g) gatt = null
                     escrita = null
-                    if (!demo) dados = DadosObd()
+                    if (!demo) {
+                        // Guarda as últimas leituras com a hora: a tela mostra "há 2 min" em vez de zerar tudo.
+                        if (dados.rpm != null || dados.tempMotor != null || dados.tensao != null) { ultimosDados = dados; desconectouEm = System.currentTimeMillis() }
+                        dados = DadosObd()
+                    }
                     definirReal(EstadoObd.Desconectado)
                 }
             }
@@ -379,6 +430,8 @@ class ObdMonitor private constructor(private val ctx: Context) {
             return null
         }
         falhasPorPid[pid] = 0
+        val agora = System.currentTimeMillis()
+        principal.post { ultimaRespostaEm = agora }
         return bruto.substring(i + prefixo.length).chunked(2).mapNotNull { it.toIntOrNull(16) }.toIntArray()
     }
 

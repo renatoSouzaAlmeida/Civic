@@ -56,10 +56,10 @@ fun SecaoStatusApp() {
         val d = obd.dados
         add(
             when (obd.estado) {
-                EstadoObd.Conectado -> ItemStatus("Adaptador OBD", NivelStatus.Ok, if ((d.rpm ?: 0) > 400) "Conectado, motor ligado (${d.rpm} rpm)" else "Conectado, motor desligado")
+                EstadoObd.Conectado -> ItemStatus("Adaptador OBD", if (obd.descricaoSituacao().startsWith("Sem resposta")) NivelStatus.Atencao else NivelStatus.Ok, obd.descricaoSituacao())
                 EstadoObd.Demonstracao -> ItemStatus("Adaptador OBD", NivelStatus.Info, "Modo de demonstração (dados simulados)")
                 EstadoObd.Conectando, EstadoObd.Procurando -> ItemStatus("Adaptador OBD", NivelStatus.Atencao, "Procurando ou conectando…")
-                EstadoObd.Desconectado -> ItemStatus("Adaptador OBD", NivelStatus.Erro, "Desconectado. Confira se o adaptador está plugado e o Bluetooth ligado.")
+                EstadoObd.Desconectado -> ItemStatus("Adaptador OBD", NivelStatus.Erro, obd.descricaoSituacao() + " Confira se o adaptador está plugado e o Bluetooth ligado.")
             }
         )
         if (obd.estado == EstadoObd.Conectado) {
