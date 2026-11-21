@@ -110,7 +110,8 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
   - **Feito:** envio do último estado ao ligar o carro (tabela `civic_estados`: motor, bateria, combustível, falhas, viagem e
     última posição). Também feito: posição ao vivo e trajeto (`civic_posicoes`), status online (`civic_status_atual`) e eventos de ignição (`civic_ignicao`),
     com dados simulados para validar o dash.
-  - A definir: retenção do histórico e o desenho das telas do dashboard.
+  - **Decidido (21/11/2026): o histórico fica permanente no banco; nada é apagado.** (Trajeto ponto a ponto ≈ 30 MB por ano com uso diário.)
+  - A definir: o desenho das telas do dashboard (aba Viagens ainda a montar na Casa Tech).
 
 ## Honda Fit
 - [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
@@ -124,6 +125,8 @@ O dono pediu para executar o que faltava sem responder às perguntas; foram adot
 - **P-2 Limite de velocidade:** mantido o limite único configurável (Desligado/80/100/110/120). Perfis por via ficam para depois (exigem mapa com licença).
 - **P-3 SOS:** Telegram vinculado + SMS aos contatos **se a multimídia tiver telefonia**; sem telefonia o app avisa e usa só o Telegram. Contatos por Telegram além do dono: colocar o bot num grupo com eles.
 - **P-4 Geofence:** áreas livres (Casa, Trabalho ou nome próprio), raios 100/300/500/1000 m, **avisa saída e entrada**, Telegram e faixa ligáveis separadamente.
+- **Retenção do histórico:** permanente (decidido pelo dono em 21/11/2026).
+- **TPMS:** continua fora do backlog (exigiria kit de sensores Bluetooth; só volta se o dono quiser).
 - **P-5 Room/SQLite:** **não migrado**; reavaliar na 1.3.0 (caixa-preta).
 
 ## Roadmap pós-1.0.0 — do documento "Projeto Civic Renatin: Roadmap de Desenvolvimento" (21/11/2026)
