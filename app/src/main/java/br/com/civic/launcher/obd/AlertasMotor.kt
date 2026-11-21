@@ -111,6 +111,7 @@ class AlertasMotor private constructor(private val ctx: Context) {
         val novo = visivel?.let { Alerta(it.key, it.value) }
         // Cada alerta que aparece na tela também entra no sininho (uma vez por ocorrência).
         if (novo != null && novo.tipo != atual?.tipo) {
+            if (novo.tipo.gravidade == Gravidade.Critico && !demonstracao) br.com.civic.launcher.CaixaPreta.obter(ctx).disparar("alerta_critico:${novo.tipo.name}", novo.tipo.titulo)
             if (novo.tipo.gravidade != Gravidade.Dica) Voz.obter(ctx).falar(novo.tipo.titulo + ". " + novo.mensagem.substringBefore('.') + ".")
             CentralNotificacoes.obter(ctx).registrar(
                 "alerta_motor",

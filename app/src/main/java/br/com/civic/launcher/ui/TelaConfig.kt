@@ -166,6 +166,7 @@ fun TelaConfig() {
             }
             SecaoGeofence()
             SecaoSos()
+            SecaoCaixaPreta()
             SecaoTpms()
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

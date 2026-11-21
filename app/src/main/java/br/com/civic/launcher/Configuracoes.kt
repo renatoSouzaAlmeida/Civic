@@ -55,6 +55,13 @@ class Configuracoes private constructor(ctx: Context) {
     /** Alertas falados (voz) nos avisos do motor, fadiga e colisão. */
     var vozAlertas by mutableStateOf(prefs.getBoolean("voz_alertas", true))
         private set
+    /** Caixa-preta digital: liga/desliga e as janelas (segundos antes e depois do evento). */
+    var caixaPretaAtiva by mutableStateOf(prefs.getBoolean("cp_ativa", true))
+        private set
+    var caixaPretaPreS by mutableStateOf(prefs.getInt("cp_pre_s", 30))
+        private set
+    var caixaPretaPosS by mutableStateOf(prefs.getInt("cp_pos_s", 15))
+        private set
     /** TPMS (pressão dos pneus por sensores Bluetooth): desligado até o dono ter os sensores. */
     var tpmsAtivo by mutableStateOf(prefs.getBoolean("tpms_ativo", false))
         private set
@@ -138,6 +145,8 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarModoLeve(v: Boolean) { modoLeve = v; prefs.edit().putBoolean("modo_leve", v).apply() }
     fun salvarCapacidade(v: String) { capacidadeTanque = v.filter { it.isDigit() }.take(3).toIntOrNull() ?: 0; prefs.edit().putInt("capacidade_tanque", capacidadeTanque).apply() }
     fun salvarVoz(v: Boolean) { vozAlertas = v; prefs.edit().putBoolean("voz_alertas", v).apply() }
+    fun salvarCaixaPreta(ativa: Boolean) { caixaPretaAtiva = ativa; prefs.edit().putBoolean("cp_ativa", ativa).apply() }
+    fun salvarCaixaPretaJanelas(pre: Int, pos: Int) { caixaPretaPreS = pre; caixaPretaPosS = pos; prefs.edit().putInt("cp_pre_s", pre).putInt("cp_pos_s", pos).apply() }
     fun salvarTpmsAtivo(v: Boolean) { tpmsAtivo = v; prefs.edit().putBoolean("tpms_ativo", v).apply() }
     fun salvarTpmsIdeal(v: Int) { tpmsIdealPsi = v; prefs.edit().putInt("tpms_ideal_psi", v).apply() }
     fun salvarTpmsBar(v: Boolean) { tpmsEmBar = v; prefs.edit().putBoolean("tpms_bar", v).apply() }

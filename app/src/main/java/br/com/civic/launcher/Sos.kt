@@ -129,6 +129,7 @@ class Sos private constructor(private val ctx: Context) {
     fun acionar() {
         if (contagem != null) return
         contagem = 5
+        CaixaPreta.obter(ctx).disparar("sos", "botão SOS acionado")
         Voz.obter(ctx).falar("S O S em 5 segundos. Toque em cancelar para parar.", forcar = true)
         principal.postDelayed(tique, 1_000)
     }
