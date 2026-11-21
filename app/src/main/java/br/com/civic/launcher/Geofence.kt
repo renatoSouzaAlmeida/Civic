@@ -45,6 +45,15 @@ class Geofence private constructor(private val ctx: Context) {
         salvar(); return true
     }
 
+    /** Edita nome e raio (e, se pedido, move o centro para a posição atual) sem recriar a área. Devolve false se não achar a área ou, ao mover, não houver GPS. */
+    fun editar(id: String, nome: String, raioM: Int, moverAqui: Boolean = false): Boolean {
+        val i = areas.indexOfFirst { it.id == id }
+        if (i < 0) return false
+        var a = areas[i].copy(nome = nome.trim().ifEmpty { areas[i].nome }, raioM = raioM, atualizadoEm = System.currentTimeMillis())
+        if (moverAqui) { val l = runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull() ?: return false; a = a.copy(lat = l.latitude, lon = l.longitude) }
+        areas[i] = a; estado.remove(id); contagem.remove(id); salvar(); return true
+    }
+
     fun alternar(id: String) { val i = areas.indexOfFirst { it.id == id }; if (i >= 0) { areas[i] = areas[i].copy(ativa = !areas[i].ativa, atualizadoEm = System.currentTimeMillis()); estado.remove(id); salvar() } }
 
     fun remover(id: String) {

@@ -30,6 +30,8 @@ fun SecaoGeofence() {
     var nome by remember { mutableStateOf("") }
     var raio by remember { mutableIntStateOf(300) }
     var msg by remember { mutableStateOf<String?>(null) }
+    var editando by remember { mutableStateOf<String?>(null) }
+    var mover by remember { mutableStateOf(false) }
     Secao("Geofence (áreas permitidas)") {
         Text("Avisa quando o carro sai ou entra de uma área. Funciona pelo GPS (inclusive sem OBD). Perda de sinal de GPS não conta como saída, e o aviso só vale depois de 3 leituras seguidas.", color = Cores.TextoSuave, fontSize = 13.sp)
         if (gf.areas.isEmpty()) Text("Nenhuma área. Fique com o carro no local e toque em \"Criar área aqui\".", color = Cores.TextoSuave, fontSize = 14.sp)
@@ -37,8 +39,8 @@ fun SecaoGeofence() {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Chip).padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Filled.LocationOn, null, tint = if (a.ativa) Cores.Destaque else Cores.TextoSuave, modifier = Modifier.size(24.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(a.nome, color = Cores.Texto, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Column(Modifier.weight(1f).clickable { editando = a.id; nome = a.nome; raio = a.raioM; mover = false; msg = "Editando \"${a.nome}\": altere o nome ou o raio abaixo e toque em Salvar." }) {
+                    Text(a.nome + if (editando == a.id) " (editando)" else "", color = Cores.Texto, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Text("raio ${a.raioM} m · " + when {
                         !a.ativa -> "pausada"
                         gf.estado[a.id] == true -> "carro dentro"
@@ -56,9 +58,19 @@ fun SecaoGeofence() {
         }
         Campo("Nome da área", nome) { nome = it }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(100, 300, 500, 1000).forEach { r -> Opcao("$r m", raio == r, Modifier.weight(1f)) { raio = r } }
+            // Raios próprios (ex.: 200 m de uma área editada) também aparecem, para não perder o valor atual.
+            (listOf(100, 300, 500, 1000) + raio).distinct().sorted().forEach { r -> Opcao("$r m", raio == r, Modifier.weight(1f)) { raio = r } }
         }
-        BotaoPilula("Criar área aqui (posição atual)", Icons.Filled.AddLocation, Modifier.fillMaxWidth()) {
+        val emEdicao = editando?.takeIf { id -> gf.areas.any { it.id == id } }
+        if (emEdicao != null) {
+            Opcao("Mover o centro para a posição atual", mover, Modifier.fillMaxWidth()) { mover = !mover }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BotaoPilula("Salvar alterações", Icons.Filled.Check, Modifier.weight(1f)) {
+                    msg = if (gf.editar(emEdicao, nome, raio, mover)) { editando = null; nome = ""; mover = false; "Área atualizada." } else "Sem posição de GPS agora para mover o centro."
+                }
+                BotaoPilula("Cancelar", Icons.Filled.Close, Modifier.weight(1f)) { editando = null; nome = ""; mover = false; msg = null }
+            }
+        } else BotaoPilula("Criar área aqui (posição atual)", Icons.Filled.AddLocation, Modifier.fillMaxWidth()) {
             msg = if (gf.criarAqui(nome, raio)) { nome = ""; "Área criada na posição atual." } else "Sem posição de GPS agora. Tente de novo com sinal de GPS."
         }
         msg?.let { Text(it, color = Cores.TextoSuave, fontSize = 13.sp) }
