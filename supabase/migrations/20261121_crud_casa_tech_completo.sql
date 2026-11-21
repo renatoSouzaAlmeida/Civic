@@ -202,3 +202,37 @@ create view public.civic_lembretes_proximos with (security_invoker = true) as
   from public.civic_lembretes l where not l.feito and not l.removido;
 grant select on public.civic_custos_mensal, public.civic_lembretes_proximos to authenticated;
 revoke all on public.civic_custos_mensal, public.civic_lembretes_proximos from anon;
+
+-- ===== Aplicada em 21/11/2026 como "civic_caixa_preta" =====
+-- Caixa-preta digital: janela de telemetria antes e depois de um evento. Diário técnico: NÃO é caixa-preta certificada nem EDR homologado.
+create table public.civic_caixa_preta (
+  dispositivo text not null references public.civic_dispositivos(token) on delete cascade,
+  id text not null,
+  ocorreu_em timestamptz not null,
+  motivo text not null,            -- frenagem_brusca | possivel_colisao | sos | alerta_critico:<Tipo> | teste (pode juntar vários, separados por vírgula)
+  detalhe text,
+  janela_pre_s integer not null,
+  janela_pos_s integer not null,
+  amostras jsonb not null,         -- [{s: segundos em relação ao evento (negativo = antes), v: km/h, f: 'obd'|'gps', r: rpm, la, lo, g: pico em g, tm: °C motor, tv: tensão}]
+  resumo jsonb not null,           -- vel_antes, vel_min, vel_max, desaceleracao_max_kmh_s, g_max, fontes, frequencia_hz, lacunas_s
+  lat double precision, lon double precision,
+  simulado boolean not null default false,
+  versao_app text,
+  observacao text,
+  enviado_em timestamptz not null default now(),
+  primary key (dispositivo, id),
+  check (janela_pre_s between 5 and 120 and janela_pos_s between 0 and 120)
+);
+create index civic_caixa_preta_idx on public.civic_caixa_preta(dispositivo, ocorreu_em desc);
+alter table public.civic_caixa_preta enable row level security;
+create policy civic_cp_app on public.civic_caixa_preta for all to anon using (dispositivo = public.civic_token()) with check (dispositivo = public.civic_token());
+create policy civic_cp_dash_ler on public.civic_caixa_preta for select to authenticated using (dispositivo in (select public.civic_meus_dispositivos()));
+create policy civic_cp_dash_editar on public.civic_caixa_preta for update to authenticated using (dispositivo in (select public.civic_meus_dispositivos())) with check (dispositivo in (select public.civic_meus_dispositivos()));
+revoke update on public.civic_caixa_preta from authenticated;
+grant update (observacao) on public.civic_caixa_preta to authenticated;
+alter publication supabase_realtime add table public.civic_caixa_preta;
+create view public.civic_caixa_preta_resumo with (security_invoker = true) as
+  select dispositivo, id, ocorreu_em, motivo, detalhe, janela_pre_s, janela_pos_s, resumo, lat, lon, simulado, observacao
+  from public.civic_caixa_preta;
+grant select on public.civic_caixa_preta_resumo to authenticated;
+revoke all on public.civic_caixa_preta_resumo from anon;
