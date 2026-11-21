@@ -10,6 +10,15 @@ As tabelas e colunas estão em `DASHBOARD-CASA-TECH.md`.
 - Cartões brancos com borda fina e raio 12 px; sem sombras pesadas. Tema claro e escuro.
 - Responsivo: 4 colunas de indicadores → 2 → 1; mapas e gráficos em SVG escalável; tabelas com rolagem horizontal própria.
 
+## Novidades de 21/11/2026 que a Casa Tech precisa incorporar (por prioridade)
+1. **Vários veículos e aparelhos.** Hoje há 11 aparelhos reais cadastrados (Civic, Fit, celulares e tablets de teste). O seletor de veículo deve usar `civic_veiculos` e mostrar **`nome_carro` · `aparelho` · `android_versao` · `versao_app`** (ex.: "Dona Quiqui · Fit · Xiaomi 22081283G · Android 12 · 1.1.7") e o selo "sem sinal há X" por `ultimo_sinal`. Esconder por padrão aparelhos sem sinal há mais de 7 dias e o "Civic (simulado)" (com opção "mostrar inativos e simulado").
+2. **Aba Viagens** (já pedida): nota de condução, cartão "Resumo da condução", excessos de velocidade (`excessos`, `excesso_max_kmh`, `excesso_s`), origem → destino (`endereco_ini` → `endereco_fim`), selo "Só GPS" quando `fonte = 'gps'`, trajeto por `civic_posicoes` entre `inicio` e `fim`, e destaque para viagens fora do horário habitual (saber **por onde o carro anda quando o dono não está dirigindo**).
+3. **Cartão/aba "Segurança"** a partir de `civic_eventos`: tipos `sos` (em vermelho, no topo), `sos_teste`, `geofence` (saiu/entrou de área), `colisao`, `uso_incomum`, `estacionamento` (o texto traz "LOCAL DESCONHECIDO" quando o carro estacionou fora dos lugares de costume) e `alerta_motor`. Mapa com os círculos das áreas de `civic_areas` (ignorar `removida = true`) e a linha do tempo de entradas e saídas.
+4. **Mapa ao vivo** com `civic_status_atual` (agora com `posicao_fonte`, `aparelho`, `android_versao` e `nome_carro`) e, com o motor ligado, o trajeto da viagem em curso por Realtime em `civic_posicoes`; avisar quando a posição é aproximada (`posicao_fonte = 'rede'`).
+5. **Cartão Pneus (TPMS)**: só aparece quando `civic_estados.pneus` não é nulo (o dono ativa os sensores no app quando os tiver): quatro pneus (DE, DD, TE, TD) com psi, °C e bateria do sensor.
+6. **Dados esparsos no começo.** Os dados reais só começaram a chegar em 21/11/2026 (antes, o banco recusava as gravações). Hoje: 1 viagem real, ~180 pontos de trajeto, ~110 eventos de ignição e **nenhum `civic_estados` real ainda** (ele só sobe quando o carro liga de novo depois de uma viagem). Os cartões de estado devem mostrar "aguardando o primeiro uso" em vez de zeros.
+7. **Histórico permanente = volume.** Nada é apagado. Consultar por faixa de data, paginar (o limite padrão do PostgREST é 1.000 linhas) e agregar por viagem; não carregar todos os pontos de `civic_posicoes` de uma vez.
+
 ## Estrutura
 **Cabeçalho:** nome do carro, modelo · ano · placa, selo **Online/Offline** (`civic_status_atual.online`, com "há X min" quando offline) e seletor de veículo.
 **Abas:** Visão geral · Viagens · Estacionamento · **Abastecimentos** · **Manutenção** (a manutenção sai da visão geral).
