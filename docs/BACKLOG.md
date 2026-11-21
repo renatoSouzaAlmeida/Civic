@@ -129,6 +129,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 
 ## Modo Direção em tela dividida (pedido do dono em 21/11/2026; a multimídia do Civic tem chip e aceita tela dividida)
 - [~] **Mapa de um lado e cockpit do outro** — *feito, experimental, a validar na multimídia do Civic:* Config. > Painel de direção > Modo Direção: *Painel flutuante* (padrão, como sempre) ou *Tela dividida*. Em tela dividida, Direção, o cartão do mapa, Casa/Trabalho e a rotina abrem o **cockpit** (velocímetro do OBD Modular com setas, farol e RPM, leituras de motor/bateria/tanque/consumo e Spotify) e o mapa **ao lado** (`FLAG_ACTIVITY_LAUNCH_ADJACENT`). Para dividir sozinho existe um serviço de **Acessibilidade opcional** que só pede ao Android "alternar tela dividida" (não lê a tela); sem ele, o dono divide pelo botão da multimídia e toca em Direção.
+  **Validado em 21/11/2026 (fotos do dono): a divisão funciona, mapa à esquerda e launcher à direita.** Ajustes feitos na 1.1.6: velocímetro grande com RPM em faixa fina no cockpit; tela do OBD compacta para meia tela (os três layouts quebravam).
   A validar: se a multimídia usa a tela dividida padrão do Android; de que lado fica cada painel; se o Waze e o Google Maps aceitam meia tela; sair da divisão (botão Fechar).
 
 ## Decisões tomadas por padrão (21/11/2026, "execute o restante")

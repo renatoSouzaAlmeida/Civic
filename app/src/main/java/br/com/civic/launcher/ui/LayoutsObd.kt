@@ -101,7 +101,7 @@ internal val SombraNumero = androidx.compose.ui.text.TextStyle(shadow = androidx
 
 /** Gráfico de linha suave com área (últimos 60 s). */
 @Composable
-private fun Sparkline(valores: List<Float>, cor: Color, modifier: Modifier = Modifier) {
+internal fun Sparkline(valores: List<Float>, cor: Color, modifier: Modifier = Modifier) {
     Canvas(modifier) {
         if (valores.size < 2) {
             drawLine(cor.copy(alpha = 0.35f), Offset(0f, size.height * 0.6f), Offset(size.width, size.height * 0.6f), 3f, StrokeCap.Round)
@@ -129,7 +129,7 @@ private fun Sparkline(valores: List<Float>, cor: Color, modifier: Modifier = Mod
  * marcas e números (alinhados de verdade sobre o círculo). O centro vem de [centro].
  */
 @Composable
-private fun DialPremium(
+internal fun DialPremium(
     fracao: Float, rotulos: List<String>, modifier: Modifier = Modifier, zonaVermelhaDesde: Float = 2f, menores: Int = 4,
     espessuraArco: Float = 0.075f, centro: @Composable BoxScope.(Dp) -> Unit = {},
 ) {
@@ -250,7 +250,7 @@ internal fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun CartaoDiagnostico(d: DadosObd, modifier: Modifier = Modifier, aoVerFalhas: () -> Unit) {
+internal fun CartaoDiagnostico(d: DadosObd, modifier: Modifier = Modifier, aoVerFalhas: () -> Unit) {
     val n = d.codigos.size + d.codigosPendentes.size
     val ok = n == 0 && !d.luzMotor
     val cor = if (ok) Cores.Ok else Cores.Amarelo

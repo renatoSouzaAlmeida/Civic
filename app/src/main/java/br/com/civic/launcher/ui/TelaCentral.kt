@@ -71,9 +71,13 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
         TelaDiagnostico(obd) { vendoFalhas = false }
         return
     }
+    val dividida = emTelaDividida()
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
-        if (maxWidth >= maxHeight) {
+        if (dividida) {
+            // Meia tela: os três layouts não cabem; usa a versão compacta (ver CentralCompacta).
+            CentralCompacta(obd, monitor, vel, { escolhendo = true }) { vendoFalhas = true }
+        } else if (maxWidth >= maxHeight) {
             if (config.layoutObd == LayoutObd.Atual) {
                 PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }
                 SeletorLayoutObd(obd, { escolhendo = true }, Modifier.align(Alignment.TopStart).padding(start = 4.dp, top = 2.dp))
