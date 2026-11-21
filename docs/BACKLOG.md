@@ -132,6 +132,10 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
   **Validado em 21/11/2026 (fotos do dono): a divisão funciona, mapa à esquerda e launcher à direita.** Ajustes feitos na 1.1.6: velocímetro grande com RPM em faixa fina no cockpit; tela do OBD compacta para meia tela (os três layouts quebravam).
   A validar: se a multimídia usa a tela dividida padrão do Android; de que lado fica cada painel; se o Waze e o Google Maps aceitam meia tela; sair da divisão (botão Fechar).
 
+## Decisões do dono (21/11/2026)
+- **Sem perfis de motorista:** o launcher se comporta igual para qualquer pessoa que o use.
+- **A Casa Tech (painel do carro) é só do dono:** um único usuário tem acesso; por isso o vínculo automático de todos os aparelhos ao usuário do dashboard é adequado e não precisa de controle por pessoa.
+
 ## Decisões tomadas por padrão (21/11/2026, "execute o restante")
 O dono pediu para executar o que faltava sem responder às perguntas; foram adotadas as recomendações abaixo (reversíveis; diga se quiser outra):
 - **P-1 CI:** mudanças só em `docs/`, `supabase/` e `.md` **não geram versão** (feito em `build-apk.yml` e CLAUDE.md).
@@ -174,7 +178,7 @@ Observação: o documento foi escrito com base no inventário textual (RECURSOS.
 - [ ] **Assistente mecânico (IA)** (Alta, posterior) — explicar DTCs e tendências com ressalvas, fontes e recomendações **não prescritivas**; resumo de anomalias. A IA explica; nunca comanda sistemas críticos nem dá diagnóstico definitivo sem validação.
 
 ### Release 2.0.0 — Plataforma
-- [ ] **Perfis de motorista** (Média) — histórico, preferências e Driving Score por condutor, com **seleção confiável** (útil para saber quem dirigiu).
+- [—] **Perfis de motorista** — **descartado pelo dono (21/11/2026):** todo mundo que usar o launcher tem o mesmo comportamento; não haverá estrutura de perfis nem Driving Score por condutor.
 - [ ] Suporte ampliado a outros veículos e adaptadores; sensores opcionais.
 - [x] **TPMS** (feito em 21/11/2026, **experimental e desligado por padrão**; o dono ativa quando tiver os sensores). Config. > "TPMS (pressão dos pneus)": chave Ativado/Desativado, varredura BLE, lista de sensores achados com **dados brutos (hex)**, atribuição a DE/DD/TE/TD, pressão ideal (padrão 32 psi) e unidade psi/bar; alerta (faixa + voz + Telegram a cada 6 h) abaixo de 85% / acima de 125% do ideal ou acima de 85 °C; cartão dos 4 pneus em Veículo; último estado em `civic_estados.pneus`. **Pendente quando os sensores chegarem:** conferir/ajustar o leitor ao formato real do sensor (o leitor atual cobre o formato BLE mais comum e não foi testado com hardware). Texto original do item: — só com sensores compatíveis. *Atenção: o TPMS tinha sido retirado do backlog por decisão do dono; só volta se você decidir.*
 
