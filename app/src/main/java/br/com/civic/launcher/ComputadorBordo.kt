@@ -208,6 +208,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             if (v.comObd) { o.put("rpm_max", v.rpmMaximo).put("rpm_alto", v.rpmAlto) }
             v.consumoMedio?.let { o.put("consumo_km_l", Math.round(it * 10) / 10.0) }
             v.nota?.let { o.put("nota", it) }
+            if (v.eventos.isNotEmpty()) o.put("eventos", JSONArray().also { a -> v.eventos.forEach { e -> a.put(JSONObject().put("em", iso(e.em)).put("tipo", e.tipo).put("texto", e.texto)) } })
             v.latIni?.let { o.put("lat_ini", it) }; v.lonIni?.let { o.put("lon_ini", it) }
             v.latFim?.let { o.put("lat_fim", it) }; v.lonFim?.let { o.put("lon_fim", it) }
             eIni?.let { o.put("endereco_ini", it) }; eFim?.let { o.put("endereco_fim", it) }
@@ -229,7 +230,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         val nuvem = Nuvem.obter(ctx)
         // Mesmos campos em todas as linhas (nulos quando faltam), senão o banco recusa o lote com erro 400.
         val campos = listOf("inicio", "fim", "distancia_km", "duracao_s", "em_movimento_s", "vel_media", "vel_max", "frenagens", "aceleracoes", "excessos", "excesso_max_kmh", "excesso_s",
-            "fonte", "simulado", "versao_app", "rpm_max", "rpm_alto", "consumo_km_l", "nota", "lat_ini", "lon_ini", "lat_fim", "lon_fim", "endereco_ini", "endereco_fim")
+            "fonte", "simulado", "versao_app", "rpm_max", "rpm_alto", "consumo_km_l", "nota", "lat_ini", "lon_ini", "lat_fim", "lon_fim", "endereco_ini", "endereco_fim", "eventos")
         val lote = JSONArray(); for (i in 0 until fila.length()) lote.put(JSONObject(fila.getJSONObject(i).toString()).put("dispositivo", nuvem.token).also { o -> campos.forEach { k -> if (!o.has(k)) o.put(k, JSONObject.NULL) } })
         val n = fila.length()
         enviando = true
