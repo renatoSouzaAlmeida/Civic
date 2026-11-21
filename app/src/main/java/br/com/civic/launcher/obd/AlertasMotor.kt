@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import br.com.civic.launcher.CentralNotificacoes
 import br.com.civic.launcher.Nuvem
 import br.com.civic.launcher.CaixaPreta
+import br.com.civic.launcher.ComputadorBordo
 import br.com.civic.launcher.Voz
 import java.util.Locale
 
@@ -112,7 +113,7 @@ class AlertasMotor private constructor(private val ctx: Context) {
         val novo = visivel?.let { Alerta(it.key, it.value) }
         // Cada alerta que aparece na tela também entra no sininho (uma vez por ocorrência).
         if (novo != null && novo.tipo != atual?.tipo) {
-            if (novo.tipo.gravidade == Gravidade.Critico && !demonstracao) br.com.civic.launcher.ComputadorBordo.obter(ctx).registrarEvento("alerta", "Alerta crítico: ${novo.tipo.titulo}")
+            if (novo.tipo.gravidade == Gravidade.Critico && !demonstracao) ComputadorBordo.obter(ctx).registrarEvento("alerta", "Alerta crítico: ${novo.tipo.titulo}")
             if (novo.tipo.gravidade == Gravidade.Critico && !demonstracao) CaixaPreta.obter(ctx).disparar("alerta_critico:${novo.tipo.name}", novo.tipo.titulo)
             if (novo.tipo.gravidade != Gravidade.Dica) Voz.obter(ctx).falar(novo.tipo.titulo + ". " + novo.mensagem.substringBefore('.') + ".")
             CentralNotificacoes.obter(ctx).registrar(
