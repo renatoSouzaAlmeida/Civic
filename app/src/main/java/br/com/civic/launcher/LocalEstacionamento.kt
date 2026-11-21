@@ -75,6 +75,7 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     fun amostra(rpm: Int?, demonstracao: Boolean) {
         if (demonstracao) return
         val agora = System.currentTimeMillis()
+        if (rpm != null) ultimaObd = agora
         if ((rpm ?: 0) > 400) {
             if (!ligado) { ligado = true; if (ligadoDesde == 0L) ligadoDesde = agora }
             principal.removeCallbacks(confirmar); pendente = false
@@ -90,7 +91,9 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
 
     /** Guarda a posição de agora (a última conhecida) e avisa. Devolve false se não houver posição. */
     fun estacionar(manual: Boolean, rapido: Boolean = false, simulado: Boolean = false): Boolean {
-        val local = runCatching { ultimaPosicao() }.getOrNull()
+        val vaga = if (manual || simulado) null else candidato()
+        val local = vaga ?: runCatching { ultimaPosicao() }.getOrNull()
+        if (!manual && !simulado) prefs.edit().remove("candidato").apply()
         if (local == null) {
             // Sem posição: avisa mesmo assim (só a hora), para o aviso nunca se perder.
             if (manual) return false
@@ -99,8 +102,9 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
             Nuvem.obter(ctx).avisar(if (simulado) "simulacao" else "estacionamento", (if (simulado) "🧪 SIMULAÇÃO\n" else "") + "🅿️ Carro estacionado às $hora\n⚠️ Não consegui obter a localização (sem sinal de GPS).")
             return true
         }
-        val agora = System.currentTimeMillis()
-        val idade = (agora - local.time).coerceAtLeast(0)
+        // Com o ponto de parada guardado, a hora é a de quando o carro parou e a posição é exata (GPS fresco naquele instante).
+        val agora = if (vaga != null) vaga.time else System.currentTimeMillis()
+        val idade = if (vaga != null) 0L else (agora - local.time).coerceAtLeast(0)
         if (simulado) {
             // Simulação: grava como vaga (aparece em "Onde parei") e vai ao histórico da nuvem marcada como "simulado".
             val sim = Estacionamento(local.latitude, local.longitude, agora, idade, null)
@@ -162,12 +166,19 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     fun registrarPosicao(local: Location) {
         val agora = System.currentTimeMillis()
         val kmh = if (local.hasSpeed()) local.speed * 3.6f else 0f
-        if (kmh > 8f) { viajando = true; paradoDesde = 0L }
+        if (kmh > 8f) { viajando = true; paradoDesde = 0L; prefs.edit().remove("candidato").apply() }
         else if (kmh < 3f && viajando) {
-            // Parado depois de dirigir: se a multimídia dormir/perder energia junto com a ignição, nenhum aviso de desligamento chega.
-            // Por isso 3 min parado já valem como estacionado (um semáforo não passa disso; se voltar a andar, a próxima parada avisa de novo).
+            // Estacionar é rápido (muitas vezes de ré) e a multimídia pode apagar em segundos com a chave. Por isso:
+            // 1) parado há 15 s guarda, sem avisar, o ponto como "possível vaga" (o aviso que sair depois usa esse ponto e essa hora);
+            // 2) com o OBD calado há 6 s (adaptador sem energia = ignição desligada) e o carro parado, já avisa;
+            // 3) 3 min parado avisa (um semáforo não passa disso; se voltar a andar, a próxima parada avisa de novo).
             if (paradoDesde == 0L) paradoDesde = agora
-            else if (agora - paradoDesde >= 3 * 60_000L) { paradoDesde = 0L; estacionar(manual = false, rapido = true) }
+            val parado = agora - paradoDesde
+            if (parado >= 15_000L && !prefs.contains("candidato"))
+                prefs.edit().putString("candidato", JSONObject().put("lat", local.latitude).put("lon", local.longitude).put("t", agora).toString()).apply()
+            val obdCalou = ligado && ultimaObd > 0 && agora - ultimaObd >= 6_000L && agora - ligadoDesde >= 20_000L
+            if (obdCalou) { ligado = false; ligadoDesde = 0L; estacionar(manual = false, rapido = true) }
+            else if (parado >= 3 * 60_000L) { paradoDesde = 0L; estacionar(manual = false, rapido = true) }
         } else paradoDesde = 0L
         if (agora - ultimoGravado < 5_000) return
         ultimoGravado = agora
@@ -175,6 +186,12 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     }
     private var ultimoGravado = 0L
     private var paradoDesde = 0L
+    @Volatile private var ultimaObd = 0L
+
+    /** Último ponto em que o carro parou (15 s parado) desde que andou; vale só para avisos automáticos. */
+    private fun candidato(): Location? = prefs.getString("candidato", null)?.let { runCatching { JSONObject(it) }.getOrNull() }?.let {
+        Location("candidato").apply { latitude = it.getDouble("lat"); longitude = it.getDouble("lon"); time = it.getLong("t") }
+    }
 
     /** Vagas já usadas (as últimas 80), para aprender os lugares de costume. */
     private fun vagas(): JSONArray = runCatching { JSONArray(prefs.getString("vagas", "[]")) }.getOrDefault(JSONArray())
