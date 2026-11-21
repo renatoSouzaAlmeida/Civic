@@ -137,3 +137,50 @@ create view public.civic_estados_diario with (security_invoker = true) as
 
 grant select on public.civic_viagens_comparativo, public.civic_viagens_semanal, public.civic_estados_diario to authenticated;
 revoke all on public.civic_viagens_comparativo, public.civic_viagens_semanal, public.civic_estados_diario from anon;
+
+-- ===== Aplicada em 21/11/2026 como "civic_entrada_de_dados_casa_tech" e "civic_marcar_atualizacao_relogio_real" =====
+-- A Casa Tech passa a LANÇAR dados por veículo: abastecimentos (valores), manutenção e quilometragem. O launcher baixa o que foi lançado.
+-- Vale o registro editado por último (atualizado_em).
+alter table public.civic_abastecimentos
+  add column atualizado_em timestamptz not null default now(),
+  add column removido boolean not null default false;
+alter table public.civic_abastecimentos alter column id set default (extract(epoch from clock_timestamp()) * 1000)::bigint;
+alter table public.civic_abastecimentos
+  add constraint civic_abast_valores_ok check (litros > 0 and litros <= 200 and km >= 0 and (preco_litro is null or preco_litro between 1 and 25) and (valor_total is null or valor_total between 1 and 3000)) not valid;
+
+create or replace function public.civic_marcar_atualizacao() returns trigger language plpgsql set search_path = '' as $$
+begin
+  if new.atualizado_em is not distinct from old.atualizado_em then new.atualizado_em := clock_timestamp(); end if;
+  return new;
+end $$;
+create trigger civic_abast_marcar before update on public.civic_abastecimentos for each row execute function public.civic_marcar_atualizacao();
+create trigger civic_manut_marcar before update on public.civic_manutencao for each row execute function public.civic_marcar_atualizacao();
+
+create or replace view public.civic_abastecimentos_analise with (security_invoker = true) as
+ SELECT dispositivo, id, data, km, litros, combustivel, tanque_cheio, aditivada, automatico, nivel_antes, nivel_depois,
+    COALESCE(valor_total, (litros * preco_litro)) AS total_pago,
+    COALESCE(preco_litro, (valor_total / NULLIF(litros, (0)::numeric))) AS preco_litro,
+    ((valor_total IS NULL) AND (preco_litro IS NULL)) AS aguardando_valor,
+    (km - lag(km) OVER w) AS km_rodados,
+    round((EXTRACT(epoch FROM (data - lag(data) OVER w)) / 86400.0), 1) AS dias_desde_anterior,
+    CASE WHEN (tanque_cheio AND (litros > (0)::numeric) AND (lag(km) OVER w IS NOT NULL)) THEN round((((km - lag(km) OVER w))::numeric / litros), 2) ELSE NULL::numeric END AS consumo_km_l,
+    CASE WHEN ((COALESCE(valor_total, (litros * preco_litro)) > (0)::numeric) AND (lag(km) OVER w IS NOT NULL) AND (km > lag(km) OVER w)) THEN round((COALESCE(valor_total, (litros * preco_litro)) / ((km - lag(km) OVER w))::numeric), 3) ELSE NULL::numeric END AS custo_por_km
+   FROM public.civic_abastecimentos a
+  WHERE NOT a.removido
+  WINDOW w AS (PARTITION BY dispositivo ORDER BY km);
+
+create table public.civic_ajustes (
+  dispositivo text primary key references public.civic_dispositivos(token) on delete cascade,
+  km_app integer, km_app_em timestamptz,
+  km_casa_tech integer check (km_casa_tech is null or km_casa_tech between 0 and 2000000), km_casa_tech_em timestamptz,
+  atualizado_em timestamptz not null default now()
+);
+alter table public.civic_ajustes enable row level security;
+create policy civic_ajuste_app on public.civic_ajustes for all to anon using (dispositivo = public.civic_token()) with check (dispositivo = public.civic_token());
+create policy civic_ajuste_dash on public.civic_ajustes for all to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos())) with check (dispositivo in (select public.civic_meus_dispositivos()));
+
+create policy civic_dash_abast_escrever on public.civic_abastecimentos for all to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos())) with check (dispositivo in (select public.civic_meus_dispositivos()));
+create policy civic_dash_manut_escrever on public.civic_manutencao for all to authenticated
+  using (dispositivo in (select public.civic_meus_dispositivos())) with check (dispositivo in (select public.civic_meus_dispositivos()));

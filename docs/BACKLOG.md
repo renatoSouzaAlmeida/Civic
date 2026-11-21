@@ -132,6 +132,9 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
   **Validado em 21/11/2026 (fotos do dono): a divisão funciona, mapa à esquerda e launcher à direita.** Ajustes feitos na 1.1.6: velocímetro grande com RPM em faixa fina no cockpit; tela do OBD compacta para meia tela (os três layouts quebravam).
   A validar: se a multimídia usa a tela dividida padrão do Android; de que lado fica cada painel; se o Waze e o Google Maps aceitam meia tela; sair da divisão (botão Fechar).
 
+## Entrada de dados na Casa Tech (pedido do dono em 21/11/2026)
+- [x] **Valores de combustível, manutenção e quilometragem lançados na Casa Tech, por veículo** — *app e banco prontos (1.1.10):* sincronização de mão dupla com data de edição (vale o editado por último); o launcher baixa o que foi lançado em até 5 min e ao abrir; abastecimento novo/corrigido/removido, manutenção (valores, intervalos e itens novos) e km (`civic_ajustes.km_casa_tech`). Testado no banco com o papel autenticado (gravações aceitas, valores absurdos recusados). **Falta a tela de lançamento e o ditado na Casa Tech** (tarefa 9 do pedido único).
+
 ## Decisões do dono (21/11/2026)
 - **Sem perfis de motorista:** o launcher se comporta igual para qualquer pessoa que o use.
 - **A Casa Tech (painel do carro) é só do dono:** um único usuário tem acesso; por isso o vínculo automático de todos os aparelhos ao usuário do dashboard é adequado e não precisa de controle por pessoa.

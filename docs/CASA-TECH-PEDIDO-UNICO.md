@@ -3,7 +3,7 @@
 **Versão do documento: 21/11/2026 (app 1.1.9).** Este é o único documento que você precisa colar no chat da Casa Tech: ele reúne o que fazer, o layout das telas e a referência dos dados.
 
 ## 1. Regras e contexto
-- Área **"Veículo"** da Casa Tech, **somente leitura**, isolada do resto. Login OAuth do Supabase (projeto CasaTechRenatin). **Só o dono acessa** (um único usuário): não há perfis nem controle por pessoa.
+- Área **"Veículo"** da Casa Tech, isolada do resto, **somente leitura exceto na entrada de dados** (valores de combustível, manutenção e quilometragem, tarefa 9). Login OAuth do Supabase (projeto CasaTechRenatin). **Só o dono acessa** (um único usuário): não há perfis nem controle por pessoa.
 - Todo aparelho real novo é vinculado sozinho ao usuário; todos aparecem em `civic_veiculos`. Hoje há 11 aparelhos reais (Civic, Fit, celulares e tablets de teste) e o simulado **"Civic (simulado)"** (59 viagens com nota), que serve para validar as telas.
 - O histórico é **permanente** (nada é apagado): consulte por faixa de data, pagine (limite padrão de 1.000 linhas) e agregue por viagem.
 - **Os dados reais só começaram a chegar em 21/11/2026.** Hoje: 1 viagem real, ~180 pontos de trajeto, ~110 eventos de ignição e **nenhum estado do carro real** (`civic_estados` só sobe quando o carro liga de novo depois de uma viagem). Onde não houver dado, mostre "aguardando", nunca zeros.
@@ -19,6 +19,7 @@
 | 5 | **Relatório semanal** | Viagens | `civic_viagens_semanal` | Por semana: viagens, km, horas, nota média, frenagens, acelerações, excessos, consumo e velocidade máxima; evolução da nota e do consumo. Ignorar linhas com `so_simulado = true` quando o simulado estiver oculto. |
 | 6 | **Tendências de diagnóstico** | Saúde do motor | `civic_estados_diario` | Séries diárias de tensão, bateria mínima na partida, temperatura máxima, consumo, correções de combustível (stft/ltft), termostato, marcha lenta e dreno; alertar alterações persistentes. Depende dos primeiros estados reais. |
 | 7 | **Cartão Pneus (TPMS)** | Visão geral | `civic_estados.pneus` | Só aparece quando não for nulo (o dono liga os sensores no app quando os tiver): quatro pneus DE, DD, TE, TD com psi, °C e bateria do sensor. |
+| 9 | **Entrada de dados por veículo:** valores de combustível, manutenção e quilometragem, com ditado | Veículo > Lançamentos | `civic_abastecimentos`, `civic_manutencao`, `civic_ajustes` | **Ler primeiro a seção "Entrada de dados na Casa Tech"** (campos, regras, validações e exemplos de ditado). Sempre por veículo selecionado; o launcher aplica em até 5 min; vale o editado por último. |
 | 8 | **Visão geral sem dados** | Visão geral | `civic_estados` | Cartões de estado, bateria e combustível mostram "aguardando o primeiro uso" até o primeiro estado real chegar. |
 
 ## Estrutura das abas
@@ -76,7 +77,7 @@ Use o veículo **"Civic (simulado)"** (ver `DASHBOARD-CASA-TECH.md`): 30 dias de
 
 Banco: projeto Supabase **CasaTechRenatin**, schema `public`. Todas as tabelas do carro têm o prefixo `civic_`.
 O dashboard lê com o login OAuth do Supabase (papel `authenticated`) e **só enxerga os aparelhos vinculados ao usuário**
-em `civic_acessos`. Tudo é somente leitura para o dashboard. Quem grava é o app do carro (e a função `civic-notificar`).
+em `civic_acessos`. O dashboard é somente leitura, **exceto na entrada de dados** (valores de combustível, manutenção e quilometragem: ver a seção "Entrada de dados na Casa Tech"). Quem grava o resto é o app do carro (e a função `civic-notificar`).
 
 Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o aparelho/multimídia).
 
@@ -98,7 +99,8 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | `civic_areas` | **Áreas do geofence** cadastradas no app (Casa, Trabalho...). Quem sai/entra gera um aviso em `civic_eventos` com `tipo = 'geofence'` | `id`, `nome`, `lat`, `lon`, `raio_m`, `ativa`, `removida` (true = apagada no app; ignore), `atualizado_em` | Mapa com os círculos das áreas; linha do tempo de entradas e saídas (eventos `geofence`); destacar viagens que saem das áreas fora do horário |
 | `civic_eventos` (tipos novos) | Alem dos alertas já listados: `geofence` (saiu/entrou de área), `sos` e `sos_teste` (botão SOS acionado ou testado, com localização e dados do carro), `local_desconhecido` aparece dentro do texto do estacionamento | `tipo`, `mensagem`, `criado_em` | Cartão "Segurança": últimos SOS (em vermelho), saídas de área e estacionamentos em local desconhecido |
 | `civic_abastecimentos_analise` (view) | **Histórico de abastecimentos com análise pronta** (use esta view em vez da tabela). Um abastecimento é criado **automaticamente** quando o nível do tanque sobe; o valor pago entra depois | `data`, `km`, `litros`, `combustivel`, `aditivada`, `tanque_cheio`, `automatico`, `nivel_antes`, `nivel_depois`; valores: `total_pago`, `preco_litro` (pode ser calculado do total), `aguardando_valor` (true = o app ainda não recebeu o valor pago); análise: `km_rodados`, `dias_desde_anterior`, `consumo_km_l`, `custo_por_km` | Nº de abastecimentos; consumo médio e por abastecimento; custo por km; preço pago por litro ao longo do tempo; gasto por mês; km por tanque; dias entre abastecimentos; nível do tanque ao abastecer; comparar aditivada x comum; selo "Aguardando valor" |
-| `civic_abastecimentos` | Tabela base (as mesmas linhas, sem a análise). Prefira a view acima | `preco_litro` e `valor_total` podem ser nulos (o dono informa só um dos dois, ou nenhum ainda) | Só se precisar de algum campo cru |
+| `civic_abastecimentos` | Tabela base. **Escrita pela Casa Tech** (ver Entrada de dados): `atualizado_em` e `removido` (apagar = `removido = true`) | `preco_litro` e `valor_total` podem ser nulos (o dono informa só um dos dois, ou nenhum ainda) | Só se precisar de algum campo cru |
+| `civic_ajustes` | **Quilometragem por veículo** (escrita pela Casa Tech) | `dispositivo`, `km_app`, `km_app_em` (app), `km_casa_tech`, `km_casa_tech_em` (Casa Tech) | Mostrar o km atual; campo para lançar o km real |
 | `civic_acessos` | Quais aparelhos o usuário do dashboard pode ver (preenchida sozinha para aparelhos novos) | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
@@ -110,6 +112,28 @@ Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário 
 - **`civic_estacionamentos.desconhecido`** (boolean): true quando o carro estacionou fora dos lugares de costume (depois de 5 vagas aprendidas e fora das áreas do geofence). Destacar na lista e no mapa.
 - **Vínculo automático:** todo aparelho novo é vinculado sozinho aos usuários do dashboard (antes 8 de 11 aparelhos ficavam invisíveis). A Casa Tech passa a ver todos os aparelhos reais.
 - **Tempo real:** `civic_eventos` entrou no Realtime (SOS, geofence, colisão, uso incomum chegam na hora). Assine com filtro por `dispositivo` e destaque `tipo = 'sos'`.
+
+## Entrada de dados na Casa Tech (valores de combustível, manutenção e quilometragem, por veículo)
+A Casa Tech deixa de ser só leitura **nestes três pontos**: o dono pode lançar e corrigir dados, **por veículo cadastrado** (o seletor de veículo define o `dispositivo` de toda gravação; o banco só aceita os veículos do dono). O launcher baixa o que foi lançado **em até 5 minutos** (e ao abrir o app) e as edições feitas no launcher sobem também. **Vale o registro editado por último** (`atualizado_em`): a Casa Tech não precisa enviá-lo, o banco carimba a hora da edição.
+
+**1) Valores de combustível — `civic_abastecimentos`**
+- Corrigir ou completar um abastecimento (principalmente os que estão "aguardando valor"): `UPDATE` por (`dispositivo`, `id`) em `preco_litro` **ou** `valor_total` (basta um dos dois), `aditivada`, `combustivel`, `litros`, `km`, `data`, `tanque_cheio`.
+- Lançar um novo: `INSERT` com `dispositivo`, `data`, `km`, `litros`, `combustivel` (`Gasolina`, `Etanol` ou `Diesel`, como já gravado), `tanque_cheio`, `preco_litro` ou `valor_total` e `aditivada`. O `id` é gerado pelo banco.
+- Apagar: `UPDATE ... SET removido = true` (nunca `DELETE`). A view `civic_abastecimentos_analise` ignora os removidos e recalcula consumo e custo por km.
+- O banco recusa valores absurdos (litros acima de 200, preço do litro fora de R$ 1 a R$ 25, total fora de R$ 1 a R$ 3.000). Sugestão na tela: km não menor que o do abastecimento anterior.
+
+**2) Manutenção — `civic_manutencao`**
+- Registrar o que foi feito: `UPDATE` por (`dispositivo`, `id`) em `ultimo_km` e `ultima_data`. Ajustar o plano: `intervalo_km`, `intervalo_meses` e `nome`.
+- Ids do plano padrão: `oleo`, `filtro_ar`, `filtro_cabine`, `rodizio`, `alinhamento`, `freio_fluido`, `pastilhas`, `arrefecimento`, `velas`, `atf`, `filtro_combustivel`, `bicos`, `bateria`, `amortecedores`, `correia_auxiliar`.
+- Item novo: `INSERT` com `id` novo (texto curto sem espaços), `nome` e os intervalos; o launcher passa a controlá-lo também.
+- `situacao` é calculada pelo launcher e atualizada na próxima sincronização. Para mostrar na hora, a Casa Tech pode calcular: **Vencido** se `ultimo_km + intervalo_km` já passou do km atual ou a data mais os meses já passou; **Próximo** se faltam 1.000 km ou menos, ou 30 dias ou menos; senão **Em dia**; **Sem registro** se nunca foi feito.
+- "Feito agora": `ultimo_km` = km atual do veículo e `ultima_data` = hoje.
+
+**3) Quilometragem — `civic_ajustes`** (uma linha por veículo)
+- Ler: `km_app` e `km_app_em` (odômetro estimado pelo launcher: km informado mais a distância medida desde então).
+- Lançar o km real do painel do carro: *upsert* por `dispositivo` com `km_casa_tech` e `km_casa_tech_em = now()`. O launcher aplica **uma vez por lançamento** e passa a contar a distância a partir dele. Sugestão: pedir confirmação se o valor for menor que `km_app`.
+
+**4) Ditado.** A Casa Tech oferece um campo de ditado (reconhecimento de voz do navegador, pt-BR) em cada um dos três lançamentos. O ditado **preenche um formulário editável e só grava depois da confirmação**. Exemplos: "abasteci quarenta litros de gasolina a seis e setenta e um" (litros 40, combustível Gasolina, preço 6,71); "troquei o óleo a cento e vinte mil quilômetros" (manutenção `oleo`, `ultimo_km` 120000, data de hoje); "o carro está com cento e vinte mil e quinhentos" (km 120500).
 
 ## Como o modo de condução (viagens) é gravado
 O launcher mede a condução **pelo GPS do serviço Vigia**, então vale mesmo com CarPlay ou Android Auto na frente e sem OBD:
