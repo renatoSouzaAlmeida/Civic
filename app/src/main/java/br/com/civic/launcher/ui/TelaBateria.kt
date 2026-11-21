@@ -79,6 +79,16 @@ fun TelaBateria(obd: ObdMonitor) {
                 }
             }
         }
+        Secao("Análise de carga elétrica") {
+            val achados = remember(saude.partidas.size, saude.partidas.firstOrNull()?.carga) { SaudeBateria.analise(saude.partidas.toList()) }
+            achados.forEach { a ->
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Chip).padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    Text(a.titulo, color = when (a.nivel) { 2 -> Cores.Vermelho; 1 -> Cores.Amarelo; else -> Cores.Ok }, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(a.texto, color = Cores.Texto, fontSize = 14.sp)
+                }
+            }
+            Text("Origem: tensão lida no conector OBD. É um indício que procura padrões repetidos nas partidas, não um diagnóstico: confirme com um teste de bateria e de alternador.", color = Cores.TextoSuave, fontSize = 12.sp)
+        }
         Secao("Agora") {
             Text(
                 (saude.ultimaTensao?.let { "%.1f V".format(BRB, it) } ?: "—") + " · motor " + if (saude.motorLigado) "ligado" else "desligado",

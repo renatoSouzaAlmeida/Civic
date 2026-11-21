@@ -16,6 +16,9 @@ enum class AvaliacaoBateria(val rotulo: String, val explicacao: String) {
     Fraca("Fraca", "A tensão caiu demais na partida: a bateria pode falhar em breve, principalmente em dias frios. Considere trocar."),
 }
 
+/** Um achado da análise de carga elétrica. nivel: 0 = tudo certo, 1 = atenção, 2 = alerta. */
+data class AchadoEletrico(val titulo: String, val texto: String, val nivel: Int)
+
 /** Uma partida do motor: tensão em repouso antes, menor tensão no giro do arranque e carga do alternador depois. */
 data class Partida(
     val data: Long,
@@ -83,6 +86,7 @@ class SaudeBateria private constructor(private val ctx: Context) {
                 partidas[0] = p.copy(carga = tensao)
                 gravar()
                 avisarSePreciso(partidas[0])
+                avisarAlternador()
             }
         }
     }
@@ -111,6 +115,15 @@ class SaudeBateria private constructor(private val ctx: Context) {
         )
     }
 
+    /** Alternador fraco de forma persistente (não uma leitura isolada): avisa no Telegram, no máximo uma vez por semana. */
+    private fun avisarAlternador() {
+        val a = analise(partidas).firstOrNull { it.nivel >= 1 && it.titulo.startsWith("Alternador") } ?: return
+        val agora = System.currentTimeMillis()
+        if (agora - prefs.getLong("ultimo_aviso_alt", 0L) < 7 * 24 * 3_600_000L) return
+        prefs.edit().putLong("ultimo_aviso_alt", agora).apply()
+        Nuvem.obter(ctx).avisar("bateria", "🔌 ${a.titulo}: ${a.texto}")
+    }
+
     fun limpar() { partidas.clear(); gravar() }
 
     private fun gravar() {
@@ -124,6 +137,43 @@ class SaudeBateria private constructor(private val ctx: Context) {
     }
 
     companion object {
+        /**
+         * Análise de carga elétrica pelas partidas reais (sem as de demonstração): alternador, queda na partida e bateria em repouso.
+         * Procura padrões que se repetem, nunca uma leitura isolada. É indício, não diagnóstico: a tensão vem do conector OBD (algumas leituras por segundo).
+         */
+        fun analise(todas: List<Partida>): List<AchadoEletrico> {
+            val p = todas.filter { !it.demonstracao } // mais recente primeiro
+            if (p.size < 3) return listOf(AchadoEletrico("Dados insuficientes", "A análise precisa de pelo menos 3 partidas reais registradas (hoje: ${p.size}). Confiança: baixa.", 0))
+            val conf = when { p.size >= 15 -> "alta"; p.size >= 6 -> "média"; else -> "baixa" }
+            val achados = mutableListOf<AchadoEletrico>()
+            fun f(v: Float) = "%.1f".format(Locale("pt", "BR"), v)
+
+            // Alternador (carga 20 s depois da partida).
+            val cargas = p.take(6).mapNotNull { it.carga }
+            if (cargas.size >= 3) {
+                val media = cargas.average().toFloat()
+                val fora = cargas.count { it < 13.5f }
+                achados += when {
+                    fora * 10 >= cargas.size * 6 && media < 13.0f -> AchadoEletrico("Alternador: carga baixa", "Em $fora de ${cargas.size} partidas a carga ficou abaixo de 13,5 V (média ${f(media)} V). Pode ser alternador, correia ou cabos; mande verificar. Confiança: $conf.", 2)
+                    fora * 10 >= cargas.size * 6 -> AchadoEletrico("Alternador: carga abaixo do ideal", "Em $fora de ${cargas.size} partidas a carga ficou abaixo de 13,5 V (média ${f(media)} V). Acompanhe; se piorar, verifique o alternador. Confiança: $conf.", 1)
+                    media > 14.8f -> AchadoEletrico("Alternador: carga alta", "Média de ${f(media)} V com o motor ligado, acima de 14,8 V (possível regulador de tensão). Confiança: $conf.", 1)
+                    else -> AchadoEletrico("Alternador: carga normal", "Média de ${f(media)} V nas últimas ${cargas.size} partidas (faixa saudável: 13,5 a 14,8 V).", 0)
+                }
+            }
+            // Queda de tensão na partida: as 3 mais recentes contra as 3 anteriores.
+            if (p.size >= 6) {
+                val recente = p.take(3).map { it.minima }.average().toFloat()
+                val anterior = p.drop(3).take(3).map { it.minima }.average().toFloat()
+                achados += if (anterior - recente >= 0.4f) AchadoEletrico("Partida: queda maior que antes", "A menor tensão no arranque caiu de ${f(anterior)} V para ${f(recente)} V. Bateria se desgastando ou conexões com resistência. Confiança: $conf.", 1)
+                else AchadoEletrico("Partida: estável", "A menor tensão no arranque está estável (${f(recente)} V contra ${f(anterior)} V antes).", 0)
+            }
+            // Bateria descarregando entre os usos.
+            val baixas = p.take(5).count { it.repouso < 12.2f }
+            if (baixas >= 3) achados += AchadoEletrico("Bateria em repouso baixa", "Em $baixas das últimas ${minOf(5, p.size)} partidas a tensão em repouso ficou abaixo de 12,2 V. Pode ser uso só em trajetos curtos, bateria cansada ou consumo com o carro desligado (veja o teste de dreno em Diagnóstico). Confiança: $conf.", 1)
+            else achados += AchadoEletrico("Bateria em repouso: normal", "Tensão em repouso normalmente acima de 12,2 V.", 0)
+            return achados
+        }
+
         /** Faixa saudável de carga do alternador com o motor ligado. */
         fun cargaOk(v: Float) = v in 13.5f..14.8f
 
