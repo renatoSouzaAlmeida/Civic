@@ -53,6 +53,17 @@ class Configuracoes private constructor(ctx: Context) {
     /** Alertas falados (voz) nos avisos do motor, fadiga e colisão. */
     var vozAlertas by mutableStateOf(prefs.getBoolean("voz_alertas", true))
         private set
+    /** TPMS (pressão dos pneus por sensores Bluetooth): desligado até o dono ter os sensores. */
+    var tpmsAtivo by mutableStateOf(prefs.getBoolean("tpms_ativo", false))
+        private set
+    /** Pressão ideal dos pneus em psi (Civic G9: 32) e unidade de exibição. */
+    var tpmsIdealPsi by mutableStateOf(prefs.getInt("tpms_ideal_psi", 32))
+        private set
+    var tpmsEmBar by mutableStateOf(prefs.getBoolean("tpms_bar", false))
+        private set
+    /** Lista todos os aparelhos BLE com dados (para descobrir sensores de outro modelo). */
+    var tpmsMostrarTodos by mutableStateOf(prefs.getBoolean("tpms_todos", false))
+        private set
     /** Geofence: avisar no Telegram e/ou mostrar a faixa quando o carro sai ou entra de uma área. */
     var geofenceTelegram by mutableStateOf(prefs.getBoolean("geofence_telegram", true))
         private set
@@ -94,6 +105,10 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarModoLeve(v: Boolean) { modoLeve = v; prefs.edit().putBoolean("modo_leve", v).apply() }
     fun salvarCapacidade(v: String) { capacidadeTanque = v.filter { it.isDigit() }.take(3).toIntOrNull() ?: 0; prefs.edit().putInt("capacidade_tanque", capacidadeTanque).apply() }
     fun salvarVoz(v: Boolean) { vozAlertas = v; prefs.edit().putBoolean("voz_alertas", v).apply() }
+    fun salvarTpmsAtivo(v: Boolean) { tpmsAtivo = v; prefs.edit().putBoolean("tpms_ativo", v).apply() }
+    fun salvarTpmsIdeal(v: Int) { tpmsIdealPsi = v; prefs.edit().putInt("tpms_ideal_psi", v).apply() }
+    fun salvarTpmsBar(v: Boolean) { tpmsEmBar = v; prefs.edit().putBoolean("tpms_bar", v).apply() }
+    fun salvarTpmsTodos(v: Boolean) { tpmsMostrarTodos = v; prefs.edit().putBoolean("tpms_todos", v).apply() }
     fun salvarGeofenceTelegram(v: Boolean) { geofenceTelegram = v; prefs.edit().putBoolean("geofence_telegram", v).apply() }
     fun salvarGeofenceFaixa(v: Boolean) { geofenceFaixa = v; prefs.edit().putBoolean("geofence_faixa", v).apply() }
     fun salvarLimiteVelocidade(v: Int) { limiteVelocidade = v; prefs.edit().putInt("limite_velocidade", v).apply() }

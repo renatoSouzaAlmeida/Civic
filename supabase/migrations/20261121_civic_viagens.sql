@@ -56,3 +56,8 @@ alter table public.civic_areas enable row level security;
 create policy civic_area_inserir on public.civic_areas for insert to anon with check (dispositivo = public.civic_token());
 create policy civic_area_atualizar on public.civic_areas for update to anon using (dispositivo = public.civic_token()) with check (dispositivo = public.civic_token());
 create policy civic_dash_areas on public.civic_areas for select to authenticated using (dispositivo in (select public.civic_meus_dispositivos()));
+
+-- ===== Aplicada em 21/11/2026 como "civic_estados_pneus" =====
+-- TPMS (opcional, desligado por padrão no app): último estado dos pneus, em jsonb:
+-- {"DE":{"psi":32.1,"c":28.5,"bat":90,"em":1763700000000},"DD":...,"TE":...,"TD":...}  (DE/DD/TE/TD = dianteiro/traseiro, esquerdo/direito)
+alter table public.civic_estados add column pneus jsonb;

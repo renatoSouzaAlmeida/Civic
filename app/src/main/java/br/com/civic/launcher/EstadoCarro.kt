@@ -102,6 +102,7 @@ class EstadoCarro private constructor(private val ctx: Context) {
                 JSONObject().put("codigo", f.codigo).put("em", iso(f.em)).put("itens", JSONObject().also { m -> f.itens.forEach { p -> m.put(p.first, p.second) } })
             }))
         }
+        runCatching { Tpms.obter(ctx).resumoJson() }.getOrNull()?.let { o.put("pneus", it) }
         ComputadorBordo.obter(ctx).let { cb ->
             (cb.atual ?: cb.historico.lastOrNull())?.let { v ->
                 o.put("viagem_km", v.distanciaKm).put("viagem_duracao_s", v.duracaoMs / 1000).put("viagem_vel_media", v.velMedia)

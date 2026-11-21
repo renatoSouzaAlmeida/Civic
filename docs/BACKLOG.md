@@ -126,7 +126,7 @@ O dono pediu para executar o que faltava sem responder às perguntas; foram adot
 - **P-3 SOS:** Telegram vinculado + SMS aos contatos **se a multimídia tiver telefonia**; sem telefonia o app avisa e usa só o Telegram. Contatos por Telegram além do dono: colocar o bot num grupo com eles.
 - **P-4 Geofence:** áreas livres (Casa, Trabalho ou nome próprio), raios 100/300/500/1000 m, **avisa saída e entrada**, Telegram e faixa ligáveis separadamente.
 - **Retenção do histórico:** permanente (decidido pelo dono em 21/11/2026).
-- **TPMS:** continua fora do backlog (exigiria kit de sensores Bluetooth; só volta se o dono quiser).
+- **TPMS:** voltou a pedido do dono, **desligado por padrão** (ver "TPMS" abaixo).
 - **P-5 Room/SQLite:** **não migrado**; reavaliar na 1.3.0 (caixa-preta).
 
 ## Roadmap pós-1.0.0 — do documento "Projeto Civic Renatin: Roadmap de Desenvolvimento" (21/11/2026)
@@ -163,7 +163,7 @@ Observação: o documento foi escrito com base no inventário textual (RECURSOS.
 ### Release 2.0.0 — Plataforma
 - [ ] **Perfis de motorista** (Média) — histórico, preferências e Driving Score por condutor, com **seleção confiável** (útil para saber quem dirigiu).
 - [ ] Suporte ampliado a outros veículos e adaptadores; sensores opcionais.
-- [ ] **TPMS** (Condicional) — só com sensores compatíveis. *Atenção: o TPMS tinha sido retirado do backlog por decisão do dono; só volta se você decidir.*
+- [x] **TPMS** (feito em 21/11/2026, **experimental e desligado por padrão**; o dono ativa quando tiver os sensores). Config. > "TPMS (pressão dos pneus)": chave Ativado/Desativado, varredura BLE, lista de sensores achados com **dados brutos (hex)**, atribuição a DE/DD/TE/TD, pressão ideal (padrão 32 psi) e unidade psi/bar; alerta (faixa + voz + Telegram a cada 6 h) abaixo de 85% / acima de 125% do ideal ou acima de 85 °C; cartão dos 4 pneus em Veículo; último estado em `civic_estados.pneus`. **Pendente quando os sensores chegarem:** conferir/ajustar o leitor ao formato real do sensor (o leitor atual cobre o formato BLE mais comum e não foi testado com hardware). Texto original do item: — só com sensores compatíveis. *Atenção: o TPMS tinha sido retirado do backlog por decisão do dono; só volta se você decidir.*
 
 ### Arquitetura e dados (orientações do documento)
 - [ ] **Camada de eventos confiável** (fazer antes da caixa-preta): evento com `event_id` idempotente (gerado no aparelho), `vehicle_id`, `event_type`, `occurred_at` (UTC), `source` (OBD, GPS, accelerometer, user_action, cloud), `confidence`, `payload` versionado, `sync_status` (pending, synced, failed) e `app_version`. Tipos iniciais: `geofence_enter/exit`, `overspeed_started/ended`, `obd_disconnected/reconnected`, `sos_triggered/cancelled/delivery_result`, `driving_score_calculated`, `blackbox_capture_started/saved`.

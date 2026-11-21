@@ -59,7 +59,7 @@ fun BannerAlerta(modifier: Modifier = Modifier, compacto: Boolean = false) {
         TipoAlerta.Alternador, TipoAlerta.BateriaFraca -> rememberVectorPainter(Icons.Filled.BatteryAlert)
         TipoAlerta.FarolDesligado -> painterResource(R.drawable.ic_farol)
         TipoAlerta.MotorFrio -> rememberVectorPainter(Icons.Filled.AcUnit)
-        TipoAlerta.Fadiga, TipoAlerta.CambioQuente, TipoAlerta.ObdSemResposta -> rememberVectorPainter(Icons.Filled.Warning)
+        TipoAlerta.Fadiga, TipoAlerta.CambioQuente, TipoAlerta.ObdSemResposta, TipoAlerta.Pneu -> rememberVectorPainter(Icons.Filled.Warning)
         TipoAlerta.Velocidade -> rememberVectorPainter(Icons.Filled.Speed)
         TipoAlerta.Geofence -> rememberVectorPainter(Icons.Filled.LocationOn)
     }

@@ -69,6 +69,7 @@ private fun AbaViagem() {
         val atual = cb.atual
         // Resumo da condução (Driving Score): da viagem em andamento ou, se não houver, da última encerrada.
         (atual ?: cb.historico.firstOrNull())?.let { CartaoConducao(it, andando = atual != null, cb.historico.drop(if (atual == null) 1 else 0).mapNotNull { h -> h.nota }.take(10), agora) }
+        CartaoPneus()
         Secao(if (atual == null) "Viagem atual" else if (atual.demonstracao) "Viagem atual (demonstração)" else "Viagem atual") {
             if (atual == null) {
                 Text("Nenhuma viagem em andamento. Ela começa sozinha quando o carro anda (ou o motor liga) e termina após 5 min parado.", color = Cores.TextoSuave, fontSize = 15.sp)

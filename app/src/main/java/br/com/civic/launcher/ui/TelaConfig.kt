@@ -142,6 +142,7 @@ fun TelaConfig() {
             }
             SecaoGeofence()
             SecaoSos()
+            SecaoTpms()
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     MapaPreferido.entries.forEach { m ->
