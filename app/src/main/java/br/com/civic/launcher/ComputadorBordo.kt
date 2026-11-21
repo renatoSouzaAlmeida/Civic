@@ -13,6 +13,9 @@ import br.com.civic.launcher.obd.AlertasMotor
 import br.com.civic.launcher.obd.TipoAlerta
 import java.util.Locale
 
+/** Um ponto da linha do tempo da viagem. `tipo`: partida, frenagem, aceleracao, excesso, rpm, colisao, sos, alerta, estacionou. */
+data class EventoViagem(val em: Long, val tipo: String, val texto: String)
+
 /** Uma viagem: do carro começar a andar (ou o motor ligar) até ficar 5 min parado/desligado. */
 data class Viagem(
     val inicio: Long,
@@ -37,7 +40,11 @@ data class Viagem(
     val comObd: Boolean = false,
     val latIni: Double? = null, val lonIni: Double? = null,
     val latFim: Double? = null, val lonFim: Double? = null,
+    /** Linha do tempo: partida, frenagens e acelerações bruscas, excessos, RPM alto, possível colisão, SOS, alertas e estacionamento (no máx. 80; a partida fica sempre). */
+    val eventos: List<EventoViagem> = emptyList(),
 ) {
+    fun comEvento(em: Long, tipo: String, texto: String): Viagem =
+        copy(eventos = (if (eventos.size >= 80) eventos.filterIndexed { i, _ -> i != 1 } else eventos) + EventoViagem(em, tipo, texto))
     val duracaoMs: Long get() = fim - inicio
     /** Média só do tempo em movimento (como o computador de bordo do carro). */
     val velMedia: Double get() = if (emMovimentoMs > 0) distanciaKm / (emMovimentoMs / 3_600_000.0) else 0.0
@@ -103,8 +110,10 @@ class ComputadorBordo private constructor(private val ctx: Context) {
     }
 
     /** A segurança avisa frenagem/aceleração brusca; entra na nota da viagem em andamento. */
-    fun frenagemBrusca() { atual = atual?.let { it.copy(frenagens = it.frenagens + 1) }; salvarAtual() }
-    fun aceleracaoBrusca() { atual = atual?.let { it.copy(aceleracoes = it.aceleracoes + 1) }; salvarAtual() }
+    fun frenagemBrusca(detalhe: String = "") { val t = System.currentTimeMillis(); atual = atual?.let { it.copy(frenagens = it.frenagens + 1).comEvento(t, "frenagem", "Frenagem brusca" + if (detalhe.isNotEmpty()) " ($detalhe)" else "") }; salvarAtual() }
+    fun aceleracaoBrusca(detalhe: String = "") { val t = System.currentTimeMillis(); atual = atual?.let { it.copy(aceleracoes = it.aceleracoes + 1).comEvento(t, "aceleracao", "Aceleração brusca" + if (detalhe.isNotEmpty()) " ($detalhe)" else "") }; salvarAtual() }
+    /** Marca um ponto na linha do tempo da viagem em andamento (colisão, SOS, alerta crítico...). Sem viagem em andamento, não faz nada. */
+    fun registrarEvento(tipo: String, texto: String) { atual = atual?.comEvento(System.currentTimeMillis(), tipo, texto); salvarAtual() }
     private fun salvarAtual() { atual?.let { prefs.edit().putString("atual", paraJson(it).toString()).apply() } }
 
     /** Velocidade do GPS: só usada se o OBD não mandou nada nos últimos 5 s. */
@@ -124,6 +133,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             if (!andando && !ligado) { AlertasMotor.obter(ctx).definirExterna(TipoAlerta.Velocidade, null); return }
             val p = runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull()
             v = Viagem(inicio = agora, fim = agora, demonstracao = demonstracao, latIni = p?.latitude, lonIni = p?.longitude)
+                .comEvento(agora, "partida", if (ligado) "Partida (motor ligado)" else "Partida (carro começou a andar)")
             ultimaAmostra = agora
             rpmAltoAtivo = false; excessoAtivo = false
         }
@@ -139,7 +149,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             comObd = v.comObd || comObd,
         )
         // RPM elevado (4.500 rpm ou mais): conta uma ocorrência por subida, com 10 s entre ocorrências.
-        if (rpm >= 4_500) { if (!rpmAltoAtivo && agora - ultimoRpmAlto > 10_000) { v = v.copy(rpmAlto = v.rpmAlto + 1); ultimoRpmAlto = agora }; rpmAltoAtivo = true }
+        if (rpm >= 4_500) { if (!rpmAltoAtivo && agora - ultimoRpmAlto > 10_000) { v = v.copy(rpmAlto = v.rpmAlto + 1).comEvento(agora, "rpm", "RPM elevado ($rpm rpm)"); ultimoRpmAlto = agora }; rpmAltoAtivo = true }
         else if (rpm < 4_000) rpmAltoAtivo = false
         // Excesso de velocidade: acima do limite (+2 km/h de tolerância) por 5 s seguidos conta uma ocorrência (30 s entre elas);
         // registra a maior velocidade e o tempo total acima do limite, e mostra a faixa com voz.
@@ -149,7 +159,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             if (excessoAtivo) v = v.copy(excessoMs = v.excessoMs + dt)
             v = v.copy(excessoMaxKmh = maxOf(v.excessoMaxKmh, vel.toInt()))
             if (!excessoAtivo && agora - acimaDesde >= 5_000L && agora - ultimoExcesso > 30_000L) {
-                v = v.copy(excessos = v.excessos + 1); ultimoExcesso = agora; excessoAtivo = true
+                v = v.copy(excessos = v.excessos + 1).comEvento(agora, "excesso", "Excesso de velocidade (${vel.toInt()} km/h, limite $limite)"); ultimoExcesso = agora; excessoAtivo = true
                 AlertasMotor.obter(ctx).definirExterna(TipoAlerta.Velocidade, "Reduza a velocidade: o limite configurado é de $limite km/h.")
             }
         } else if (limite == 0 || vel < limite - 5) {
@@ -173,7 +183,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         prefs.edit().remove("atual").apply()
         if (v0.distanciaKm < 0.1 && !simulacao) return // manobra na garagem não vira viagem
         val p = runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull()
-        val v = v0.copy(latFim = p?.latitude ?: v0.latFim, lonFim = p?.longitude ?: v0.lonFim)
+        val v = v0.copy(latFim = p?.latitude ?: v0.latFim, lonFim = p?.longitude ?: v0.lonFim).comEvento(v0.fim, "estacionou", "Estacionou / viagem encerrada")
         historico.add(0, v)
         while (historico.size > 30) historico.removeAt(historico.lastIndex)
         gravarHistorico()
@@ -281,6 +291,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         .put("exm", v.excessoMaxKmh).put("exs", v.excessoMs)
         .put("fren", v.frenagens).put("acel", v.aceleracoes).put("exc", v.excessos).put("rpma", v.rpmAlto)
         .put("ck", v.consKm).put("cl", v.consLitros).put("obd", v.comObd)
+        .put("ev", JSONArray().also { a -> v.eventos.forEach { e -> a.put(JSONObject().put("t", e.em).put("k", e.tipo).put("x", e.texto)) } })
         .apply { v.latIni?.let { put("lai", it) }; v.lonIni?.let { put("loi", it) }; v.latFim?.let { put("laf", it) }; v.lonFim?.let { put("lof", it) } }
 
     private fun deJson(o: JSONObject) = Viagem(
@@ -288,6 +299,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         o.optInt("fren"), o.optInt("acel"), o.optInt("exc"), o.optInt("rpma"), o.optInt("exm"), o.optLong("exs"), o.optDouble("ck", 0.0), o.optDouble("cl", 0.0), o.optBoolean("obd"),
         if (o.has("lai")) o.getDouble("lai") else null, if (o.has("loi")) o.getDouble("loi") else null,
         if (o.has("laf")) o.getDouble("laf") else null, if (o.has("lof")) o.getDouble("lof") else null,
+        o.optJSONArray("ev")?.let { a -> (0 until a.length()).map { i -> a.getJSONObject(i).let { EventoViagem(it.getLong("t"), it.getString("k"), it.getString("x")) } } } ?: emptyList(),
     )
 
     companion object {

@@ -156,8 +156,8 @@ class Seguranca private constructor(private val ctx: Context) {
             val dt = (agora - ant.t) / 1000f
             if (dt in 0.15f..3.2f) {
                 val a = (vel - ant.v) / dt // km/h por segundo
-                if (a <= -11f && ant.v >= 15f && agora - ultimaFrenagem > 3_000) { ComputadorBordo.obter(ctx).frenagemBrusca(); ultimaFrenagem = agora; CaixaPreta.obter(ctx).disparar("frenagem_brusca", "%.0f → %.0f km/h".format(ant.v, vel)) }
-                if (a >= 9f && vel >= 8f && agora - ultimaAceleracao > 3_000) { ComputadorBordo.obter(ctx).aceleracaoBrusca(); ultimaAceleracao = agora }
+                if (a <= -11f && ant.v >= 15f && agora - ultimaFrenagem > 3_000) { ComputadorBordo.obter(ctx).frenagemBrusca("%.0f → %.0f km/h".format(ant.v, vel)); ultimaFrenagem = agora; CaixaPreta.obter(ctx).disparar("frenagem_brusca", "%.0f → %.0f km/h".format(ant.v, vel)) }
+                if (a >= 9f && vel >= 8f && agora - ultimaAceleracao > 3_000) { ComputadorBordo.obter(ctx).aceleracaoBrusca("%.0f → %.0f km/h".format(ant.v, vel)); ultimaAceleracao = agora }
             }
         }
         janela.addLast(Ponto(agora, vel))
@@ -202,6 +202,7 @@ class Seguranca private constructor(private val ctx: Context) {
         if (colisao != null) return
         colisaoTeste = teste
         colisao = segundos
+        if (!teste) ComputadorBordo.obter(ctx).registrarEvento("colisao", "Possível colisão detectada (queda brusca de velocidade e motor apagado)")
         CaixaPreta.obter(ctx).disparar(if (teste) "teste" else "possivel_colisao", if (teste) "teste de colisão" else "queda brusca de velocidade e motor apagado")
         Voz.obter(ctx).falar("Possível colisão detectada. Toque em estou bem para cancelar.")
         principal.postDelayed(tique, 1_000)

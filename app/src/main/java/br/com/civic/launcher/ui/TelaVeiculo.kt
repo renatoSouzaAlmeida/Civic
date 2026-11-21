@@ -64,6 +64,8 @@ private fun AbaViagem() {
     var limpar by remember { mutableStateOf(false) }
     // Comparador: toque em duas viagens do histórico (guarda o início de cada uma).
     var comparar by remember { mutableStateOf(listOf<Long>()) }
+    // Linha do tempo: início da viagem escolhida (null = a em andamento ou a última).
+    var linha by remember { mutableStateOf<Long?>(null) }
     // Atualiza a duração mesmo parado (a viagem só recebe amostras quando há leitura).
     var agora by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { agora = System.currentTimeMillis(); kotlinx.coroutines.delay(1_000) } }
@@ -99,6 +101,7 @@ private fun AbaViagem() {
             )
             Text("Km do painel informado (ou do último abastecimento) + %.1f km medidos pelo app desde então.".format(BR, v.distanciaDesdeBase), color = Cores.TextoSuave, fontSize = 13.sp)
         }
+        (cb.historico.firstOrNull { it.inicio == linha } ?: atual ?: cb.historico.firstOrNull())?.let { LinhaDoTempoViagem(it) }
         Secao("Últimas viagens (${cb.historico.size})") {
             if (cb.historico.isEmpty()) Text("As viagens encerradas aparecem aqui.", color = Cores.TextoSuave, fontSize = 15.sp)
             val fmt = remember { SimpleDateFormat("dd/MM HH:mm", BR) }
@@ -121,6 +124,7 @@ private fun AbaViagem() {
                         Text(cb.resumo(h), color = Cores.TextoSuave, fontSize = 13.sp)
                         h.resumoConducao()?.let { Text(it, color = Cores.TextoSuave, fontSize = 12.sp) }
                     }
+                    if (h.eventos.isNotEmpty()) TextButton(onClick = { linha = h.inicio }) { Text("Linha do tempo", fontSize = 13.sp) }
                     h.nota?.let { n ->
                         Text("$n", color = corNota(n), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
                         Text("/100", color = Cores.TextoSuave, fontSize = 12.sp, modifier = Modifier.padding(start = 2.dp, top = 8.dp))
@@ -598,5 +602,29 @@ private fun OndeParei() {
             "Para o GPS funcionar com o Waze na frente, em Config. permita a localização \"o tempo todo\" para o Civic Renatin.",
             color = Cores.TextoSuave, fontSize = 13.sp,
         )
+    }
+}
+
+/** Linha do tempo da viagem: partida, frenagens e acelerações bruscas, excessos, RPM alto, colisão, SOS, alertas e estacionamento, com a hora de cada um. */
+@Composable
+private fun LinhaDoTempoViagem(v: br.com.civic.launcher.Viagem) {
+    val hora = remember { SimpleDateFormat("HH:mm:ss", BR) }
+    Secao("Linha do tempo da viagem") {
+        Text(SimpleDateFormat("dd/MM HH:mm", BR).format(Date(v.inicio)) + (if (v.demonstracao) " · demonstração" else "") + " · " + br.com.civic.launcher.ComputadorBordo.duracao(v.duracaoMs), color = Cores.TextoSuave, fontSize = 13.sp)
+        if (v.eventos.isEmpty()) Text("Esta viagem não tem eventos registrados (viagens antigas não guardavam a linha do tempo).", color = Cores.TextoSuave, fontSize = 14.sp)
+        v.eventos.forEach { e ->
+            val (cor, icone) = when (e.tipo) {
+                "partida" -> Cores.Ok to Icons.Filled.PlayArrow
+                "estacionou" -> Cores.Destaque to Icons.Filled.LocationOn
+                "colisao", "sos" -> Cores.Vermelho to Icons.Filled.Warning
+                "alerta" -> Cores.Amarelo to Icons.Filled.Warning
+                else -> Cores.Amarelo to Icons.Filled.Warning
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(icone, null, tint = cor, modifier = Modifier.size(22.dp))
+                Text(hora.format(Date(e.em)), color = Cores.TextoSuave, fontSize = 13.sp, modifier = Modifier.width(70.dp))
+                Text(e.texto, color = Cores.Texto, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
