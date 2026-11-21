@@ -26,6 +26,8 @@ data class Abastecimento(
     val automatico: Boolean = false,
     val nivelAntes: Int? = null,
     val nivelDepois: Int? = null,
+    /** Última edição (ms). Na sincronização com a nuvem vale o registro editado por último (app ou Casa Tech). */
+    val atualizadoEm: Long = 0L,
 ) {
     val total: Float get() = if (valorTotal > 0f) valorTotal else litros * precoLitro
     /** Preço por litro: o informado ou calculado do valor total. 0 = ainda sem valor. */
@@ -41,7 +43,15 @@ data class ItemManutencao(
     val intervaloMeses: Int?,
     val ultimoKm: Int? = null,
     val ultimaData: Long? = null,
+    /** Última edição (ms), para a sincronização com a nuvem (vale o mais recente). */
+    val atualizadoEm: Long = 0L,
 )
+
+/** Manutenção como veio da nuvem (Casa Tech pode lançar ou corrigir). */
+data class ManutencaoNuvem(val id: String, val nome: String, val intervaloKm: Int?, val intervaloMeses: Int?, val ultimoKm: Int?, val ultimaData: Long?, val atualizadoEm: Long)
+
+/** Abastecimento como veio da nuvem; [removido] = apagado na Casa Tech. */
+data class AbastecimentoNuvem(val abastecimento: Abastecimento, val removido: Boolean)
 
 enum class SituacaoManutencao(val rotulo: String) { SemRegistro("Sem registro"), EmDia("Em dia"), Proximo("Próximo"), Vencido("Vencido") }
 
@@ -85,7 +95,8 @@ class Veiculo private constructor(ctx: Context) {
 
     fun salvarKmManual(km: Int) { kmManual = km; prefs.edit().putInt("km_manual", km).apply(); zerarDistancia(); aposMudanca() }
 
-    fun adicionar(a: Abastecimento) {
+    fun adicionar(original: Abastecimento) {
+        val a = original.copy(atualizadoEm = System.currentTimeMillis())
         abastecimentos.add(a)
         abastecimentos.sortBy { it.km }
         if (a.km >= (abastecimentos.maxOfOrNull { it.km } ?: 0)) zerarDistancia() // km do painel vira a nova base
@@ -101,12 +112,15 @@ class Veiculo private constructor(ctx: Context) {
 
     /** Depois de qualquer mudança: envia para a nuvem e confere se alguma manutenção precisa de aviso. */
     fun aposMudanca() {
-        nuvem.sincronizar(this)
-        nuvem.verificarManutencao(this)
+        nuvem.baixarESincronizar(this) // puxa o que a Casa Tech lançou, junta (vale o mais recente), envia e confere os avisos
     }
 
+    /** Km que está no painel do carro (digitado ou lançado na Casa Tech) e o momento em que a Casa Tech o definiu pela última vez que aplicamos. */
+    private fun kmCasaTechAplicado(): Long = prefs.getLong("km_ct_aplicado", 0L)
+
     /** Troca um abastecimento (mesmo id) pelo editado, ex.: ao informar o valor pago de um abastecimento automático. */
-    fun atualizar(novo: Abastecimento) {
+    fun atualizar(editado: Abastecimento) {
+        val novo = editado.copy(atualizadoEm = System.currentTimeMillis())
         val i = abastecimentos.indexOfFirst { it.id == novo.id }
         if (i < 0) return
         abastecimentos[i] = novo
@@ -125,7 +139,8 @@ class Veiculo private constructor(ctx: Context) {
         )
     }
 
-    fun adicionarAutomatico(a: Abastecimento, teste: Boolean = false) {
+    fun adicionarAutomatico(original: Abastecimento, teste: Boolean = false) {
+        val a = original.copy(atualizadoEm = System.currentTimeMillis())
         abastecimentos.add(a)
         abastecimentos.sortBy { it.km }
         zerarDistancia()
@@ -222,40 +237,53 @@ class Veiculo private constructor(ctx: Context) {
     /** Marca como feito agora, no km atual. */
     fun registrarFeito(item: ItemManutencao) {
         val i = manutencao.indexOfFirst { it.id == item.id }
-        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = kmAtual, ultimaData = System.currentTimeMillis()); gravarManutencao(); aposMudanca() }
+        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = kmAtual, ultimaData = System.currentTimeMillis(), atualizadoEm = System.currentTimeMillis()); gravarManutencao(); aposMudanca() }
     }
 
     /**
-     * Junta o que veio da nuvem: fica com o registro mais recente de cada item e, se a nuvem tiver
-     * um km maior que o atual (ex.: revisão lançada direto no Supabase), atualiza o km do painel.
-     * Devolve true se algo mudou.
+     * Junta o que veio da nuvem, sempre ficando com o registro editado por último (app ou Casa Tech):
+     * manutenção (inclusive itens novos e intervalos), abastecimentos (valores, aditivada, novos e removidos) e a
+     * quilometragem lançada na Casa Tech. Devolve true se algo mudou no aparelho.
      */
-    fun aplicarDaNuvem(remotos: List<Triple<String, Int?, Long?>>): Boolean {
-        var mudou = false
-        remotos.forEach { (id, km, data) ->
-            val i = manutencao.indexOfFirst { it.id == id }
-            if (i < 0 || data == null) return@forEach
-            val local = manutencao[i]
-            if (local.ultimaData == null || data > local.ultimaData) {
-                manutencao[i] = local.copy(ultimoKm = km, ultimaData = data)
-                mudou = true
+    fun aplicarDaNuvem(manut: List<ManutencaoNuvem>, abast: List<AbastecimentoNuvem>, kmCasaTech: Pair<Int, Long>?): Boolean {
+        var mudouManut = false; var mudouAbast = false; var mudouKm = false
+        manut.forEach { r ->
+            val i = manutencao.indexOfFirst { it.id == r.id }
+            if (i < 0) { manutencao.add(ItemManutencao(r.id, r.nome, r.intervaloKm, r.intervaloMeses, r.ultimoKm, r.ultimaData, r.atualizadoEm)); mudouManut = true }
+            else if (r.atualizadoEm > manutencao[i].atualizadoEm) {
+                manutencao[i] = manutencao[i].copy(nome = r.nome, intervaloKm = r.intervaloKm, intervaloMeses = r.intervaloMeses, ultimoKm = r.ultimoKm, ultimaData = r.ultimaData, atualizadoEm = r.atualizadoEm)
+                mudouManut = true
             }
         }
-        val maiorKm = remotos.mapNotNull { it.second }.maxOrNull()
-        if (maiorKm != null && maiorKm > kmAtual) {
-            kmManual = maiorKm
-            prefs.edit().putInt("km_manual", maiorKm).apply()
-            zerarDistancia()
-            mudou = true
+        abast.forEach { (r, removido) ->
+            val i = abastecimentos.indexOfFirst { it.id == r.id }
+            when {
+                removido -> if (i >= 0) { abastecimentos.removeAt(i); mudouAbast = true }
+                i < 0 -> { abastecimentos.add(r); mudouAbast = true }
+                r.atualizadoEm > abastecimentos[i].atualizadoEm -> { abastecimentos[i] = r; mudouAbast = true }
+            }
         }
-        if (mudou) gravarManutencao()
-        return mudou
+        if (mudouAbast) abastecimentos.sortBy { it.km }
+        // Quilometragem lançada na Casa Tech (só vale uma vez por lançamento).
+        if (kmCasaTech != null && kmCasaTech.second > kmCasaTechAplicado()) {
+            kmManual = kmCasaTech.first
+            prefs.edit().putInt("km_manual", kmCasaTech.first).putLong("km_ct_aplicado", kmCasaTech.second).apply()
+            zerarDistancia(); mudouKm = true
+        }
+        // O odômetro nunca pode ficar abaixo do último km de uma manutenção.
+        val maiorKm = manutencao.mapNotNull { it.ultimoKm }.maxOrNull()
+        if (maiorKm != null && maiorKm > kmAtual) {
+            kmManual = maiorKm; prefs.edit().putInt("km_manual", maiorKm).apply(); zerarDistancia(); mudouKm = true
+        }
+        if (mudouManut) gravarManutencao()
+        if (mudouAbast) gravarAbastecimentos()
+        return mudouManut || mudouAbast || mudouKm
     }
 
     /** Informa quando foi feito pela última vez (km e data), para começar o controle. */
     fun informarUltimo(item: ItemManutencao, km: Int?, data: Long?) {
         val i = manutencao.indexOfFirst { it.id == item.id }
-        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = km, ultimaData = data); gravarManutencao(); aposMudanca() }
+        if (i >= 0) { manutencao[i] = item.copy(ultimoKm = km, ultimaData = data, atualizadoEm = System.currentTimeMillis()); gravarManutencao(); aposMudanca() }
     }
 
     // ---- Persistência ----
@@ -272,6 +300,7 @@ class Veiculo private constructor(ctx: Context) {
                         o.optBoolean("cheio", true),
                         o.optDouble("total", 0.0).toFloat(), o.optBoolean("adit", false), o.optBoolean("auto", false),
                         if (o.has("na")) o.getInt("na") else null, if (o.has("nd")) o.getInt("nd") else null,
+                        o.optLong("ue", 0L),
                     )
                 )
             }
@@ -280,15 +309,24 @@ class Veiculo private constructor(ctx: Context) {
             val arr = JSONArray(prefs.getString("manutencao", "[]"))
             (0 until arr.length()).map { arr.getJSONObject(it) }.associateBy { it.getString("id") }
         }.getOrDefault(emptyMap())
-        // Plano padrão do Civic G9 1.8 (uso severo/urbano). Os registros salvos preenchem o último feito.
+        // Plano padrão do Civic G9 1.8 (uso severo/urbano). Os registros salvos preenchem o último feito, os intervalos e a data de edição;
+        // itens criados na Casa Tech (fora do plano padrão) também ficam guardados.
+        fun inteiro(o: JSONObject, chave: String, padrao: Int?): Int? = if (!o.has(chave)) padrao else if (o.isNull(chave)) null else o.getInt(chave)
         PLANO_PADRAO.forEach { p ->
             val o = salvos[p.id]
             manutencao.add(
                 if (o == null) p else p.copy(
+                    nome = if (o.has("nome")) o.getString("nome") else p.nome,
+                    intervaloKm = inteiro(o, "ik", p.intervaloKm), intervaloMeses = inteiro(o, "im", p.intervaloMeses),
                     ultimoKm = if (o.has("km")) o.getInt("km") else null,
                     ultimaData = if (o.has("data")) o.getLong("data") else null,
+                    atualizadoEm = o.optLong("ue", 0L),
                 )
             )
+        }
+        salvos.values.filter { o -> PLANO_PADRAO.none { it.id == o.getString("id") } && o.has("nome") }.forEach { o ->
+            manutencao.add(ItemManutencao(o.getString("id"), o.getString("nome"), inteiro(o, "ik", null), inteiro(o, "im", null),
+                if (o.has("km")) o.getInt("km") else null, if (o.has("data")) o.getLong("data") else null, o.optLong("ue", 0L)))
         }
     }
 
@@ -298,6 +336,7 @@ class Veiculo private constructor(ctx: Context) {
             arr.put(JSONObject().put("id", it.id).put("data", it.data).put("km", it.km).put("litros", it.litros.toDouble())
                 .put("preco", it.precoLitro.toDouble()).put("comb", it.combustivel.name).put("cheio", it.tanqueCheio)
                 .put("total", it.valorTotal.toDouble()).put("adit", it.aditivada).put("auto", it.automatico)
+                .put("ue", it.atualizadoEm)
                 .also { o -> it.nivelAntes?.let { v -> o.put("na", v) }; it.nivelDepois?.let { v -> o.put("nd", v) } })
         }
         prefs.edit().putString("abastecimentos", arr.toString()).apply()
@@ -306,7 +345,8 @@ class Veiculo private constructor(ctx: Context) {
     private fun gravarManutencao() {
         val arr = JSONArray()
         manutencao.forEach { m ->
-            val o = JSONObject().put("id", m.id)
+            val o = JSONObject().put("id", m.id).put("nome", m.nome).put("ue", m.atualizadoEm)
+                .put("ik", m.intervaloKm ?: JSONObject.NULL).put("im", m.intervaloMeses ?: JSONObject.NULL)
             m.ultimoKm?.let { o.put("km", it) }
             m.ultimaData?.let { o.put("data", it) }
             arr.put(o)

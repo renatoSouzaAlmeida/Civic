@@ -80,11 +80,14 @@ class Nuvem private constructor(ctx: Context) {
 
     // ---------- Sincronização ----------
 
+    /** Envia o que o aparelho tem (abastecimentos, manutenção e a quilometragem do app). Cada registro leva a sua data de edição. */
     fun sincronizar(v: Veiculo) {
         val abast = v.abastecimentos.toList()
         val manut = v.manutencao.map { it to v.situacao(it) }
+        val km = v.kmAtual
         fila.execute {
             if (!garantirCadastro()) return@execute
+            val agora = System.currentTimeMillis()
             if (abast.isNotEmpty()) {
                 val arr = JSONArray()
                 abast.forEach {
@@ -94,7 +97,8 @@ class Nuvem private constructor(ctx: Context) {
                         .put("valor_total", if (it.total > 0f) it.total.toDouble() else JSONObject.NULL)
                         .put("combustivel", it.combustivel.name).put("tanque_cheio", it.tanqueCheio)
                         .put("aditivada", it.aditivada).put("automatico", it.automatico)
-                        .put("nivel_antes", it.nivelAntes ?: JSONObject.NULL).put("nivel_depois", it.nivelDepois ?: JSONObject.NULL))
+                        .put("nivel_antes", it.nivelAntes ?: JSONObject.NULL).put("nivel_depois", it.nivelDepois ?: JSONObject.NULL)
+                        .put("atualizado_em", iso(if (it.atualizadoEm > 0) it.atualizadoEm else agora)))
                 }
                 http("POST", "/rest/v1/civic_abastecimentos", arr.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"))
             }
@@ -103,35 +107,61 @@ class Nuvem private constructor(ctx: Context) {
                 arr.put(JSONObject().put("dispositivo", token).put("id", m.id).put("nome", m.nome)
                     .put("intervalo_km", m.intervaloKm ?: JSONObject.NULL).put("intervalo_meses", m.intervaloMeses ?: JSONObject.NULL)
                     .put("ultimo_km", m.ultimoKm ?: JSONObject.NULL).put("ultima_data", m.ultimaData?.let { iso(it) } ?: JSONObject.NULL)
-                    .put("situacao", s.name).put("atualizado_em", iso(System.currentTimeMillis())))
+                    .put("situacao", s.name).put("atualizado_em", iso(if (m.atualizadoEm > 0) m.atualizadoEm else agora)))
             }
             http("POST", "/rest/v1/civic_manutencao", arr.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"))
+            // Quilometragem do app (a Casa Tech escreve em km_casa_tech, outra coluna: não há disputa).
+            if (km > 0) http("POST", "/rest/v1/civic_ajustes?on_conflict=dispositivo", JSONObject().put("dispositivo", token).put("km_app", km).put("km_app_em", iso(agora)).put("atualizado_em", iso(agora)).toString(),
+                mapOf("Prefer" to "resolution=merge-duplicates,return=minimal"))
         }
     }
 
     /**
-     * Baixa a manutenção guardada na nuvem (ex.: revisão lançada direto no Supabase), junta com a do
-     * aparelho ficando com o mais recente e, depois, envia tudo de volta e confere os avisos.
+     * Sincronização de mão dupla: baixa manutenção, abastecimentos e a quilometragem lançada na Casa Tech, junta com a do aparelho
+     * (vale o registro editado por último), depois envia tudo de volta e confere os avisos de manutenção.
      */
     fun baixarESincronizar(v: Veiculo) {
         fila.execute {
-            val remotos = if (!garantirCadastro()) emptyList() else {
-                val (status, texto) = http("GET", "/rest/v1/civic_manutencao?select=id,ultimo_km,ultima_data", null)
-                if (status != 200) emptyList() else runCatching {
-                    val arr = JSONArray(texto)
+            var manut = emptyList<ManutencaoNuvem>(); var abast = emptyList<AbastecimentoNuvem>(); var km: Pair<Int, Long>? = null
+            if (garantirCadastro()) {
+                val (s1, t1) = http("GET", "/rest/v1/civic_manutencao?select=id,nome,intervalo_km,intervalo_meses,ultimo_km,ultima_data,atualizado_em", null)
+                if (s1 == 200) manut = runCatching {
+                    val arr = JSONArray(t1)
                     (0 until arr.length()).map { i ->
                         val o = arr.getJSONObject(i)
-                        Triple(
-                            o.getString("id"),
-                            if (o.isNull("ultimo_km")) null else o.getInt("ultimo_km"),
-                            if (o.isNull("ultima_data")) null else lerIso(o.getString("ultima_data")),
+                        ManutencaoNuvem(o.getString("id"), o.optString("nome"), if (o.isNull("intervalo_km")) null else o.getInt("intervalo_km"),
+                            if (o.isNull("intervalo_meses")) null else o.getInt("intervalo_meses"), if (o.isNull("ultimo_km")) null else o.getInt("ultimo_km"),
+                            if (o.isNull("ultima_data")) null else lerIso(o.getString("ultima_data")), lerIso(o.optString("atualizado_em")) ?: 0L)
+                    }
+                }.getOrDefault(emptyList())
+                val (s2, t2) = http("GET", "/rest/v1/civic_abastecimentos?select=id,data,km,litros,preco_litro,valor_total,combustivel,tanque_cheio,aditivada,automatico,nivel_antes,nivel_depois,atualizado_em,removido", null)
+                if (s2 == 200) abast = runCatching {
+                    val arr = JSONArray(t2)
+                    (0 until arr.length()).map { i ->
+                        val o = arr.getJSONObject(i)
+                        AbastecimentoNuvem(
+                            Abastecimento(
+                                o.getLong("id"), lerIso(o.getString("data")) ?: 0L, o.getInt("km"), o.getDouble("litros").toFloat(),
+                                if (o.isNull("preco_litro")) 0f else o.getDouble("preco_litro").toFloat(),
+                                runCatching { Combustivel.valueOf(o.getString("combustivel")) }.getOrDefault(Combustivel.Gasolina), o.optBoolean("tanque_cheio", true),
+                                if (o.isNull("valor_total")) 0f else o.getDouble("valor_total").toFloat(), o.optBoolean("aditivada", false), o.optBoolean("automatico", false),
+                                if (o.isNull("nivel_antes")) null else o.getInt("nivel_antes"), if (o.isNull("nivel_depois")) null else o.getInt("nivel_depois"),
+                                lerIso(o.optString("atualizado_em")) ?: 0L,
+                            ),
+                            o.optBoolean("removido", false),
                         )
                     }
                 }.getOrDefault(emptyList())
+                val (s3, t3) = http("GET", "/rest/v1/civic_ajustes?select=km_casa_tech,km_casa_tech_em", null)
+                if (s3 == 200) km = runCatching {
+                    val o = JSONArray(t3).optJSONObject(0)
+                    if (o == null || o.isNull("km_casa_tech") || o.isNull("km_casa_tech_em")) null else o.getInt("km_casa_tech") to (lerIso(o.getString("km_casa_tech_em")) ?: 0L)
+                }.getOrNull()
             }
             principal.post {
-                v.aplicarDaNuvem(remotos)
-                v.aposMudanca()
+                v.aplicarDaNuvem(manut, abast, km)
+                sincronizar(v)
+                verificarManutencao(v)
             }
         }
     }

@@ -42,6 +42,7 @@ class Telemetria private constructor(private val ctx: Context) {
     private var enviando = false
     /** Última leitura com giro vindo do OBD; sem OBD (Fit) o uso do carro é detectado pelo GPS. */
     private var ultimaObd = 0L
+    private var ultimaSincVeiculo = 0L
     private var porGps = false
     private var ultimoMovimento = 0L
 
@@ -61,6 +62,8 @@ class Telemetria private constructor(private val ctx: Context) {
             // Sem OBD: 5 min parado depois de andar = carro desligado.
             if (porGps && motorLigado && System.currentTimeMillis() - ultimoMovimento >= 5 * 60_000L) desligouSemObd()
             runCatching { Nuvem.obter(ctx).reenviarPendentes() } // avisos que ficaram sem internet
+            // O que foi lançado na Casa Tech (valores de combustível, manutenção, km) chega ao aparelho em até 5 min.
+            if (System.currentTimeMillis() - ultimaSincVeiculo >= 5 * 60_000L) { ultimaSincVeiculo = System.currentTimeMillis(); runCatching { Nuvem.obter(ctx).baixarESincronizar(Veiculo.obter(ctx)) } }
             runCatching { Tpms.obter(ctx).sincronizar() } // liga/desliga a procura de sensores conforme a chave em Config.
             runCatching { ComputadorBordo.obter(ctx).enviarPendentes() } // viagens que ficaram sem internet
             enviar(); principal.postDelayed(this, 30_000)
