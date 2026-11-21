@@ -1,3 +1,5 @@
+> **21/11/2026:** o dono confirmou que todos os itens deste roteiro foram validados no carro.
+
 # Validação no carro — tudo junto
 
 Roteiro para testar de uma vez as funções novas. Marque cada item. Onde der, o "em casa" não precisa do carro.

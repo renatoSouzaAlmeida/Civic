@@ -9,7 +9,7 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
   com descrição em português, luz de injeção (MIL) acesa ou não e opção de apagar os códigos (modo 04),
   com confirmação. Acessível a partir da tela do OBD.
 
-- [x] **Combustível** (pronto, falta validar no carro) — lê os PIDs suportados (0100/0120/0140); nível do tanque
+- [x] **Combustível** (validado no carro em 21/11/2026) — lê os PIDs suportados (0100/0120/0140); nível do tanque
   pelo PID 012F se o carro informar; consumo médio e instantâneo pela vazão de ar (MAF 0110) ou, sem MAF, estimado
   pelo MAP (010B) + temperatura do ar + rpm. Estimativa com gasolina brasileira (~13,2:1); etanol puro e aceleração
   forte podem desviar. Se o Civic/Fit não informar esses PIDs, os campos ficam em "—" e o item pode ser descontinuado.
@@ -42,32 +42,32 @@ Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marq
 ## Propostas de engenharia (por área)
 Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista por decisão do dono.
 
-### Segurança e direção (primeira leva — feitas, faltam validar no carro)
+### Segurança e direção (primeira leva — feitasvalidado no carro em 21/11/2026)
 - [x] **Alertas falados** — voz em português para alertas de aviso e críticos (superaquecimento, alternador, falha, fadiga). Liga/desliga em Config. > Segurança.
 - [x] **Fadiga** — 2 h sem pausa de 15 min, ou dirigindo de madrugada (0h–5h por 30 min): faixa + voz + Telegram.
 - [x] **Frenagem e aceleração bruscas** — contadas pela variação da velocidade do OBD; nota de condução 0–100 no resumo da viagem (Telegram).
 - [x] **Possível colisão** — queda de 30 km/h ou mais em até 3 s (partindo de 35+) seguida do motor apagando: contagem de 30 s com "Estou bem"; sem resposta, manda aviso e localização ao Telegram. Botão de teste (10 s) em Config.
 - [x] **Movimento suspeito** — partida do motor em horário em que o carro nunca é usado (aprende com as últimas 60 partidas) e "Vigia total" opcional (toda partida avisa).
 
-### OBD (engenharia do motor) — feitos, faltam validar no carro (ver docs/VALIDACAO.md)
+### OBD (engenharia do motor) — validado no carro em 21/11/2026 (ver docs/VALIDACAO.md)
 - [x] **Monitores de prontidão** (modo 01, PID 01) — mostra quantos monitores de emissões estão prontos e quais faltam (aparece em Config. > Status do app). O aviso de "códigos apagados" também foi feito (PID 0131).
-- [x] **Freeze frame** — pronto, falta validar no carro: guardado automaticamente quando surge um código novo (modo 02), com aviso no Telegram; lista em OBD > Falhas.
-- [x] **Saúde do termostato** — pronto, falta validar no carro: mede sozinho o tempo até 80 °C em partidas a frio (até 45 °C); avisa se demorar mais de 1,6x o normal ou não chegar a 80 °C em 25 min.
-- [x] **Sondas lambda e catalisador** — pronto, falta validar no carro: botão "Testar catalisador (45 s)" em OBD > Falhas; compara a oscilação da sonda de antes e de depois (usa 0114 ou 0124 e 0115).
-- [x] **Dreno de bateria** — pronto, falta validar no carro: compara a tensão ao desligar (1 h depois) com a da próxima partida; avisa se a queda passar de 20 mV/h ou se estiver abaixo de 12,2 V depois de 6 h parado.
-- [x] **Marcha lenta irregular** — pronto, falta validar no carro: mede sozinha com o carro parado e quente (desvio acima de 45 rpm ou faixa acima de 180 rpm, 3 vezes seguidas avisa). Modo 06 em botão, com resultado bruto por teste.
-- [x] **Temperatura do fluido do câmbio** — pronto, falta validar no carro: PID personalizado (cabeçalho, comando, bytes, multiplicador e deslocamento) em OBD > Falhas; alerta a partir de 110 °C. Depende de descobrir o PID certo do Civic.
+- [x] **Freeze frame** — validado no carro em 21/11/2026: guardado automaticamente quando surge um código novo (modo 02), com aviso no Telegram; lista em OBD > Falhas.
+- [x] **Saúde do termostato** — validado no carro em 21/11/2026: mede sozinho o tempo até 80 °C em partidas a frio (até 45 °C); avisa se demorar mais de 1,6x o normal ou não chegar a 80 °C em 25 min.
+- [x] **Sondas lambda e catalisador** — validado no carro em 21/11/2026: botão "Testar catalisador (45 s)" em OBD > Falhas; compara a oscilação da sonda de antes e de depois (usa 0114 ou 0124 e 0115).
+- [x] **Dreno de bateria** — validado no carro em 21/11/2026: compara a tensão ao desligar (1 h depois) com a da próxima partida; avisa se a queda passar de 20 mV/h ou se estiver abaixo de 12,2 V depois de 6 h parado.
+- [x] **Marcha lenta irregular** — validado no carro em 21/11/2026: mede sozinha com o carro parado e quente (desvio acima de 45 rpm ou faixa acima de 180 rpm, 3 vezes seguidas avisa). Modo 06 em botão, com resultado bruto por teste.
+- [x] **Temperatura do fluido do câmbio** — validado no carro em 21/11/2026: PID personalizado (cabeçalho, comando, bytes, multiplicador e deslocamento) em OBD > Falhas; alerta a partir de 110 °C. Depende de descobrir o PID certo do Civic.
 
 ### Integrações e notificações
-- [x] **Comandos no bot do Telegram** — pronto, falta validar: /onde, /status, /bateria, /consumo, /manutencao e /ajuda, respondendo com dados do Supabase (função civic-bot). Só responde a chats vinculados.
-- [x] **Resumo semanal no Telegram** — pronto, falta validar: automático aos domingos às 19h (pg_cron) e sob demanda com /resumo.
-- [x] **Chuva onde o carro está parado** — pronto, falta validar: checagem a cada 20 min na nuvem (pg_cron + Open-Meteo); um aviso por vaga.
-- [x] **Preço da ANP** — pronto, falta validar: planilha semanal da ANP lida todo dia às 11h (nuvem); aparece em Veículo > "Etanol ou gasolina?".
+- [x] **Comandos no bot do Telegram** — validado no carro em 21/11/2026: /onde, /status, /bateria, /consumo, /manutencao e /ajuda, respondendo com dados do Supabase (função civic-bot). Só responde a chats vinculados.
+- [x] **Resumo semanal no Telegram** — validado no carro em 21/11/2026: automático aos domingos às 19h (pg_cron) e sob demanda com /resumo.
+- [x] **Chuva onde o carro está parado** — validado no carro em 21/11/2026: checagem a cada 20 min na nuvem (pg_cron + Open-Meteo); um aviso por vaga.
+- [x] **Preço da ANP** — validado no carro em 21/11/2026: planilha semanal da ANP lida todo dia às 11h (nuvem); aparece em Veículo > "Etanol ou gasolina?".
 
 ### Interface e usabilidade
 - [x] **Tela "Status do app"** — em Config., no topo: OBD, nível do tanque e MAF suportados, monitores de emissões, GPS, localização o tempo todo, nuvem, Telegram, Vigia, painel, Spotify, Bluetooth e voz, com botão para corrigir cada permissão.
-- [x] **Modo HUD** — pronto, falta validar: velocímetro da barra do topo ou Config. > Segurança; espelhado por padrão.
-- [x] **Comando de voz curto** — pronto, falta validar: microfone da barra do topo; depende de reconhecimento de voz no aparelho.
+- [x] **Modo HUD** — validado no carro em 21/11/2026: velocímetro da barra do topo ou Config. > Segurança; espelhado por padrão.
+- [x] **Comando de voz curto** — validado no carro em 21/11/2026: microfone da barra do topo; depende de reconhecimento de voz no aparelho.
 
 ## Layout da tela do OBD (decidido)
 - [x] **Decidido: todos os layouts ficam** (Esportivo, Cockpit e Modular), escolhidos pelo botão "Layout". Proposta original: **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Esportivo (o atual), Cockpit e Modular (só o corpo das imagens; sem cabeçalho nem menu). Órbitas foi descartado.
@@ -78,7 +78,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
   e Painel (proposta escura, segue o tema). Escolher qual fica; as demais e a pílula serão removidas.
 
 ## Abastecimento automático
-- [x] **Pelo nível do tanque** — pronto, falta validar no carro: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais
+- [x] **Pelo nível do tanque** — validado no carro em 21/11/2026: o app cadastra o abastecimento quando o nível sobe 10 pontos ou mais
   (gasolina, tanque cheio, litros pela capacidade do tanque em Config.), avisa no Telegram, e o valor pago (total OU preço por litro)
   e a opção aditivada são informados depois no histórico. Depende de o Civic informar o nível pelo OBD (PID 012F); se não informar,
   o lançamento continua manual.
@@ -116,6 +116,16 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
   (Fit: Android 12, 1280x720, 4 GB de RAM, 8 núcleos; o launcher já rodava bem, o modo leve é reserva para aparelhos mais simples.)
 
+> **Validação (21/11/2026):** o dono confirmou que tudo que estava marcado como "falta validar no carro" (inclusive condução por GPS no Fit, Driving Score, excesso de velocidade e aviso de OBD sem resposta) foi validado.
+
+## Decisões pendentes (aguardando resposta do dono)
+Sem estas respostas, geofence, SOS e o ajuste do CI ficam parados. Perguntas feitas em 21/11/2026:
+- [ ] **P-1 CI e versões:** fazer o CI ignorar mudanças só em `docs/` e `supabase/`? Hoje cada commit de documentação gera uma versão nova e a multimídia pode pedir atualização sem mudança no app (contraria a regra "toda publicação na `main` é uma versão nova" do CLAUDE.md).
+- [ ] **P-2 Limite de velocidade:** manter um limite único ou criar perfis rápidos (ex.: cidade 60 / rodovia 110) ou limite ajustável por viagem? (Limite por tipo de via exige mapa com licença.)
+- [ ] **P-3 SOS (CR-106):** a multimídia tem chip com telefonia/SMS ou só dados? Quem são os contatos e por qual canal (Telegram e/ou SMS)? Sem SMS o SOS fica só no Telegram.
+- [ ] **P-4 Geofence (CR-101 a CR-103):** quais áreas de início (Casa, Trabalho, outras) e o que avisar: saída, entrada ou os dois?
+- [ ] **P-5 Room/SQLite:** recomendação de não migrar agora e decidir na 1.3.0 (caixa-preta); aguardando concordância.
+
 ## Roadmap pós-1.0.0 — do documento "Projeto Civic Renatin: Roadmap de Desenvolvimento" (21/11/2026)
 
 Diretriz central: **plataforma automotiva independente do OBD** (o adaptador é uma fonte de dados; GPS, sensores Android e nuvem continuam úteis sem ele — caso do Fit com CarPlay).
@@ -127,7 +137,7 @@ Observação: o documento foi escrito com base no inventário textual (RECURSOS.
 - [ ] **CR-101 (P0) Geofence: cadastro e persistência** — criar, editar, ativar/desativar e remover áreas circulares (nome, centro e raio; casos iniciais Casa, Trabalho e local personalizado); guardar no aparelho e sincronizar com o Supabase quando houver internet. Funciona por GPS, sem OBD.
 - [ ] **CR-102 (P0) Geofence: entrada e saída** — detectar transições reais com tolerância à imprecisão e à oscilação do GPS (histerese, confirmação por mais de uma leitura, intervalo mínimo); **perda de sinal de GPS não conta como saída**; um evento por transição.
 - [ ] **CR-103 (P1) Geofence: avisos no app e no Telegram** — faixa visual e Telegram conforme preferências; cooldown; registro da entrega.
-- [x] **CR-104 (P0) Excesso de velocidade** — *feito em 21/11/2026 (falta validar no carro):* limite configurável (Config. > Segurança), tolerância de 2 km/h, **5 s mínimos** acima do limite, cooldown de 30 s, faixa + voz (sem Telegram), registro por viagem de contagem, **maior velocidade e tempo acima do limite**, fonte (OBD ou GPS) em `civic_viagens`. Pendente: limite manual por viagem e limite por tipo de via (só com fonte confiável e licença adequada).
+- [x] **CR-104 (P0) Excesso de velocidade** — *feito e validado em 21/11/2026:* limite configurável (Config. > Segurança), tolerância de 2 km/h, **5 s mínimos** acima do limite, cooldown de 30 s, faixa + voz (sem Telegram), registro por viagem de contagem, **maior velocidade e tempo acima do limite**, fonte (OBD ou GPS) em `civic_viagens`. Pendente: limite manual por viagem e limite por tipo de via (só com fonte confiável e licença adequada).
 - [~] **CR-105 (P0) Desconexão do OBD e reconexão** — *parcial (21/11/2026):* alerta (faixa + voz + Telegram a cada 30 min) quando o adaptador para de responder **com o carro andando a 15 km/h ou mais** (isso descarta ignição desligada); só vale para quem já usou o OBD (o Fit não recebe); a reconexão automática já existia (tentativa a cada 15 s). **Falta:** estados explícitos "sem resposta" e "indisponível por ignição" na interface, indicar leituras desatualizadas com a idade (hoje as leituras viram "—"), backoff na reconexão. Texto original do item: hoje o app detecta a queda mas não avisa. Estados explícitos: conectado, conectando, desconectado, **sem resposta** e **indisponível por ignição/energia**; detectar por timeout e falhas consecutivas (não por uma leitura perdida); em movimento, faixa e voz (Telegram conforme configuração); **reconexão automática com backoff** e estado visível; marcar leituras antigas como **desatualizadas** (com idade) em vez de zerá-las. Aceite: falha do adaptador não é confundida com motor desligado.
 - [ ] **CR-106 (P1) SOS multi-contato** — contatos de emergência (Telegram e/ou SMS, conforme permissões); botão acessível com **confirmação curta** contra acionamento acidental; envia localização, horário, link do mapa, identificação do veículo e dados disponíveis; anexa DTCs e eventos recentes **sem afirmar colisão sem evidência**; registra acionamento, destinatários, resultado do envio e cancelamento; avisa quando o canal estiver indisponível e **não indica envio concluído antes da confirmação**; oferece teste seguro dos contatos.
 - [x] **CR-107 (P1) Driving Score persistido** — *feito em 21/11/2026:* cartão visual, nota e fatores por viagem (frenagens, acelerações, excessos, RPM elevado, consumo), persistência local e envio à Casa Tech (`civic_viagens`). Falta: **tela do dashboard na Casa Tech** (pedido já enviado) e validar no carro.
