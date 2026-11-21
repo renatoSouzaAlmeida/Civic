@@ -20,7 +20,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
-data class ContatoSos(val nome: String, val telefone: String)
+data class ContatoSos(val nome: String, val telefone: String, val id: String = java.util.UUID.randomUUID().toString(), val atualizadoEm: Long = 0L, val ativo: Boolean = true)
+
+/** Contato como veio da nuvem (a Casa Tech cadastra, edita, pausa e remove). */
+data class ContatoNuvem(val contato: ContatoSos, val removido: Boolean)
 
 /**
  * Botão SOS: depois de uma contagem curta (5 s, com "Cancelar") manda ao Telegram vinculado e, por SMS, a cada contato
@@ -47,7 +50,7 @@ class Sos private constructor(private val ctx: Context) {
     init {
         runCatching {
             val arr = JSONArray(prefs.getString("contatos", "[]"))
-            for (i in 0 until arr.length()) arr.getJSONObject(i).let { contatos.add(ContatoSos(it.getString("nome"), it.getString("tel"))) }
+            for (i in 0 until arr.length()) arr.getJSONObject(i).let { contatos.add(ContatoSos(it.getString("nome"), it.getString("tel"), it.optString("id").ifEmpty { java.util.UUID.randomUUID().toString() }, it.optLong("ue", 0L), it.optBoolean("ativo", true))) }
         }
         val rec = object : BroadcastReceiver() {
             override fun onReceive(c: Context, i: Intent) {
@@ -65,12 +68,59 @@ class Sos private constructor(private val ctx: Context) {
     fun adicionar(nome: String, telefone: String): Boolean {
         val tel = telefone.filter { it.isDigit() || it == '+' }
         if (tel.length < 8 || nome.isBlank()) return false
-        contatos.add(ContatoSos(nome.trim(), tel)); salvar(); return true
+        contatos.add(ContatoSos(nome.trim(), tel, atualizadoEm = System.currentTimeMillis())); salvar(); sincronizarContatos(); return true
     }
-    fun remover(c: ContatoSos) { contatos.remove(c); salvar() }
+    fun remover(c: ContatoSos) {
+        contatos.remove(c); salvar()
+        val r = runCatching { JSONArray(prefs.getString("removidos", "[]")) }.getOrDefault(JSONArray()); r.put(c.id)
+        prefs.edit().putString("removidos", r.toString()).apply()
+        sincronizarContatos()
+    }
     private fun salvar() {
-        val arr = JSONArray(); contatos.forEach { arr.put(JSONObject().put("nome", it.nome).put("tel", it.telefone)) }
+        val arr = JSONArray(); contatos.forEach { arr.put(JSONObject().put("nome", it.nome).put("tel", it.telefone).put("id", it.id).put("ue", it.atualizadoEm).put("ativo", it.ativo)) }
         prefs.edit().putString("contatos", arr.toString()).apply()
+    }
+
+    // ---------- sincronização com a Casa Tech (vale a edição mais recente) ----------
+
+    private val remotoEm = HashMap<String, Long>()
+
+    /** Junta os contatos que vieram da nuvem. Devolve true se algo mudou aqui. */
+    fun aplicarDaNuvem(remotos: List<ContatoNuvem>): Boolean {
+        val removidosLocais = runCatching { JSONArray(prefs.getString("removidos", "[]")) }.getOrDefault(JSONArray()).let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
+        var mudou = false
+        remotos.forEach { (r, removido) ->
+            remotoEm[r.id] = r.atualizadoEm
+            val i = contatos.indexOfFirst { it.id == r.id }
+            when {
+                removido -> if (i >= 0 && r.atualizadoEm >= contatos[i].atualizadoEm) { contatos.removeAt(i); mudou = true }
+                r.id in removidosLocais -> {}
+                i < 0 -> { contatos.add(r); mudou = true }
+                r.atualizadoEm > contatos[i].atualizadoEm -> { contatos[i] = r; mudou = true }
+            }
+        }
+        if (mudou) salvar()
+        return mudou
+    }
+
+    /** Envia à nuvem só os contatos que o aparelho editou depois da versão de lá (e os removidos aqui). */
+    fun sincronizarContatos() {
+        val nuvem = Nuvem.obter(ctx)
+        val agora = System.currentTimeMillis()
+        fun iso(ms: Long) = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(ms))
+        val removidos = runCatching { JSONArray(prefs.getString("removidos", "[]")) }.getOrDefault(JSONArray())
+        val lote = JSONArray()
+        contatos.filter { it.atualizadoEm > (remotoEm[it.id] ?: -1L) }.forEach {
+            lote.put(JSONObject().put("dispositivo", nuvem.token).put("id", it.id).put("nome", it.nome).put("telefone", it.telefone).put("ativo", it.ativo)
+                .put("removido", false).put("atualizado_em", iso(if (it.atualizadoEm > 0) it.atualizadoEm else agora)))
+        }
+        for (i in 0 until removidos.length()) lote.put(JSONObject().put("dispositivo", nuvem.token).put("id", removidos.getString(i)).put("nome", "(removido)").put("telefone", "00000000")
+            .put("ativo", false).put("removido", true).put("atualizado_em", iso(agora)))
+        if (lote.length() == 0) return
+        val n = removidos.length()
+        nuvem.enviarJson("/rest/v1/civic_contatos_sos?on_conflict=dispositivo,id", lote.toString(), "resolution=merge-duplicates") { ok ->
+            if (ok && n > 0) prefs.edit().putString("removidos", "[]").apply()
+        }
     }
 
     // ---------- acionamento ----------
@@ -140,11 +190,12 @@ class Sos private constructor(private val ctx: Context) {
             }
         }
         // SMS aos contatos.
-        if (contatos.isEmpty()) { linha("SMS: nenhum contato cadastrado."); return }
+        val ativos = contatos.filter { it.ativo }
+        if (ativos.isEmpty()) { linha("SMS: nenhum contato ativo cadastrado."); return }
         when {
             !temTelefonia() -> linha("SMS: indisponível (esta multimídia não tem telefonia). Só o Telegram foi usado.")
             !temPermissaoSms() -> linha("SMS: sem permissão. Libere em Config. > SOS e contatos de emergência.")
-            else -> contatos.forEachIndexed { i, c -> enviarSms(c, texto, teste, i) }
+            else -> ativos.forEachIndexed { i, c -> enviarSms(c, texto, teste, i) }
         }
     }
 

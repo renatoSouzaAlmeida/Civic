@@ -14,7 +14,10 @@ import java.util.Locale
 import java.util.UUID
 
 /** Área circular permitida (Casa, Trabalho ou ponto escolhido). */
-data class Area(val id: String, val nome: String, val lat: Double, val lon: Double, val raioM: Int, val ativa: Boolean = true)
+data class Area(val id: String, val nome: String, val lat: Double, val lon: Double, val raioM: Int, val ativa: Boolean = true, val atualizadoEm: Long = 0L)
+
+/** Área como veio da nuvem (a Casa Tech cria, edita e remove). */
+data class AreaNuvem(val area: Area, val removida: Boolean)
 
 /**
  * Geofence: avisa quando o carro sai ou entra de uma área. Funciona só com o GPS (vale para o Fit, sem OBD).
@@ -38,11 +41,11 @@ class Geofence private constructor(private val ctx: Context) {
 
     fun criarAqui(nome: String, raioM: Int): Boolean {
         val l = runCatching { LocalEstacionamento.obter(ctx).posicaoRecente() }.getOrNull() ?: return false
-        areas.add(Area(UUID.randomUUID().toString(), nome.trim().ifEmpty { "Área ${areas.size + 1}" }, l.latitude, l.longitude, raioM))
+        areas.add(Area(UUID.randomUUID().toString(), nome.trim().ifEmpty { "Área ${areas.size + 1}" }, l.latitude, l.longitude, raioM, atualizadoEm = System.currentTimeMillis()))
         salvar(); return true
     }
 
-    fun alternar(id: String) { val i = areas.indexOfFirst { it.id == id }; if (i >= 0) { areas[i] = areas[i].copy(ativa = !areas[i].ativa); estado.remove(id); salvar() } }
+    fun alternar(id: String) { val i = areas.indexOfFirst { it.id == id }; if (i >= 0) { areas[i] = areas[i].copy(ativa = !areas[i].ativa, atualizadoEm = System.currentTimeMillis()); estado.remove(id); salvar() } }
 
     fun remover(id: String) {
         areas.removeAll { it.id == id }; estado.remove(id)
@@ -95,7 +98,7 @@ class Geofence private constructor(private val ctx: Context) {
         runCatching {
             val arr = JSONArray(prefs.getString("areas", "[]"))
             for (i in 0 until arr.length()) arr.getJSONObject(i).let { o ->
-                areas.add(Area(o.getString("id"), o.getString("nome"), o.getDouble("lat"), o.getDouble("lon"), o.getInt("raio"), o.optBoolean("ativa", true)))
+                areas.add(Area(o.getString("id"), o.getString("nome"), o.getDouble("lat"), o.getDouble("lon"), o.getInt("raio"), o.optBoolean("ativa", true), o.optLong("ue", 0L)))
             }
             val e = JSONObject(prefs.getString("dentro", "{}"))
             e.keys().forEach { k -> if (areas.any { it.id == k }) estado[k] = e.getBoolean(k) }
@@ -109,20 +112,47 @@ class Geofence private constructor(private val ctx: Context) {
 
     private fun salvar() {
         val arr = JSONArray()
-        areas.forEach { arr.put(JSONObject().put("id", it.id).put("nome", it.nome).put("lat", it.lat).put("lon", it.lon).put("raio", it.raioM).put("ativa", it.ativa)) }
+        areas.forEach { arr.put(JSONObject().put("id", it.id).put("nome", it.nome).put("lat", it.lat).put("lon", it.lon).put("raio", it.raioM).put("ativa", it.ativa).put("ue", it.atualizadoEm)) }
         prefs.edit().putString("areas", arr.toString()).apply()
         sincronizar()
     }
 
-    /** Envia as áreas ao Supabase (as removidas vão marcadas e a nuvem guarda o histórico). Sem internet, tenta na próxima alteração/partida. */
+    /** Quando cada área foi editada por último na nuvem (da última baixada), para só enviar o que o aparelho editou depois. */
+    private val remotoEm = HashMap<String, Long>()
+
+    /** Junta o que veio da nuvem: vale a edição mais recente (aparelho ou Casa Tech). Devolve true se algo mudou aqui. */
+    fun aplicarDaNuvem(remotas: List<AreaNuvem>): Boolean {
+        val removidasLocais = runCatching { JSONArray(prefs.getString("removidas", "[]")) }.getOrDefault(JSONArray()).let { a -> (0 until a.length()).map { a.getString(it) }.toSet() }
+        var mudou = false
+        remotas.forEach { (r, removida) ->
+            remotoEm[r.id] = r.atualizadoEm
+            val i = areas.indexOfFirst { it.id == r.id }
+            when {
+                removida -> if (i >= 0 && r.atualizadoEm >= areas[i].atualizadoEm) { areas.removeAt(i); estado.remove(r.id); mudou = true }
+                r.id in removidasLocais -> {} // removida aqui e ainda não enviada: não ressuscita
+                i < 0 -> { areas.add(r); mudou = true }
+                r.atualizadoEm > areas[i].atualizadoEm -> { areas[i] = r; estado.remove(r.id); mudou = true }
+            }
+        }
+        if (mudou) {
+            val arr = JSONArray()
+            areas.forEach { arr.put(JSONObject().put("id", it.id).put("nome", it.nome).put("lat", it.lat).put("lon", it.lon).put("raio", it.raioM).put("ativa", it.ativa).put("ue", it.atualizadoEm)) }
+            prefs.edit().putString("areas", arr.toString()).apply(); salvarEstado()
+        }
+        return mudou
+    }
+
+    /** Envia ao Supabase só as áreas que o aparelho editou depois da versão da nuvem (as removidas vão marcadas). Sem internet, tenta na próxima. */
     fun sincronizar() {
         val nuvem = Nuvem.obter(ctx)
         val removidas = runCatching { JSONArray(prefs.getString("removidas", "[]")) }.getOrDefault(JSONArray())
+        val agora = System.currentTimeMillis()
+        fun iso(ms: Long) = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(ms))
         val lote = JSONArray()
-        areas.forEach { lote.put(JSONObject().put("dispositivo", nuvem.token).put("id", it.id).put("nome", it.nome).put("lat", it.lat).put("lon", it.lon)
-            .put("raio_m", it.raioM).put("ativa", it.ativa).put("removida", false)) }
+        areas.filter { it.atualizadoEm > (remotoEm[it.id] ?: -1L) }.forEach { lote.put(JSONObject().put("dispositivo", nuvem.token).put("id", it.id).put("nome", it.nome).put("lat", it.lat).put("lon", it.lon)
+            .put("raio_m", it.raioM).put("ativa", it.ativa).put("removida", false).put("atualizado_em", iso(if (it.atualizadoEm > 0) it.atualizadoEm else agora))) }
         for (i in 0 until removidas.length()) lote.put(JSONObject().put("dispositivo", nuvem.token).put("id", removidas.getString(i)).put("nome", "(removida)")
-            .put("lat", 0).put("lon", 0).put("raio_m", 1).put("ativa", false).put("removida", true))
+            .put("lat", 0).put("lon", 0).put("raio_m", 1).put("ativa", false).put("removida", true).put("atualizado_em", iso(agora)))
         if (lote.length() == 0) return
         val n = removidas.length()
         nuvem.enviarJson("/rest/v1/civic_areas?on_conflict=dispositivo,id", lote.toString(), "resolution=merge-duplicates") { ok ->

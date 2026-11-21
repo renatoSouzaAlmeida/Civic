@@ -92,6 +92,36 @@ class Configuracoes private constructor(ctx: Context) {
     /** Segunda linha do cartão do carro: "G9 · 2012" (ou só o que estiver preenchido). */
     val modeloEAno: String get() = listOf(modelo, ano).filter { it.isNotBlank() }.joinToString(" · ")
 
+    /**
+     * Retrato dos dados do veículo e das regras de segurança que a Casa Tech pode editar (as preferências de tela, tema e layouts ficam só no launcher).
+     * Vai para a nuvem em civic_configuracao.valores_app, para a Casa Tech mostrar os valores atuais.
+     */
+    fun retratoRemoto(): org.json.JSONObject = org.json.JSONObject()
+        .put("nome_carro", nomeCarro).put("modelo", modelo).put("ano", ano).put("placa", placa).put("imagem_carro", imagemCarro.name)
+        .put("capacidade_tanque", capacidadeTanque).put("endereco_casa", enderecoCasa).put("endereco_trabalho", enderecoTrabalho).put("mapa", mapa.name)
+        .put("limite_velocidade", limiteVelocidade).put("vigia_total", vigiaTotal).put("voz_alertas", vozAlertas).put("tpms_ideal_psi", tpmsIdealPsi)
+        .put("geofence_telegram", geofenceTelegram).put("geofence_faixa", geofenceFaixa)
+
+    /** Aplica o que a Casa Tech definiu (uma vez por edição lá). A Casa Tech manda: vale o que foi salvo por último. */
+    fun aplicarRemoto(valores: org.json.JSONObject, em: Long): Boolean {
+        if (em <= prefs.getLong("config_remota_em", 0L)) return false
+        valores.keys().forEach { k ->
+            runCatching {
+                when (k) {
+                    "nome_carro" -> salvarNomeCarro(valores.getString(k)); "modelo" -> salvarModelo(valores.getString(k)); "ano" -> salvarAno(valores.getString(k))
+                    "placa" -> salvarPlaca(valores.getString(k)); "imagem_carro" -> salvarImagem(ImagemCarro.valueOf(valores.getString(k)))
+                    "capacidade_tanque" -> salvarCapacidade(valores.getInt(k).toString()); "endereco_casa" -> salvarEnderecoCasa(valores.getString(k))
+                    "endereco_trabalho" -> salvarEnderecoTrabalho(valores.getString(k)); "mapa" -> salvarMapa(MapaPreferido.valueOf(valores.getString(k)))
+                    "limite_velocidade" -> salvarLimiteVelocidade(valores.getInt(k)); "vigia_total" -> salvarVigia(valores.getBoolean(k))
+                    "voz_alertas" -> salvarVoz(valores.getBoolean(k)); "tpms_ideal_psi" -> salvarTpmsIdeal(valores.getInt(k))
+                    "geofence_telegram" -> salvarGeofenceTelegram(valores.getBoolean(k)); "geofence_faixa" -> salvarGeofenceFaixa(valores.getBoolean(k))
+                }
+            }
+        }
+        prefs.edit().putLong("config_remota_em", em).apply()
+        return true
+    }
+
     fun salvarNomeApp(v: String) { nomeApp = v; gravar("nome_app", v) }
     fun salvarNomeCarro(v: String) { nomeCarro = v; gravar("nome_carro", v) }
     fun salvarModelo(v: String) { modelo = v; gravar("modelo", v) }

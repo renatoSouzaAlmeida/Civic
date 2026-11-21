@@ -30,6 +30,7 @@ data class PrecoAnp(val local: String, val fonte: String, val semanaInicio: Stri
  * - Tudo roda em segundo plano; sem internet, nada trava — os dados continuam salvos no aparelho.
  */
 class Nuvem private constructor(ctx: Context) {
+    private val app = ctx.applicationContext
     private val prefs = ctx.getSharedPreferences("nuvem", Context.MODE_PRIVATE)
     private val fila = Executors.newSingleThreadExecutor()
     private val principal = Handler(Looper.getMainLooper())
@@ -123,6 +124,7 @@ class Nuvem private constructor(ctx: Context) {
     fun baixarESincronizar(v: Veiculo) {
         fila.execute {
             var manut = emptyList<ManutencaoNuvem>(); var abast = emptyList<AbastecimentoNuvem>(); var km: Pair<Int, Long>? = null
+            var config: Pair<JSONObject, Long>? = null; var areasNuvem: List<AreaNuvem>? = null; var contatosNuvem: List<ContatoNuvem>? = null
             if (garantirCadastro()) {
                 val (s1, t1) = http("GET", "/rest/v1/civic_manutencao?select=id,nome,intervalo_km,intervalo_meses,ultimo_km,ultima_data,atualizado_em", null)
                 if (s1 == 200) manut = runCatching {
@@ -157,13 +159,45 @@ class Nuvem private constructor(ctx: Context) {
                     val o = JSONArray(t3).optJSONObject(0)
                     if (o == null || o.isNull("km_casa_tech") || o.isNull("km_casa_tech_em")) null else o.getInt("km_casa_tech") to (lerIso(o.getString("km_casa_tech_em")) ?: 0L)
                 }.getOrNull()
+                // Configuração do veículo, áreas do geofence e contatos do SOS lançados na Casa Tech.
+                val (s4, t4) = http("GET", "/rest/v1/civic_configuracao?select=valores,atualizado_em", null)
+                if (s4 == 200) config = runCatching {
+                    val o = JSONArray(t4).optJSONObject(0)
+                    if (o == null || o.optJSONObject("valores") == null || o.getJSONObject("valores").length() == 0) null else o.getJSONObject("valores") to (lerIso(o.getString("atualizado_em")) ?: 0L)
+                }.getOrNull()
+                val (s5, t5) = http("GET", "/rest/v1/civic_areas?select=id,nome,lat,lon,raio_m,ativa,removida,atualizado_em", null)
+                if (s5 == 200) areasNuvem = runCatching {
+                    val arr = JSONArray(t5)
+                    (0 until arr.length()).map { i -> arr.getJSONObject(i).let { o ->
+                        AreaNuvem(Area(o.getString("id"), o.getString("nome"), o.getDouble("lat"), o.getDouble("lon"), o.getInt("raio_m"), o.optBoolean("ativa", true), lerIso(o.optString("atualizado_em")) ?: 0L), o.optBoolean("removida", false))
+                    } }
+                }.getOrNull()
+                val (s6, t6) = http("GET", "/rest/v1/civic_contatos_sos?select=id,nome,telefone,ativo,removido,atualizado_em", null)
+                if (s6 == 200) contatosNuvem = runCatching {
+                    val arr = JSONArray(t6)
+                    (0 until arr.length()).map { i -> arr.getJSONObject(i).let { o ->
+                        ContatoNuvem(ContatoSos(o.getString("nome"), o.getString("telefone"), o.getString("id"), lerIso(o.optString("atualizado_em")) ?: 0L, o.optBoolean("ativo", true)), o.optBoolean("removido", false))
+                    } }
+                }.getOrNull()
             }
             principal.post {
                 v.aplicarDaNuvem(manut, abast, km)
+                config?.let { (valores, em) -> Configuracoes.obter(app).aplicarRemoto(valores, em) }
+                areasNuvem?.let { Geofence.obter(app).aplicarDaNuvem(it) }
+                contatosNuvem?.let { Sos.obter(app).aplicarDaNuvem(it) }
                 sincronizar(v)
+                Geofence.obter(app).sincronizar()
+                Sos.obter(app).sincronizarContatos()
+                enviarRetratoConfig()
                 verificarManutencao(v)
             }
         }
+    }
+
+    /** Publica o retrato da configuração do veículo (a Casa Tech mostra os valores atuais e edita em `valores`). */
+    private fun enviarRetratoConfig() {
+        val corpo = JSONObject().put("dispositivo", token).put("valores_app", Configuracoes.obter(app).retratoRemoto()).put("app_em", iso(System.currentTimeMillis()))
+        fila.execute { if (garantirCadastro()) http("POST", "/rest/v1/civic_configuracao?on_conflict=dispositivo", corpo.toString(), mapOf("Prefer" to "resolution=merge-duplicates,return=minimal")) }
     }
 
     /** Envia o resumo do último estado do carro (uma linha em civic_estados). Devolve o resultado em [aoTerminar]. */
