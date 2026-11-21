@@ -71,10 +71,16 @@ class VigiaService : Service() {
             .setContentText("Monitorando o carro")
             .setOngoing(true)
             .build()
-        runCatching {
-            if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            else startForeground(ID, n)
-        }
+        // Tipo "location": com o CarPlay/Android Auto/Waze na frente o Android só deixa o GPS ligado em segundo plano a um serviço desse tipo
+        // (ou com a permissão "localização o tempo todo"). Se não houver permissão de localização, cai para o modo simples.
+        val ok = runCatching {
+            when {
+                Build.VERSION.SDK_INT >= 34 -> startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+                Build.VERSION.SDK_INT >= 29 -> startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+                else -> startForeground(ID, n)
+            }
+        }.isSuccess
+        if (!ok) runCatching { startForeground(ID, n) }
         ativo = true
         ligarGps()
         // Os objetos abaixo vivem no processo; só garantimos que existem.

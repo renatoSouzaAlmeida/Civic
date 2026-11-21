@@ -123,6 +123,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - **Início automático (Fit/CarPlay):** o Vigia (GPS, estacionamento, telemetria) só iniciava ao abrir a tela do launcher; no Fit o CarPlay abre direto e nada era monitorado. Agora um `BootReceiver` liga o Vigia ao ligar o aparelho e depois de atualizar o app, e o Vigia também inicia o OBD.
 - **Fila de avisos sem internet:** avisos (estacionamento, alertas, SOS) que falham por falta de internet ficam guardados e são reenviados (a cada 30 s), com a observação "enviado com atraso".
 - **Banco (RLS):** gravações de `civic_ignicao`, `civic_posicoes`, `civic_estados`, `civic_viagens` e `civic_areas` voltavam 401 (faltava a regra de leitura das próprias linhas); por isso a Casa Tech só tinha dados simulados. Corrigido; os dados guardados nos aparelhos sobem na próxima conexão.
+- **Atualização (o dono informou que o launcher abre primeiro e depois o CarPlay):** a causa mais provável é o Android cortar o GPS do app em segundo plano. Correções: serviço do Vigia declarado como tipo *location*; aviso no app pedindo a permissão "localização o tempo todo"; lotes de ignição/viagens com os mesmos campos (o banco recusava com erro 400).
 - **Pendente de apuração:** o Fit (versão 1.1.4, segundo o dono) não aparece no banco com versão 1.1.x; verificar se tem internet própria. A junção dos aparelhos duplicados no banco (script de limpeza) aguarda confirmação.
 
 ## Decisões tomadas por padrão (21/11/2026, "execute o restante")

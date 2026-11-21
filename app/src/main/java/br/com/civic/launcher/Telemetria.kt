@@ -171,7 +171,8 @@ class Telemetria private constructor(private val ctx: Context) {
         if (pontos.length() == 0 && eventos.length() == 0 && !status) return
         enviando = true
         val token = Nuvem.obter(ctx).token
-        val ev = JSONArray(); for (i in 0 until eventos.length()) ev.put(JSONObject(eventos.getJSONObject(i).toString()).put("dispositivo", token))
+        // O banco (PostgREST) recusa lote cujas linhas têm campos diferentes (erro 400): todas as linhas ganham os mesmos campos, nulos quando faltam.
+        val ev = JSONArray(); for (i in 0 until eventos.length()) ev.put(JSONObject(eventos.getJSONObject(i).toString()).put("dispositivo", token).also { o -> listOf("lat", "lon", "tensao").forEach { k -> if (!o.has(k)) o.put(k, JSONObject.NULL) } })
         val pt = JSONArray(); for (i in 0 until pontos.length()) pt.put(JSONObject(pontos.getJSONObject(i).toString()).put("dispositivo", token))
         val nEv = ev.length(); val nPt = pt.length()
         val nuvem = Nuvem.obter(ctx)

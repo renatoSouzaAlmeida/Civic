@@ -217,7 +217,10 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         val fila = runCatching { JSONArray(prefs.getString("fila_nuvem", "[]")) }.getOrDefault(JSONArray())
         if (fila.length() == 0) return
         val nuvem = Nuvem.obter(ctx)
-        val lote = JSONArray(); for (i in 0 until fila.length()) lote.put(JSONObject(fila.getJSONObject(i).toString()).put("dispositivo", nuvem.token))
+        // Mesmos campos em todas as linhas (nulos quando faltam), senão o banco recusa o lote com erro 400.
+        val campos = listOf("inicio", "fim", "distancia_km", "duracao_s", "em_movimento_s", "vel_media", "vel_max", "frenagens", "aceleracoes", "excessos", "excesso_max_kmh", "excesso_s",
+            "fonte", "simulado", "versao_app", "rpm_max", "rpm_alto", "consumo_km_l", "nota", "lat_ini", "lon_ini", "lat_fim", "lon_fim", "endereco_ini", "endereco_fim")
+        val lote = JSONArray(); for (i in 0 until fila.length()) lote.put(JSONObject(fila.getJSONObject(i).toString()).put("dispositivo", nuvem.token).also { o -> campos.forEach { k -> if (!o.has(k)) o.put(k, JSONObject.NULL) } })
         val n = fila.length()
         enviando = true
         nuvem.enviarJson("/rest/v1/civic_viagens?on_conflict=dispositivo,inicio", lote.toString(), "resolution=merge-duplicates") { ok ->

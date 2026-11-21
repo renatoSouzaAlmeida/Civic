@@ -23,6 +23,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Comando de voz curto (botão do microfone). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -76,7 +77,7 @@
         <!-- Resultado da instalação de atualizações (ver Atualizador). -->
         <service android:name=".PainelService" android:exported="false" />
 
-        <service android:name=".VigiaService" android:exported="false" android:foregroundServiceType="specialUse">
+        <service android:name=".VigiaService" android:exported="false" android:foregroundServiceType="location|specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Monitorar o carro (OBD/GPS) e avisar onde estacionou" />
         </service>
 

@@ -96,6 +96,7 @@ fun HomeScreen(
     }
 
     ModalNovaVersao(atualizador)
+    ModalLocalizacaoSempre()
     ModalSemInternet()
     AlertaColisao()
     DialogosSos()
@@ -351,5 +352,40 @@ private fun DialogosSos() {
         text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { sos.resultado.forEach { Text(it, fontSize = 17.sp) } } },
         confirmButton = { TextButton(onClick = { sos.mostrandoResultado = false }) { Text("Fechar", fontSize = 20.sp, fontWeight = FontWeight.Bold) } },
         dismissButton = { TextButton(onClick = { sos.tentarNovamente() }) { Text("Tentar de novo", fontSize = 18.sp) } },
+    )
+}
+
+
+/**
+ * Sem a permissão "localização o tempo todo", com o CarPlay/Android Auto na frente o Android pode parar o GPS do app: não sai o aviso de
+ * onde você estacionou nem o trajeto. Avisa uma vez por abertura do app e leva direto aos ajustes.
+ */
+@Composable
+private fun ModalLocalizacaoSempre() {
+    val ctx = LocalContext.current
+    var dispensado by remember { mutableStateOf(false) }
+    fun tem(p: String) = androidx.core.content.ContextCompat.checkSelfPermission(ctx, p) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    val faltaSempre = android.os.Build.VERSION.SDK_INT >= 29 && tem(android.Manifest.permission.ACCESS_FINE_LOCATION) && !tem(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+    if (!faltaSempre || dispensado) return
+    AlertDialog(
+        onDismissRequest = { dispensado = true },
+        title = { Text("Permitir localização o tempo todo", fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "Com o CarPlay, o Android Auto ou o Waze na frente, o Android pode desligar o GPS do Civic Renatin. Sem a permissão \"o tempo todo\", " +
+                    "o aviso de onde você estacionou e o trajeto da viagem podem não funcionar.\n\n" +
+                    "Toque em Abrir ajustes > Permissões > Localização > Permitir o tempo todo.",
+                fontSize = 18.sp,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                dispensado = true
+                runCatching {
+                    ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }) { Text("Abrir ajustes", fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = { TextButton(onClick = { dispensado = true }) { Text("Depois", fontSize = 20.sp) } },
     )
 }
