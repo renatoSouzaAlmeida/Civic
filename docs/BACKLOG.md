@@ -1,6 +1,6 @@
 # Backlog — Civic Renatin
 
-> **Marco 1.0.0:** depois da escolha do layout da tela do OBD e quando todos os itens abaixo estiverem concluídos, a versão do app sobe para 1.0.0 (ver `versao.properties` e CLAUDE.md). Nenhuma parte da versão passa de 99.
+> **Marco 1.0.0 atingido em 21/11/2026.** Regra original: depois da escolha do layout da tela do OBD e quando todos os itens abaixo estiverem concluídos, a versão do app sobe para 1.0.0 (ver `versao.properties` e CLAUDE.md). Nenhuma parte da versão passa de 99.
 
 Itens combinados e ainda não feitos. Ao concluir um item, remova daqui (ou marque como feito).
 
@@ -69,12 +69,12 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] **Modo HUD** — pronto, falta validar: velocímetro da barra do topo ou Config. > Segurança; espelhado por padrão.
 - [x] **Comando de voz curto** — pronto, falta validar: microfone da barra do topo; depende de reconhecimento de voz no aparelho.
 
-## Layout da tela do OBD (decisão em aberto)
-- [ ] **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Esportivo (o atual), Cockpit e Modular (só o corpo das imagens; sem cabeçalho nem menu). Órbitas foi descartado.
+## Layout da tela do OBD (decidido)
+- [x] **Decidido: todos os layouts ficam** (Esportivo, Cockpit e Modular), escolhidos pelo botão "Layout". Proposta original: **Comparar 3 propostas novas com a atual** — OBD > botão "Layout": Esportivo (o atual), Cockpit e Modular (só o corpo das imagens; sem cabeçalho nem menu). Órbitas foi descartado.
   Testar com a demonstração do OBD e escolher quais ficam; as demais serão removidas. A versão segue 0.x até essa decisão.
 
-## Layout da Tela Início (decisão em aberto)
-- [ ] **Comparar 3 propostas** — pílula "Início: …" no alto da Tela Início: Padrão (a atual), Caixas (clara, caixas separadas e mapa menor)
+## Layout da Tela Início (decidido)
+- [x] **Decidido: todos os layouts ficam** (Padrão, Caixas e Painel), escolhidos pela pílula "Início". Proposta original: **Comparar 3 propostas** — pílula "Início: …" no alto da Tela Início: Padrão (a atual), Caixas (clara, caixas separadas e mapa menor)
   e Painel (proposta escura, segue o tema). Escolher qual fica; as demais e a pílula serão removidas.
 
 ## Abastecimento automático
@@ -84,7 +84,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
   o lançamento continua manual.
 
 ## Integração com a Casa Tech (painel fora do carro)
-- [ ] **Dashboard do veículo dentro da Casa Tech** — uma tela dedicada, isolada do resto da Casa Tech, para consultar
+- [x] **Dashboard do veículo dentro da Casa Tech** (pronto, montado na Casa Tech) — uma tela dedicada, isolada do resto da Casa Tech, para consultar
   de fora do carro tudo que o launcher captura. Acesso próprio (login/senha ou autorização separada da conta
   principal) e **somente leitura**, sem acesso aos demais módulos da Casa Tech.
   - Dados a mostrar: dados do veículo (nome, modelo, ano, placa, odômetro do app); manutenção (plano, vencidos e
