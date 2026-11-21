@@ -184,3 +184,6 @@ create policy civic_dash_abast_escrever on public.civic_abastecimentos for all t
   using (dispositivo in (select public.civic_meus_dispositivos())) with check (dispositivo in (select public.civic_meus_dispositivos()));
 create policy civic_dash_manut_escrever on public.civic_manutencao for all to authenticated
   using (dispositivo in (select public.civic_meus_dispositivos())) with check (dispositivo in (select public.civic_meus_dispositivos()));
+
+-- ===== Aplicada em 21/11/2026 como "civic_crud_casa_tech_completo" =====
+-- CRUD completo da Casa Tech por veículo. O SQL aplicado está em supabase/migrations/20261121_crud_casa_tech_completo.sql.
