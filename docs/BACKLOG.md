@@ -124,6 +124,7 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - **Fila de avisos sem internet:** avisos (estacionamento, alertas, SOS) que falham por falta de internet ficam guardados e são reenviados (a cada 30 s), com a observação "enviado com atraso".
 - **Banco (RLS):** gravações de `civic_ignicao`, `civic_posicoes`, `civic_estados`, `civic_viagens` e `civic_areas` voltavam 401 (faltava a regra de leitura das próprias linhas); por isso a Casa Tech só tinha dados simulados. Corrigido; os dados guardados nos aparelhos sobem na próxima conexão.
 - **Atualização (o dono informou que o launcher abre primeiro e depois o CarPlay):** a causa mais provável é o Android cortar o GPS do app em segundo plano. Correções: serviço do Vigia declarado como tipo *location*; aviso no app pedindo a permissão "localização o tempo todo"; lotes de ignição/viagens com os mesmos campos (o banco recusava com erro 400).
+- **Identificação dos aparelhos (21/11/2026):** cada aparelho envia modelo, versão do Android e nome do carro a cada sinal de vida (`civic_status`, views `civic_veiculos` e `civic_status_atual`); Config. > Status do app mostra "Este aparelho" com o ID de 8 letras, o mesmo que aparece na Casa Tech.
 - **Pendente de apuração:** o Fit (versão 1.1.4, segundo o dono) não aparece no banco com versão 1.1.x; verificar se tem internet própria. A junção dos aparelhos duplicados no banco (script de limpeza) aguarda confirmação.
 
 ## Decisões tomadas por padrão (21/11/2026, "execute o restante")

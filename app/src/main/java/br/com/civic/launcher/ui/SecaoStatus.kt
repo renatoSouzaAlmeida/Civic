@@ -49,6 +49,9 @@ fun SecaoStatusApp() {
     fun idade(ms: Long): String { val s = (System.currentTimeMillis() - ms) / 1000; return if (s < 90) "há $s s" else if (s < 5400) "há ${s / 60} min" else "há ${s / 3600} h" }
 
     val itens = buildList {
+        // Quem é este aparelho (o mesmo identificador aparece na Casa Tech).
+        add(ItemStatus("Este aparelho", NivelStatus.Info,
+            "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} · Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT}) · app ${runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "?"} · ID ${nuvem.token.take(8)}"))
         // OBD
         val d = obd.dados
         add(

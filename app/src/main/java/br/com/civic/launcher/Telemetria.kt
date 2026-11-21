@@ -188,6 +188,10 @@ class Telemetria private constructor(private val ctx: Context) {
             ultimoStatus = agora
             val s = JSONObject().put("dispositivo", token).put("atualizado_em", iso(agora)).put("motor_ligado", motorLigado)
                 .put("posicao_fonte", if (fonteRede) "rede" else "gps").put("heartbeat_s", intervalo / 1000).put("viagem", viagem).put("versao_app", versao())
+                // Quem é quem no dashboard: modelo do aparelho, versão do Android e o nome do carro configurado no app.
+                .put("aparelho", "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}".trim())
+                .put("android_versao", "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})")
+                .put("nome_carro", Configuracoes.obter(ctx).let { c -> listOf(c.nomeCarro, c.modeloEAno).filter { it.isNotBlank() }.joinToString(" · ") })
             posicao?.let { s.put("lat", it.latitude).put("lon", it.longitude).put("vel", Math.round(velocidade * 10) / 10.0) }
             tensao?.let { s.put("tensao", it.toDouble()) }
             nuvem.enviarJson("/rest/v1/civic_status?on_conflict=dispositivo", JSONArray().put(s).toString(), "resolution=merge-duplicates") { fim() }

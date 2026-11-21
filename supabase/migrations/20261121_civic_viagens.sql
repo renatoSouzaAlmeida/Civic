@@ -71,3 +71,18 @@ create policy civic_pos_ler on public.civic_posicoes for select to anon using (d
 create policy civic_estado_ler on public.civic_estados for select to anon using (dispositivo = public.civic_token());
 create policy civic_viagem_ler on public.civic_viagens for select to anon using (dispositivo = public.civic_token());
 create policy civic_area_ler on public.civic_areas for select to anon using (dispositivo = public.civic_token());
+
+-- ===== Aplicada em 21/11/2026 como "civic_status_identificacao_aparelho" =====
+-- Identifica cada aparelho: modelo, versão do Android e nome do carro configurado no app (enviados a cada sinal de vida).
+alter table public.civic_status add column aparelho text, add column android_versao text, add column nome_carro text;
+
+create or replace view public.civic_status_atual with (security_invoker = true) as
+  select s.dispositivo, s.atualizado_em, s.motor_ligado, s.lat, s.lon, s.vel, s.tensao, s.viagem, s.versao_app, s.heartbeat_s,
+         (s.atualizado_em > now() - (s.heartbeat_s * 2.5) * interval '1 second') as online,
+         s.posicao_fonte, s.aparelho, s.android_versao, s.nome_carro
+  from public.civic_status s;
+
+create or replace view public.civic_veiculos with (security_invoker = false) as
+  select d.token as dispositivo, d.nome, d.criado_em, s.aparelho, s.android_versao, s.nome_carro, s.versao_app, s.atualizado_em as ultimo_sinal
+  from public.civic_dispositivos d left join public.civic_status s on s.dispositivo = d.token
+  where d.token in (select public.civic_meus_dispositivos());
