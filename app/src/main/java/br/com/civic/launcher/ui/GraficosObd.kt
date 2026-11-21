@@ -86,14 +86,25 @@ fun MostradorCentral(
             Canvas(Modifier.fillMaxSize()) {
                 val c = Offset(size.width / 2, size.height / 2)
                 val raio = size.minDimension / 2
-                // Anel ECO: brilho e aro na cor do modo de condução.
-                if (anel.alpha > 0f) drawCircle(
-                    Brush.radialGradient(0.80f to anel.copy(alpha = 0.55f * anel.alpha), 1f to Color.Transparent, center = c, radius = raio),
-                    raio, c,
-                )
                 drawCircle(Painel.face, raio * 0.93f, c)
-                if (anel.alpha > 0f) drawCircle(anel, raio * 0.94f, c, style = Stroke(raio * 0.05f))
-                else drawCircle(Brush.sweepGradient(listOf(Painel.borda, Color(0xFF6B7A90), Painel.borda), c), raio * 0.94f, c, style = Stroke(raio * 0.025f))
+                drawCircle(Brush.sweepGradient(listOf(Painel.borda, Color(0xFF6B7A90), Painel.borda), c), raio * 0.94f, c, style = Stroke(raio * 0.025f))
+                // Arco ECO: só a metade de cima (do meio para cima), num degradê suave que some nas duas pontas.
+                // Verde = econômico, azul claro = normal, laranja = alto consumo (modo de condução, como o ECO Assist do Civic).
+                if (anel.alpha > 0f) {
+                    val rAro = raio * 0.915f
+                    val transparente = anel.copy(alpha = 0f)
+                    val suave = Brush.sweepGradient(
+                        0.00f to transparente, 0.50f to transparente, // 180° (meio, à esquerda)
+                        0.60f to anel.copy(alpha = 0.40f * anel.alpha),
+                        0.75f to anel.copy(alpha = 0.90f * anel.alpha), // 270° (topo)
+                        0.90f to anel.copy(alpha = 0.40f * anel.alpha),
+                        1.00f to transparente, // 360° (meio, à direita)
+                        center = c,
+                    )
+                    val canto = Offset(c.x - rAro, c.y - rAro); val tam = Size(rAro * 2, rAro * 2)
+                    drawArc(suave, 180f, 180f, false, canto, tam, alpha = 0.30f, style = Stroke(raio * 0.13f)) // brilho largo por baixo
+                    drawArc(suave, 180f, 180f, false, canto, tam, style = Stroke(raio * 0.045f, cap = StrokeCap.Round))
+                }
                 // Faixa vermelha externa no fim da escala.
                 val rFaixa = raio * 0.90f
                 drawArc(
