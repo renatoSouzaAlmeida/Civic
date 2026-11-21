@@ -25,7 +25,7 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | `civic_eventos` (tipos novos) | Alem dos alertas já listados: `geofence` (saiu/entrou de área), `sos` e `sos_teste` (botão SOS acionado ou testado, com localização e dados do carro), `local_desconhecido` aparece dentro do texto do estacionamento | `tipo`, `mensagem`, `criado_em` | Cartão "Segurança": últimos SOS (em vermelho), saídas de área e estacionamentos em local desconhecido |
 | `civic_abastecimentos_analise` (view) | **Histórico de abastecimentos com análise pronta** (use esta view em vez da tabela). Um abastecimento é criado **automaticamente** quando o nível do tanque sobe; o valor pago entra depois | `data`, `km`, `litros`, `combustivel`, `aditivada`, `tanque_cheio`, `automatico`, `nivel_antes`, `nivel_depois`; valores: `total_pago`, `preco_litro` (pode ser calculado do total), `aguardando_valor` (true = o app ainda não recebeu o valor pago); análise: `km_rodados`, `dias_desde_anterior`, `consumo_km_l`, `custo_por_km` | Nº de abastecimentos; consumo médio e por abastecimento; custo por km; preço pago por litro ao longo do tempo; gasto por mês; km por tanque; dias entre abastecimentos; nível do tanque ao abastecer; comparar aditivada x comum; selo "Aguardando valor" |
 | `civic_abastecimentos` | Tabela base (as mesmas linhas, sem a análise). Prefira a view acima | `preco_litro` e `valor_total` podem ser nulos (o dono informa só um dos dois, ou nenhum ainda) | Só se precisar de algum campo cru |
-| `civic_acessos` | Quais aparelhos cada usuário do dashboard pode ver | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
+| `civic_acessos` | Quais aparelhos o usuário do dashboard pode ver (preenchida sozinha para aparelhos novos) | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
 
@@ -52,13 +52,9 @@ manda o Telegram e **grava a linha em `civic_estacionamentos` na mesma chamada**
 (chave única `dispositivo + data`). Se não houver posição de GPS, só o aviso de texto sai (em `civic_eventos`) e nada é
 gravado em `civic_estacionamentos`, pois lat/lon são obrigatórios.
 
-## Liberar o acesso ao dashboard (uma vez)
-Entre na Casa Tech com o login OAuth, pegue o `id` do usuário em `auth.users` e vincule ao aparelho:
-
-```sql
-insert into public.civic_acessos (user_id, dispositivo)
-select '<ID_DO_USUARIO>', token from public.civic_dispositivos;  -- todos os aparelhos; filtre por nome se quiser só um
-```
+## Acesso ao dashboard
+A Casa Tech é **só do dono** (um único usuário, login OAuth do Supabase). Todo aparelho real novo é **vinculado automaticamente** a esse usuário (gatilho no banco), então não há mais vínculo manual:
+os aparelhos aparecem em `civic_veiculos` assim que se cadastram. Só o aparelho simulado precisa de vínculo manual (SQL na seção "Dados simulados").
 
 ## Exemplos de consulta (supabase-js)
 ```js
