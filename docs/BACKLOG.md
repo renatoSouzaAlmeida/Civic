@@ -116,10 +116,62 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - [x] Modo leve / perfil do Fit — chave "Desempenho" em Config.: sem animações contínuas nem vibração ao tocar.
   (Fit: Android 12, 1280x720, 4 GB de RAM, 8 núcleos; o launcher já rodava bem, o modo leve é reserva para aparelhos mais simples.)
 
-## Novas propostas (pós-1.0.0, a implementar) — detalhes em `docs/RECURSOS.md`
-- [x] **Driving Score completo** (feito em 21/11/2026; falta validar no carro e montar a tela no dash) — cartão "Resumo da condução" (anel com a nota, selo, km, minutos, frenagens, acelerações, RPM elevado, consumo médio), nota guardada por viagem, comparação entre viagens e envio à Casa Tech.
-- [ ] **Geofence** — áreas permitidas (raio em torno de Casa, Trabalho ou ponto escolhido) com aviso ao sair e ao entrar; funciona por GPS (vale para o Fit).
-- [ ] **Alerta de excesso de velocidade** — a contagem por viagem e o limite já existem (21/11/2026); falta o aviso na hora (voz + faixa + Telegram).
-- [ ] **Alerta de desconexão do OBD** — hoje o app detecta a queda mas não avisa; falta faixa, voz, Telegram em movimento e reconexão visível.
-- [ ] **Botão SOS** — localização e dados do veículo para vários contatos cadastrados, com confirmação de 5 s.
-- [ ] **Aviso de local desconhecido** — aprender as vagas de costume e avisar quando o carro parar ou andar fora delas (GPS).
+## Roadmap pós-1.0.0 — do documento "Projeto Civic Renatin: Roadmap de Desenvolvimento" (21/11/2026)
+
+Diretriz central: **plataforma automotiva independente do OBD** (o adaptador é uma fonte de dados; GPS, sensores Android e nuvem continuam úteis sem ele — caso do Fit com CarPlay).
+Pilares: Condução · Segurança · Diagnóstico · Inteligência. Princípios: segurança e legibilidade na condução (sem interação complexa em movimento), funções essenciais locais e tolerantes à falta de internet,
+**mostrar a origem e a confiança de cada dado** (OBD, GPS, sensor Android, nuvem), não apresentar estimativa como medição, projetar para várias resoluções e paisagem/retrato.
+Observação: o documento foi escrito com base no inventário textual (RECURSOS.md de antes do Driving Score); o estado atual de cada item está marcado abaixo. Prioridade: P0 = essencial para a release; P1 = importante.
+
+### Release 1.1.0 — Segurança (escopo recomendado da primeira entrega)
+- [ ] **CR-101 (P0) Geofence: cadastro e persistência** — criar, editar, ativar/desativar e remover áreas circulares (nome, centro e raio; casos iniciais Casa, Trabalho e local personalizado); guardar no aparelho e sincronizar com o Supabase quando houver internet. Funciona por GPS, sem OBD.
+- [ ] **CR-102 (P0) Geofence: entrada e saída** — detectar transições reais com tolerância à imprecisão e à oscilação do GPS (histerese, confirmação por mais de uma leitura, intervalo mínimo); **perda de sinal de GPS não conta como saída**; um evento por transição.
+- [ ] **CR-103 (P1) Geofence: avisos no app e no Telegram** — faixa visual e Telegram conforme preferências; cooldown; registro da entrega.
+- [ ] **CR-104 (P0) Excesso de velocidade** — *parcial (21/11/2026): limite configurável e contagem por viagem já existem.* Falta: tolerância e **duração mínima** acima do limite, **cooldown**, registro da **duração e da maior velocidade excedida** por viagem, **fonte da velocidade registrada (OBD ou GPS)**, limite manual por viagem, aviso por voz/faixa e Telegram opcional e limitado. Futuro: limite por tipo de via (só com fonte confiável e licença adequada). Aceite: oscilação perto do limite não repete alerta.
+- [ ] **CR-105 (P0) Desconexão do OBD e reconexão** — hoje o app detecta a queda mas não avisa. Estados explícitos: conectado, conectando, desconectado, **sem resposta** e **indisponível por ignição/energia**; detectar por timeout e falhas consecutivas (não por uma leitura perdida); em movimento, faixa e voz (Telegram conforme configuração); **reconexão automática com backoff** e estado visível; marcar leituras antigas como **desatualizadas** (com idade) em vez de zerá-las. Aceite: falha do adaptador não é confundida com motor desligado.
+- [ ] **CR-106 (P1) SOS multi-contato** — contatos de emergência (Telegram e/ou SMS, conforme permissões); botão acessível com **confirmação curta** contra acionamento acidental; envia localização, horário, link do mapa, identificação do veículo e dados disponíveis; anexa DTCs e eventos recentes **sem afirmar colisão sem evidência**; registra acionamento, destinatários, resultado do envio e cancelamento; avisa quando o canal estiver indisponível e **não indica envio concluído antes da confirmação**; oferece teste seguro dos contatos.
+- [x] **CR-107 (P1) Driving Score persistido** — *feito em 21/11/2026:* cartão visual, nota e fatores por viagem (frenagens, acelerações, excessos, RPM elevado, consumo), persistência local e envio à Casa Tech (`civic_viagens`). Falta: **tela do dashboard na Casa Tech** (pedido já enviado) e validar no carro.
+- [ ] **CR-108 (P0) Testes no tablet e na multimídia TS18** — energia (ACC desligando, suspensão profunda, retomada), rede, OBD, GPS, tela e regressão; ver "Plano de testes" abaixo.
+
+### Release 1.2.0 — Análise
+- [ ] **Comparador de viagens** (prioridade Alta) — comparar trajetos por distância, duração, consumo, custo, velocidade e eventos (base: `civic_viagens`).
+- [ ] **Relatórios** e **tendências de consumo e condução**; dashboard Casa Tech ampliado.
+- [ ] **Tendências de diagnóstico** (Muito alta) — detectar alterações persistentes em temperatura, fuel trims, tensão, marcha lenta e consumo (base: `civic_estados` e séries do OBD).
+- [ ] **Análise de carga elétrica** (Alta) — evoluir tensão e partida para achar padrões de bateria/alternador.
+
+### Release 1.3.0 — Caixa-preta
+- [ ] **Caixa-preta digital** (Muito alta) — buffer circular de telemetria com janela configurável (velocidade, aceleração, GPS, RPM e parâmetros disponíveis); captura disparada por frenagem brusca, possível colisão, falha crítica ou SOS; persistir janela **pré e pós-evento** com timestamp e horário local; registrar origem, frequência e qualidade de cada sinal (aceitar lacunas quando o OBD desconectar); definir retenção, exportação explícita e política de localização. **Limite:** diário técnico de eventos, não é caixa-preta certificada nem EDR homologado.
+- [ ] **Linha do tempo da viagem** (partida, frenagem brusca, possível colisão, estacionamento) e tela de **Segurança** com mapa, geofence e eventos.
+- [ ] **Mapa de saúde do veículo** (Alta) — estado por subsistema, com dado observado, fonte e confiança.
+
+### Release 1.4.0 — Assistente
+- [ ] **Assistente mecânico (IA)** (Alta, posterior) — explicar DTCs e tendências com ressalvas, fontes e recomendações **não prescritivas**; resumo de anomalias. A IA explica; nunca comanda sistemas críticos nem dá diagnóstico definitivo sem validação.
+
+### Release 2.0.0 — Plataforma
+- [ ] **Perfis de motorista** (Média) — histórico, preferências e Driving Score por condutor, com **seleção confiável** (útil para saber quem dirigiu).
+- [ ] Suporte ampliado a outros veículos e adaptadores; sensores opcionais.
+- [ ] **TPMS** (Condicional) — só com sensores compatíveis. *Atenção: o TPMS tinha sido retirado do backlog por decisão do dono; só volta se você decidir.*
+
+### Arquitetura e dados (orientações do documento)
+- [ ] **Camada de eventos confiável** (fazer antes da caixa-preta): evento com `event_id` idempotente (gerado no aparelho), `vehicle_id`, `event_type`, `occurred_at` (UTC), `source` (OBD, GPS, accelerometer, user_action, cloud), `confidence`, `payload` versionado, `sync_status` (pending, synced, failed) e `app_version`. Tipos iniciais: `geofence_enter/exit`, `overspeed_started/ended`, `obd_disconnected/reconnected`, `sos_triggered/cancelled/delivery_result`, `driving_score_calculated`, `blackbox_capture_started/saved`.
+  Estender as tabelas atuais (`civic_eventos`, `civic_viagens`...) de forma retrocompatível, com migrações versionadas e RLS.
+- [ ] **Camada de qualidade/origem dos dados**: valor, unidade, origem, timestamp e validade em cada leitura; separar OBD, GPS e sensores.
+- [ ] **Persistência local**: o documento recomenda Room/SQLite; hoje o app usa SharedPreferences com JSON. Avaliar a migração pesando o **tamanho do app** (regra do projeto) e a necessidade (eventos, buffer da caixa-preta, fila offline).
+- [ ] Sincronização: IDs gerados no aparelho, gravações idempotentes, fila local com tentativas graduais e estado visível, separar telemetria frequente de eventos importantes, política de retenção para trajetos, coordenadas e eventos.
+- [ ] **Privacidade**: localização, rotas, identificação do veículo e contatos são dados sensíveis — autenticação por veículo/usuário, RLS, transporte seguro, minimização, controles de exclusão/exportação; nunca embutir service-role key no app.
+- [ ] Separação em camadas (UI, núcleo automotivo, serviço OBD, localização e sensores, dados locais, nuvem) para o núcleo servir ao Civic e ao Fit.
+
+### Requisitos da multimídia e cuidados automotivos (valem para todas as entregas)
+- Validar: inicialização como HOME e retomada após reinício/atualização; **energia** (ACC desligando, suspensão profunda, evitar serviços desnecessários); OBD (compatibilidade, reconexão, latência, timeouts, taxas de consulta); GPS (precisão em movimento, perda em garagem/túnel, rede como reserva); tela (2000×1200 paisagem, retrato, brilho, modo noturno, áreas de toque); áudio (foco, alertas falados, Spotify e navegação juntos, volume automático); permissões (Bluetooth, localização, notificações, microfone e SMS se adotado); estabilidade (teste prolongado, aquecimento, memória, vazamentos, perda de internet).
+- **Matriz por fonte:** velocidade (OBD ou GPS), RPM/temperatura do motor (só OBD, se o PID existir), viagem/distância (GPS; OBD opcional), geofence (GPS; nuvem opcional), movimento (OBD opcional, GPS, sensor Android), DTC/freeze frame (OBD, conforme ECU), Telegram/dashboard (internet; localização pode compor).
+- **Cuidados:** não escrever na ECU nem apagar DTC ou executar comandos proprietários automaticamente; não assumir que o adaptador OBD fica alimentado com o carro desligado; pressão de óleo, TPMS e PIDs proprietários da Honda dependem de hardware/PIDs específicos; alertas críticos exigem limites validados e não concluem diagnóstico com um único sensor; não induzir o motorista a usar menus complexos dirigindo.
+
+### Plano de testes e qualidade
+- Cenários: sem internet durante a viagem (eventos ficam em fila e sincronizam depois **sem duplicar**); OBD desconecta em movimento (dados marcados como desatualizados, alerta e reconexão); GPS oscila na borda da geofence (sem entradas/saídas falsas); velocidade oscila perto do limite (sem alertas repetidos); SOS sem rede móvel (informa a falha, mantém registro local e permite nova tentativa); multimídia entra em suspensão (serviços respeitam a energia e o estado é recuperado); app atualizado (assinatura preservada, banco migra sem perda); **veículo sem OBD** (viagem, localização, geofence e GPS seguem disponíveis).
+- Métricas: taxa de reconexão do OBD e tempo médio para recuperar a sessão; falsos positivos de geofence, excesso de velocidade e colisão; **eventos duplicados após sincronização offline = zero**; tempo de inicialização e retomada na TS18; memória e estabilidade em execução prolongada; percentual de eventos com fonte, timestamp e qualidade registrados.
+
+### Outros itens ainda abertos (fora do documento)
+- [ ] **Aviso de local desconhecido** — aprender as vagas de costume e avisar quando o carro parar ou andar fora delas (GPS). Combina com a geofence (CR-101 a CR-103).
+- [ ] **Versionamento:** o documento chama as entregas de 1.1.0, 1.2.0... Hoje a versão é calculada pelo CI (1.0.x a cada build). Para marcar uma release, basta subir `MENOR` em `versao.properties` (e `RUN_BASE`) na entrega correspondente.
+
+**Ordem recomendada pelo documento:** consolidar a 1.1.0 nas lacunas identificadas, estabelecer a **camada de eventos confiável** e só então avançar para caixa-preta, tendências e assistente. Passos: inspecionar o repositório, confirmar esquema/RLS/Edge Functions, implementar o modelo comum de eventos e a camada de qualidade/origem, construir geofence e excesso de velocidade como regras independentes do OBD, completar o estado de conexão OBD, adicionar SOS multi-contato, e testar em tablet e TS18.
