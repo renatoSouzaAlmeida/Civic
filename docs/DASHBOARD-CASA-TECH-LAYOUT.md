@@ -21,6 +21,7 @@ As tabelas e colunas estão em `DASHBOARD-CASA-TECH.md`.
 4. **Três tendências (30 dias):** tensão da bateria (repouso e mínima na partida), consumo médio km/l, temperatura máxima do motor.
 
 ### Viagens
+**Condução (Driving Score):** cada viagem tem nota 0–100 (`civic_viagens.nota`) em anel colorido (verde 90+, azul 75+, âmbar 55+, vermelho abaixo), selo (Muito bom / Bom / Atenção / Precisa melhorar), origem → destino (`endereco_ini` → `endereco_fim`) e, ao abrir, o cartão "Resumo da condução" com frenagens, acelerações, excessos de velocidade, RPM elevado e consumo (os dois últimos só com OBD; `fonte = 'gps'` mostra o selo "Só GPS"). Acima da tabela: nota média da semana, evolução da nota por dia e as 3 melhores e 3 piores viagens. O trajeto da viagem vem de `civic_posicoes` entre `inicio` e `fim`. Serve para saber **por onde o carro anda quando o dono não está dirigindo**.
 Filtro 7/14/30 dias, gráfico de km por dia e **tabela completa**: data, trajeto, saída, duração, distância com barra proporcional, média, máxima, consumo, situação (Normal / Falha). Cabeçalho fixo, linha com hover.
 
 ### Estacionamento
@@ -46,7 +47,7 @@ Tabela do plano: item, intervalo, última vez (data · km), situação (Em dia /
 | Bateria, combustível, falhas, consumo, temperatura | último registro de `civic_estados`; tendências = série de `civic_estados` (30 dias) |
 | Últimos 7 dias (km, nº de viagens, tempo) | `civic_estados` (`viagem_km`, `viagem_duracao_s`) ou agrupando `civic_posicoes` por `viagem` |
 | Mapa e trajeto da última viagem | `civic_posicoes` filtrado pela `viagem` mais recente, ordenado por `em` |
-| Viagens (lista) | `civic_ignicao` (`motor_ligou` → `motor_desligou` da mesma `viagem`) combinado com `civic_estados` por horário |
+| Viagens (lista, nota e condução) | `civic_viagens` (uma linha por viagem, com nota, eventos e endereços); trajeto em `civic_posicoes` |
 | Vagas e precisão do GPS | `civic_estacionamentos` (`idade_gps_s`: < 10 s exata; < 120 s ok; maior = defasada) |
 | Atenção: alertas e falhas | `civic_eventos` (30 dias) e `dtc`/`dtc_pendentes` de `civic_estados` |
 | Aba Abastecimentos | `civic_abastecimentos_analise` (view com consumo, custo por km e dias entre abastecimentos) |

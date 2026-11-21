@@ -20,11 +20,21 @@ Chave de ligação entre as tabelas: a coluna **`dispositivo`** (identifica o ap
 | `civic_status_atual.posicao_fonte` | `gps` ou `rede`: de onde veio a posição do status. Com `rede` a posição é aproximada (aparelho sem GPS) | — | Mostrar "posição aproximada" no mapa quando for `rede` |
 | `civic_posicoes` | **Trajeto**: um ponto a cada 15 s com o motor ligado ou andando | `em`, `lat`, `lon`, `vel` (km/h), `viagem` (id da viagem = hora em que o motor ligou, em ms; agrupa os pontos) | Desenhar a linha da viagem no mapa (filtre por `viagem`, ordene por `em`); velocidade ao longo do trajeto; replay da viagem. Realtime em `civic_posicoes` acompanha a viagem em curso |
 | `civic_ignicao` | **Eventos de ignição**: linha do tempo de liga/desliga | `tipo` (`motor_ligou`, `motor_desligou`, `multimidia_ligou`, `multimidia_desligou`), `em`, `lat`, `lon`, `tensao`, `viagem` | Linha do tempo do dia; duração do uso (`motor_ligou` até `motor_desligou` da mesma `viagem`); horários típicos de saída e chegada |
+| `civic_viagens` | **Viagens com modo de condução (Driving Score)**: uma linha por viagem, enviada quando ela termina. **Funciona com OBD ou só com GPS** (Honda Fit com CarPlay/Android Auto na frente, sem OBD). Sem internet, o app guarda e envia depois | `inicio`, `fim`, `duracao_s`, `em_movimento_s`, `distancia_km`, `vel_media`, `vel_max`; **condução:** `nota` (0 a 100: 90+ Muito bom, 75+ Bom, 55+ Atenção, abaixo Precisa melhorar), `frenagens`, `aceleracoes`, `excessos` (vezes acima do limite de velocidade configurado no app), `rpm_alto` e `rpm_max` e `consumo_km_l` (**só com OBD**; nulos quando `fonte = 'gps'`); **por onde andou:** `lat_ini`, `lon_ini`, `lat_fim`, `lon_fim`, `endereco_ini`, `endereco_fim`; `fonte` (`obd` ou `gps`), `simulado`, `versao_app` | **Aba Viagens:** lista com origem → destino, nota em anel colorido, km, duração; cartão "Resumo da condução" da viagem escolhida (anel com a nota, selo, frenagens, acelerações, excessos, RPM elevado, consumo); evolução da nota ao longo dos dias; ranking das melhores e piores viagens; **por onde o carro anda quando o dono não está**: trajeto no mapa (junte com `civic_posicoes` pela faixa `inicio`–`fim`) e lugares mais frequentes. Mostre "—" nos campos nulos e o selo "Só GPS" quando `fonte = 'gps'` |
 | `civic_abastecimentos_analise` (view) | **Histórico de abastecimentos com análise pronta** (use esta view em vez da tabela). Um abastecimento é criado **automaticamente** quando o nível do tanque sobe; o valor pago entra depois | `data`, `km`, `litros`, `combustivel`, `aditivada`, `tanque_cheio`, `automatico`, `nivel_antes`, `nivel_depois`; valores: `total_pago`, `preco_litro` (pode ser calculado do total), `aguardando_valor` (true = o app ainda não recebeu o valor pago); análise: `km_rodados`, `dias_desde_anterior`, `consumo_km_l`, `custo_por_km` | Nº de abastecimentos; consumo médio e por abastecimento; custo por km; preço pago por litro ao longo do tempo; gasto por mês; km por tanque; dias entre abastecimentos; nível do tanque ao abastecer; comparar aditivada x comum; selo "Aguardando valor" |
 | `civic_abastecimentos` | Tabela base (as mesmas linhas, sem a análise). Prefira a view acima | `preco_litro` e `valor_total` podem ser nulos (o dono informa só um dos dois, ou nenhum ainda) | Só se precisar de algum campo cru |
 | `civic_acessos` | Quais aparelhos cada usuário do dashboard pode ver | `user_id`, `dispositivo` | Só administração; o dash não precisa consultar |
 
 Não use `civic_dispositivos` no dash (tem token e chat do Telegram; o usuário logado não tem acesso a ela).
+
+## Como o modo de condução (viagens) é gravado
+O launcher mede a condução **pelo GPS do serviço Vigia**, então vale mesmo com CarPlay ou Android Auto na frente e sem OBD:
+frenagem brusca (queda de 11 km/h por segundo ou mais), aceleração brusca (subida de 9 km/h por segundo ou mais), excesso de velocidade
+(acima do limite escolhido em Config. > Segurança; padrão 110 km/h) e fadiga. Com OBD entram também o RPM elevado (4.500 rpm ou mais) e o consumo.
+A nota é `100 − (6 × frenagens + 4 × acelerações + 3 × excessos + 2 × RPM elevado)`, diluída em viagens longas (a partir de 10 km), de 0 a 100.
+A viagem começa quando o carro anda (ou o motor liga) e termina após 5 min parado; ao terminar o app grava uma linha em `civic_viagens`
+(origem e destino com endereço, sem duplicar: chave `dispositivo + inicio`). O trajeto ponto a ponto continua em `civic_posicoes` e a ignição em `civic_ignicao`.
+Quando outra pessoa usa o carro: a partida detectada pelo GPS passa pela checagem de "uso incomum" (aviso no Telegram) e o status online mostra a posição ao vivo.
 
 ## Como o histórico de estacionamento é gravado
 O app avisa quando o carro estaciona (ignição desliga, motor para ou multimídia desliga). A função `civic-notificar`
@@ -84,7 +94,7 @@ depois). Cada ponto é gravado uma única vez (chave única). "Online" não é u
 `civic_status_atual` pelo horário do último aviso.
 
 ## Dados simulados para validar o dash
-O banco tem um veículo fictício **"Civic (simulado)"** com 30 dias de uso (59 viagens, ~7.600 pontos de trajeto, 3 abastecimentos, ignição, estacionamentos,
+O banco tem um veículo fictício **"Civic (simulado)"** com 30 dias de uso (59 viagens, **cada uma com nota de condução em `civic_viagens`**, ~7.600 pontos de trajeto, 3 abastecimentos, ignição, estacionamentos,
 estados, alertas, abastecimentos e manutenção). Para vê-lo no dash, vincule o seu usuário a ele:
 
 ```sql

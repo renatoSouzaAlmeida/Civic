@@ -117,9 +117,9 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
   (Fit: Android 12, 1280x720, 4 GB de RAM, 8 núcleos; o launcher já rodava bem, o modo leve é reserva para aparelhos mais simples.)
 
 ## Novas propostas (pós-1.0.0, a implementar) — detalhes em `docs/RECURSOS.md`
-- [ ] **Driving Score completo** — cartão "Resumo da condução" (anel com a nota, selo, km, minutos, frenagens, acelerações, RPM elevado, consumo médio), nota guardada por viagem, comparação entre viagens e envio à Casa Tech.
+- [x] **Driving Score completo** (feito em 21/11/2026; falta validar no carro e montar a tela no dash) — cartão "Resumo da condução" (anel com a nota, selo, km, minutos, frenagens, acelerações, RPM elevado, consumo médio), nota guardada por viagem, comparação entre viagens e envio à Casa Tech.
 - [ ] **Geofence** — áreas permitidas (raio em torno de Casa, Trabalho ou ponto escolhido) com aviso ao sair e ao entrar; funciona por GPS (vale para o Fit).
-- [ ] **Alerta de excesso de velocidade** — limite configurável, voz + faixa + Telegram, contagem por viagem que entra na nota.
+- [ ] **Alerta de excesso de velocidade** — a contagem por viagem e o limite já existem (21/11/2026); falta o aviso na hora (voz + faixa + Telegram).
 - [ ] **Alerta de desconexão do OBD** — hoje o app detecta a queda mas não avisa; falta faixa, voz, Telegram em movimento e reconexão visível.
 - [ ] **Botão SOS** — localização e dados do veículo para vários contatos cadastrados, com confirmação de 5 s.
 - [ ] **Aviso de local desconhecido** — aprender as vagas de costume e avisar quando o carro parar ou andar fora delas (GPS).

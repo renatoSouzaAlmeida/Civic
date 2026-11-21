@@ -11,9 +11,9 @@ Legenda: **OBD** = precisa do adaptador ELM327 · **GPS** = funciona sem OBD (ex
 
 | Ideia | Situação | O que já existe | O que falta implementar |
 |---|---|---|---|
-| **Driving Score** | **Parcial** | Nota de condução 0–100 (frenagens e acelerações bruscas), contada por viagem; vai só como **texto** no Telegram ao fim da viagem. Anel ECO Assist (econômico/normal/alto consumo) ao vivo | Cartão visual "Resumo da condução" no app (anel com a nota, selo Muito bom/Bom/Atenção, km e minutos, frenagens, acelerações, **RPM elevado** e consumo médio); contar ocorrências de RPM elevado; **guardar a nota em cada viagem** (histórico e comparação entre viagens); enviar a nota à Casa Tech (coluna nova em `civic_estados`) e mostrar no dashboard |
+| **Driving Score** | **Feito (21/11/2026)** | Cartão "Resumo da condução" em Veículo > Viagem (anel com a nota, selo, km, tempo, frenagens, acelerações, excessos de velocidade, RPM elevado, consumo, comparação com as últimas viagens); nota guardada por viagem; **funciona só com GPS** (CarPlay/Android Auto, sem OBD); cada viagem sobe para `civic_viagens` na Casa Tech | Validar no carro; tela do dashboard na Casa Tech |
 | **Geofence** | **Não existe** | Só o histórico de estacionamentos e as vagas | Áreas permitidas (círculo com raio em torno de Casa, Trabalho ou ponto escolhido); aviso no Telegram e faixa no app ao sair (e ao entrar); funciona por GPS, inclusive no Fit; áreas guardadas no aparelho e na nuvem |
-| **Excesso de velocidade** | **Não existe** | A velocidade máxima da viagem é registrada, e a velocidade vem do OBD ou do GPS | Limite configurável (fixo, ou por faixa de via); aviso com voz + faixa + Telegram (com intervalo mínimo para não repetir); contagem de excessos por viagem, que entra na nota de condução |
+| **Excesso de velocidade** | **Parcial** | Limite configurável (Config. > Segurança) e contagem de excessos por viagem, que entra na nota | Aviso na hora (voz + faixa + Telegram) |
 | **Alerta de desconexão OBD** | **Parcial** | O app detecta a queda (estado vai para Desconectado e os dados zeram) | **Não avisa ninguém:** falta faixa e voz "Adaptador OBD desconectado", Telegram se acontecer com o carro em movimento, tentativa de reconexão automática visível e diferenciar "motor desligou" de "adaptador caiu" |
 | **Botão SOS** | **Não existe** | Detecção de possível colisão com contagem de 30 s e "Estou bem", que manda localização ao Telegram vinculado (um chat só) | Botão SOS na barra do topo (com confirmação de 5 s para evitar toque sem querer); envia localização, endereço, dados do carro (placa, modelo, combustível, falhas) para **vários contatos cadastrados**; contatos em Config. (Telegram e/ou SMS); registro do evento na Casa Tech |
 
@@ -77,7 +77,7 @@ Legenda: **OBD** = precisa do adaptador ELM327 · **GPS** = funciona sem OBD (ex
 - **Alertas inteligentes** (faixa sobre qualquer tela, voz opcional e Telegram nos graves): superaquecimento, luz de injeção, alternador sem carga, bateria fraca, farol desligado, motor frio com giro alto, câmbio quente, fadiga.
 - **Alertas falados** em português (liga/desliga no topo e em Config. > Avisos sonoros).
 - **Fadiga:** 2 h sem pausa de 15 min, ou dirigindo de madrugada.
-- **Frenagens e acelerações bruscas** contadas por viagem, com nota de condução 0–100 no resumo da viagem (Telegram).
+- **Modo de condução (Driving Score):** frenagens e acelerações bruscas, excessos de velocidade e RPM elevado contados por viagem, nota 0–100 no resumo (Telegram, Veículo > Viagem e Casa Tech). Medido pelo GPS do Vigia, então vale com CarPlay/Android Auto e sem OBD.
 - **Possível colisão:** queda de 30 km/h ou mais em até 3 s seguida do motor apagando; contagem de 30 s com "Estou bem"; sem resposta, manda aviso e localização ao Telegram (botão de teste em Config.).
 - **Movimento suspeito:** partida em horário fora do padrão (aprende com as últimas 60 partidas) e "Vigia total" (toda partida avisa).
 - **Vigia (serviço em segundo plano):** mantém GPS e avisos mesmo com o launcher fechado ou com o CarPlay na frente.
