@@ -118,13 +118,13 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 
 > **Validação (21/11/2026):** o dono confirmou que tudo que estava marcado como "falta validar no carro" (inclusive condução por GPS no Fit, Driving Score, excesso de velocidade e aviso de OBD sem resposta) foi validado.
 
-## Decisões pendentes (aguardando resposta do dono)
-Sem estas respostas, geofence, SOS e o ajuste do CI ficam parados. Perguntas feitas em 21/11/2026:
-- [ ] **P-1 CI e versões:** fazer o CI ignorar mudanças só em `docs/` e `supabase/`? Hoje cada commit de documentação gera uma versão nova e a multimídia pode pedir atualização sem mudança no app (contraria a regra "toda publicação na `main` é uma versão nova" do CLAUDE.md).
-- [ ] **P-2 Limite de velocidade:** manter um limite único ou criar perfis rápidos (ex.: cidade 60 / rodovia 110) ou limite ajustável por viagem? (Limite por tipo de via exige mapa com licença.)
-- [ ] **P-3 SOS (CR-106):** a multimídia tem chip com telefonia/SMS ou só dados? Quem são os contatos e por qual canal (Telegram e/ou SMS)? Sem SMS o SOS fica só no Telegram.
-- [ ] **P-4 Geofence (CR-101 a CR-103):** quais áreas de início (Casa, Trabalho, outras) e o que avisar: saída, entrada ou os dois?
-- [ ] **P-5 Room/SQLite:** recomendação de não migrar agora e decidir na 1.3.0 (caixa-preta); aguardando concordância.
+## Decisões tomadas por padrão (21/11/2026, "execute o restante")
+O dono pediu para executar o que faltava sem responder às perguntas; foram adotadas as recomendações abaixo (reversíveis; diga se quiser outra):
+- **P-1 CI:** mudanças só em `docs/`, `supabase/` e `.md` **não geram versão** (feito em `build-apk.yml` e CLAUDE.md).
+- **P-2 Limite de velocidade:** mantido o limite único configurável (Desligado/80/100/110/120). Perfis por via ficam para depois (exigem mapa com licença).
+- **P-3 SOS:** Telegram vinculado + SMS aos contatos **se a multimídia tiver telefonia**; sem telefonia o app avisa e usa só o Telegram. Contatos por Telegram além do dono: colocar o bot num grupo com eles.
+- **P-4 Geofence:** áreas livres (Casa, Trabalho ou nome próprio), raios 100/300/500/1000 m, **avisa saída e entrada**, Telegram e faixa ligáveis separadamente.
+- **P-5 Room/SQLite:** **não migrado**; reavaliar na 1.3.0 (caixa-preta).
 
 ## Roadmap pós-1.0.0 — do documento "Projeto Civic Renatin: Roadmap de Desenvolvimento" (21/11/2026)
 
@@ -133,15 +133,15 @@ Pilares: Condução · Segurança · Diagnóstico · Inteligência. Princípios:
 **mostrar a origem e a confiança de cada dado** (OBD, GPS, sensor Android, nuvem), não apresentar estimativa como medição, projetar para várias resoluções e paisagem/retrato.
 Observação: o documento foi escrito com base no inventário textual (RECURSOS.md de antes do Driving Score); o estado atual de cada item está marcado abaixo. Prioridade: P0 = essencial para a release; P1 = importante.
 
-### Release 1.1.0 — Segurança (escopo recomendado da primeira entrega)
-- [ ] **CR-101 (P0) Geofence: cadastro e persistência** — criar, editar, ativar/desativar e remover áreas circulares (nome, centro e raio; casos iniciais Casa, Trabalho e local personalizado); guardar no aparelho e sincronizar com o Supabase quando houver internet. Funciona por GPS, sem OBD.
-- [ ] **CR-102 (P0) Geofence: entrada e saída** — detectar transições reais com tolerância à imprecisão e à oscilação do GPS (histerese, confirmação por mais de uma leitura, intervalo mínimo); **perda de sinal de GPS não conta como saída**; um evento por transição.
-- [ ] **CR-103 (P1) Geofence: avisos no app e no Telegram** — faixa visual e Telegram conforme preferências; cooldown; registro da entrega.
+### Release 1.1.0 — Segurança (entregue em 21/11/2026; ver o que falta validar no carro em cada item)
+- [x] **CR-101 (P0) Geofence: cadastro e persistência** *(feito; criar na posição atual, ativar/pausar, remover; guardado no aparelho e em `civic_areas`; falta só **editar** nome/raio sem recriar)* — criar, editar, ativar/desativar e remover áreas circulares (nome, centro e raio; casos iniciais Casa, Trabalho e local personalizado); guardar no aparelho e sincronizar com o Supabase quando houver internet. Funciona por GPS, sem OBD.
+- [x] **CR-102 (P0) Geofence: entrada e saída** *(feito)* — detectar transições reais com tolerância à imprecisão e à oscilação do GPS (histerese, confirmação por mais de uma leitura, intervalo mínimo); **perda de sinal de GPS não conta como saída**; um evento por transição.
+- [x] **CR-103 (P1) Geofence: avisos no app e no Telegram** *(feito; falta o registro de entrega na tela)* — faixa visual e Telegram conforme preferências; cooldown; registro da entrega.
 - [x] **CR-104 (P0) Excesso de velocidade** — *feito e validado em 21/11/2026:* limite configurável (Config. > Segurança), tolerância de 2 km/h, **5 s mínimos** acima do limite, cooldown de 30 s, faixa + voz (sem Telegram), registro por viagem de contagem, **maior velocidade e tempo acima do limite**, fonte (OBD ou GPS) em `civic_viagens`. Pendente: limite manual por viagem e limite por tipo de via (só com fonte confiável e licença adequada).
 - [~] **CR-105 (P0) Desconexão do OBD e reconexão** — *parcial (21/11/2026):* alerta (faixa + voz + Telegram a cada 30 min) quando o adaptador para de responder **com o carro andando a 15 km/h ou mais** (isso descarta ignição desligada); só vale para quem já usou o OBD (o Fit não recebe); a reconexão automática já existia (tentativa a cada 15 s). **Falta:** estados explícitos "sem resposta" e "indisponível por ignição" na interface, indicar leituras desatualizadas com a idade (hoje as leituras viram "—"), backoff na reconexão. Texto original do item: hoje o app detecta a queda mas não avisa. Estados explícitos: conectado, conectando, desconectado, **sem resposta** e **indisponível por ignição/energia**; detectar por timeout e falhas consecutivas (não por uma leitura perdida); em movimento, faixa e voz (Telegram conforme configuração); **reconexão automática com backoff** e estado visível; marcar leituras antigas como **desatualizadas** (com idade) em vez de zerá-las. Aceite: falha do adaptador não é confundida com motor desligado.
-- [ ] **CR-106 (P1) SOS multi-contato** — contatos de emergência (Telegram e/ou SMS, conforme permissões); botão acessível com **confirmação curta** contra acionamento acidental; envia localização, horário, link do mapa, identificação do veículo e dados disponíveis; anexa DTCs e eventos recentes **sem afirmar colisão sem evidência**; registra acionamento, destinatários, resultado do envio e cancelamento; avisa quando o canal estiver indisponível e **não indica envio concluído antes da confirmação**; oferece teste seguro dos contatos.
+- [x] **CR-106 (P1) SOS multi-contato** *(feito: botão SOS, contagem 5 s, SMS + Telegram, resultado com confirmação, teste e nova tentativa; o SMS só funciona se a multimídia tiver telefonia)* — contatos de emergência (Telegram e/ou SMS, conforme permissões); botão acessível com **confirmação curta** contra acionamento acidental; envia localização, horário, link do mapa, identificação do veículo e dados disponíveis; anexa DTCs e eventos recentes **sem afirmar colisão sem evidência**; registra acionamento, destinatários, resultado do envio e cancelamento; avisa quando o canal estiver indisponível e **não indica envio concluído antes da confirmação**; oferece teste seguro dos contatos.
 - [x] **CR-107 (P1) Driving Score persistido** — *feito em 21/11/2026:* cartão visual, nota e fatores por viagem (frenagens, acelerações, excessos, RPM elevado, consumo), persistência local e envio à Casa Tech (`civic_viagens`). Validado no carro em 21/11/2026. Falta só a **tela do dashboard na Casa Tech** (pedido já enviado).
-- [ ] **CR-108 (P0) Testes no tablet e na multimídia TS18** — energia (ACC desligando, suspensão profunda, retomada), rede, OBD, GPS, tela e regressão; ver "Plano de testes" abaixo.
+- [~] **CR-108 (P0) Testes no tablet e na multimídia TS18** *(validação anterior confirmada pelo dono; a 1.1.0 nova — geofence, SOS e local desconhecido — precisa ser validada: GPS oscilando na borda de uma área, SOS com e sem rede, teste dos contatos)* — energia (ACC desligando, suspensão profunda, retomada), rede, OBD, GPS, tela e regressão; ver "Plano de testes" abaixo.
 
 ### Release 1.2.0 — Análise
 - [ ] **Comparador de viagens** (prioridade Alta) — comparar trajetos por distância, duração, consumo, custo, velocidade e eventos (base: `civic_viagens`).
@@ -181,7 +181,7 @@ Observação: o documento foi escrito com base no inventário textual (RECURSOS.
 - Métricas: taxa de reconexão do OBD e tempo médio para recuperar a sessão; falsos positivos de geofence, excesso de velocidade e colisão; **eventos duplicados após sincronização offline = zero**; tempo de inicialização e retomada na TS18; memória e estabilidade em execução prolongada; percentual de eventos com fonte, timestamp e qualidade registrados.
 
 ### Outros itens ainda abertos (fora do documento)
-- [ ] **Aviso de local desconhecido** — aprender as vagas de costume e avisar quando o carro parar ou andar fora delas (GPS). Combina com a geofence (CR-101 a CR-103).
+- [x] **Aviso de local desconhecido** *(feito em 21/11/2026: depois de 5 vagas aprendidas, estacionar a mais de 250 m de todas e fora das áreas do geofence avisa no Telegram)* — — aprender as vagas de costume e avisar quando o carro parar ou andar fora delas (GPS). Combina com a geofence (CR-101 a CR-103).
 - [ ] **Versionamento:** o documento chama as entregas de 1.1.0, 1.2.0... Hoje a versão é calculada pelo CI (1.0.x a cada build). Para marcar uma release, basta subir `MENOR` em `versao.properties` (e `RUN_BASE`) na entrega correspondente.
 
 **Ordem recomendada pelo documento:** consolidar a 1.1.0 nas lacunas identificadas, estabelecer a **camada de eventos confiável** e só então avançar para caixa-preta, tendências e assistente. Passos: inspecionar o repositório, confirmar esquema/RLS/Edge Functions, implementar o modelo comum de eventos e a camada de qualidade/origem, construir geofence e excesso de velocidade como regras independentes do OBD, completar o estado de conexão OBD, adicionar SOS multi-contato, e testar em tablet e TS18.

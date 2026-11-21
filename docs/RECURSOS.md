@@ -12,10 +12,10 @@ Legenda: **OBD** = precisa do adaptador ELM327 · **GPS** = funciona sem OBD (ex
 | Ideia | Situação | O que já existe | O que falta implementar |
 |---|---|---|---|
 | **Driving Score** | **Feito (21/11/2026)** | Cartão "Resumo da condução" em Veículo > Viagem (anel com a nota, selo, km, tempo, frenagens, acelerações, excessos de velocidade, RPM elevado, consumo, comparação com as últimas viagens); nota guardada por viagem; **funciona só com GPS** (CarPlay/Android Auto, sem OBD); cada viagem sobe para `civic_viagens` na Casa Tech | Validar no carro; tela do dashboard na Casa Tech |
-| **Geofence** | **Não existe** | Só o histórico de estacionamentos e as vagas | Áreas permitidas (círculo com raio em torno de Casa, Trabalho ou ponto escolhido); aviso no Telegram e faixa no app ao sair (e ao entrar); funciona por GPS, inclusive no Fit; áreas guardadas no aparelho e na nuvem |
+| **Geofence** | **Feito (21/11/2026)** | Áreas circulares por GPS (sem OBD), histerese, 3 leituras, 2 min entre eventos, faixa + Telegram, áreas em `civic_areas` | Editar área; validar no carro |
 | **Excesso de velocidade** | **Feito (21/11/2026)** | Limite configurável, 5 s mínimos, faixa + voz, contagem, maior velocidade e tempo acima do limite por viagem (na nota e no banco) | Validar no carro; limite por tipo de via |
 | **Alerta de desconexão OBD** | **Parcial (alerta em movimento feito em 21/11/2026)** | O app detecta a queda (estado vai para Desconectado e os dados zeram) | **Não avisa ninguém:** falta faixa e voz "Adaptador OBD desconectado", Telegram se acontecer com o carro em movimento, tentativa de reconexão automática visível e diferenciar "motor desligou" de "adaptador caiu" |
-| **Botão SOS** | **Não existe** | Detecção de possível colisão com contagem de 30 s e "Estou bem", que manda localização ao Telegram vinculado (um chat só) | Botão SOS na barra do topo (com confirmação de 5 s para evitar toque sem querer); envia localização, endereço, dados do carro (placa, modelo, combustível, falhas) para **vários contatos cadastrados**; contatos em Config. (Telegram e/ou SMS); registro do evento na Casa Tech |
+| **Botão SOS** | **Feito (21/11/2026)** | Botão vermelho no topo, contagem de 5 s, Telegram + SMS (se houver telefonia), resultado confirmado, teste e nova tentativa | Validar; contatos Telegram além do dono (usar grupo) |
 
 ---
 
