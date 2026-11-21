@@ -83,7 +83,7 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
             // Só vira "estacionou" se o motor rodou por pelo menos 1 minuto (uma calada no semáforo não conta).
             if (ligadoDesde != 0L && agora - ligadoDesde >= 20_000 && !pendente) {
                 pendente = true
-                principal.postDelayed(confirmar, 3_000)
+                principal.postDelayed(confirmar, 1_000) // curto: a multimídia pode apagar logo após a ignição
             }
         }
     }
@@ -161,12 +161,20 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     /** Chamado pelo Sensores a cada posição de GPS (guarda a cada 5 s) para termos o último sinal. */
     fun registrarPosicao(local: Location) {
         val agora = System.currentTimeMillis()
-        if (local.hasSpeed() && local.speed * 3.6f > 8f) viajando = true
+        val kmh = if (local.hasSpeed()) local.speed * 3.6f else 0f
+        if (kmh > 8f) { viajando = true; paradoDesde = 0L }
+        else if (kmh < 3f && viajando) {
+            // Parado depois de dirigir: se a multimídia dormir/perder energia junto com a ignição, nenhum aviso de desligamento chega.
+            // Por isso 3 min parado já valem como estacionado (um semáforo não passa disso; se voltar a andar, a próxima parada avisa de novo).
+            if (paradoDesde == 0L) paradoDesde = agora
+            else if (agora - paradoDesde >= 3 * 60_000L) { paradoDesde = 0L; estacionar(manual = false, rapido = true) }
+        } else paradoDesde = 0L
         if (agora - ultimoGravado < 5_000) return
         ultimoGravado = agora
         prefs.edit().putString("ultimo_gps", JSONObject().put("lat", local.latitude).put("lon", local.longitude).put("t", agora).toString()).apply()
     }
     private var ultimoGravado = 0L
+    private var paradoDesde = 0L
 
     /** Vagas já usadas (as últimas 80), para aprender os lugares de costume. */
     private fun vagas(): JSONArray = runCatching { JSONArray(prefs.getString("vagas", "[]")) }.getOrDefault(JSONArray())
