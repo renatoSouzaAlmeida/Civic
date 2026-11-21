@@ -165,7 +165,7 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
     private var ultimoGravado = 0L
 
     @Suppress("DEPRECATION")
-    private fun endereco(lat: Double, lon: Double): String? = runCatching {
+    fun endereco(lat: Double, lon: Double): String? = runCatching {
         if (!Geocoder.isPresent()) return null
         Geocoder(ctx, Locale("pt", "BR")).getFromLocation(lat, lon, 1)?.firstOrNull()?.let { a ->
             listOfNotNull(a.thoroughfare, a.subThoroughfare, a.subLocality, a.locality).distinct().joinToString(", ").ifEmpty { null }

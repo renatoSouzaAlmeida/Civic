@@ -67,6 +67,8 @@ private fun AbaViagem() {
     LaunchedEffect(Unit) { while (true) { agora = System.currentTimeMillis(); kotlinx.coroutines.delay(1_000) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         val atual = cb.atual
+        // Resumo da condução (Driving Score): da viagem em andamento ou, se não houver, da última encerrada.
+        (atual ?: cb.historico.firstOrNull())?.let { CartaoConducao(it, andando = atual != null, cb.historico.drop(if (atual == null) 1 else 0).mapNotNull { h -> h.nota }.take(10), agora) }
         Secao(if (atual == null) "Viagem atual" else if (atual.demonstracao) "Viagem atual (demonstração)" else "Viagem atual") {
             if (atual == null) {
                 Text("Nenhuma viagem em andamento. Ela começa sozinha quando o carro anda (ou o motor liga) e termina após 5 min parado.", color = Cores.TextoSuave, fontSize = 15.sp)
@@ -105,6 +107,11 @@ private fun AbaViagem() {
                     Column(Modifier.weight(1f)) {
                         Text(fmt.format(Date(h.inicio)) + if (h.demonstracao) " · demonstração" else "", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text(cb.resumo(h), color = Cores.TextoSuave, fontSize = 13.sp)
+                        h.resumoConducao()?.let { Text(it, color = Cores.TextoSuave, fontSize = 12.sp) }
+                    }
+                    h.nota?.let { n ->
+                        Text("$n", color = corNota(n), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("/100", color = Cores.TextoSuave, fontSize = 12.sp, modifier = Modifier.padding(start = 2.dp, top = 8.dp))
                     }
                 }
             }
@@ -212,6 +219,65 @@ private fun Resumo(v: Veiculo) {
             Numero("Pendentes de valor", v.abastecimentos.count { it.semValor }.toString(), Modifier.weight(1f))
         }
         if (v.consumoMedio() == null) Text("O consumo aparece a partir do segundo abastecimento com tanque cheio.", color = Cores.TextoSuave, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun corNota(n: Int): Color = when { n >= 90 -> Cores.Ok; n >= 75 -> Cores.Destaque; n >= 55 -> Cores.Amarelo; else -> Cores.Vermelho }
+
+/** Resumo da condução: anel com a nota 0–100, selo, distância e tempo, e os eventos da viagem; compara com as viagens anteriores. */
+@Composable
+private fun CartaoConducao(v: br.com.civic.launcher.Viagem, andando: Boolean, anteriores: List<Int>, agora: Long) {
+    val nota = v.nota
+    val cor = if (nota != null) corNota(nota) else Cores.TextoSuave
+    val vazio = Cores.SegVazio
+    val tempo = if (andando) maxOf(v.duracaoMs, agora - v.inicio) else v.duracaoMs
+    val br = BR
+    Secao("Resumo da condução") {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            Box(Modifier.size(112.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                    val esp = 11.dp.toPx()
+                    val tam = androidx.compose.ui.geometry.Size(size.width - esp, size.height - esp)
+                    val topo = androidx.compose.ui.geometry.Offset(esp / 2, esp / 2)
+                    drawArc(vazio, 0f, 360f, false, topo, tam, style = androidx.compose.ui.graphics.drawscope.Stroke(esp))
+                    if (nota != null) drawArc(cor, -90f, 360f * nota / 100f, false, topo, tam, style = androidx.compose.ui.graphics.drawscope.Stroke(esp, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(nota?.toString() ?: "—", color = cor, fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 40.sp)
+                    Text("/ 100", color = Cores.TextoSuave, fontSize = 13.sp)
+                }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (nota != null) Text(br.com.civic.launcher.Viagem.rotuloNota(nota), color = cor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(if (andando) "Viagem em andamento" else "Viagem concluída", color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("%.1f km".format(br, v.distanciaKm), color = Cores.Texto, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
+                Text(br.com.civic.launcher.ComputadorBordo.duracao(tempo) + " de condução", color = Cores.TextoSuave, fontSize = 14.sp)
+                if (nota == null) Text("A nota aparece depois de 0,5 km.", color = Cores.TextoSuave, fontSize = 12.sp)
+            }
+        }
+        @Composable fun linha(rotulo: String, valor: String) = Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+            Text(rotulo, color = Cores.TextoSuave, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(valor, color = Cores.Texto, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+        linha("Frenagens bruscas", "${v.frenagens}")
+        linha("Acelerações bruscas", "${v.aceleracoes}")
+        linha("Excessos de velocidade", if (br.com.civic.launcher.Configuracoes.obter(LocalContext.current).limiteVelocidade > 0) "${v.excessos}" else "desligado")
+        linha("RPM elevado", if (v.comObd) (if (v.rpmAlto == 1) "1 ocorrência" else "${v.rpmAlto} ocorrências") else "— (sem OBD)")
+        linha("Consumo médio", v.consumoMedio?.let { "%.1f km/l".format(br, it) } ?: "— (sem OBD)")
+        linha("Velocidade média / máxima", "%.0f / %d km/h".format(br, v.velMedia, v.velMaxima))
+        if (nota != null && anteriores.isNotEmpty()) {
+            val media = anteriores.average()
+            val dif = nota - media.toInt()
+            Text(
+                "Média das últimas ${anteriores.size} viagens: %.0f. ".format(br, media) + when { dif > 2 -> "Esta ficou $dif pontos acima."; dif < -2 -> "Esta ficou ${-dif} pontos abaixo."; else -> "Esta ficou na média." },
+                color = Cores.TextoSuave, fontSize = 13.sp,
+            )
+        }
+        Text(
+            if (v.comObd) "Medido pelo OBD e pelo GPS." else "Medido pelo GPS (sem OBD): RPM e consumo não aparecem. Funciona também com CarPlay e Android Auto na frente.",
+            color = Cores.TextoSuave, fontSize = 12.sp,
+        )
     }
 }
 

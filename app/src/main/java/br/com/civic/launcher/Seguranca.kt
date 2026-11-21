@@ -44,11 +44,8 @@ class Seguranca private constructor(private val ctx: Context) {
     private var ultimaAceleracao = 0L
     private var silencioColisaoAte = 0L
 
-    // Viagem
-    private var frenagens = 0
-    private var aceleracoes = 0
-    private var distanciaKm = 0.0
     private var ultimoTempo = 0L
+    private var ultimaObd = 0L
 
     // Fadiga
     private var dirigindoDesde = 0L
@@ -58,6 +55,7 @@ class Seguranca private constructor(private val ctx: Context) {
     fun amostra(d: DadosObd, demonstracao: Boolean) {
         if (demonstracao) return
         val agora = System.currentTimeMillis()
+        ultimaObd = agora
         val rpm = d.rpm ?: 0
         val vel = (d.velocidade ?: 0).toFloat()
         val girando = rpm > 400
@@ -75,7 +73,6 @@ class Seguranca private constructor(private val ctx: Context) {
             if (!motorLigado) {
                 motorLigado = true
                 val partidaReal = !primeira || SystemClock.elapsedRealtime() < 10 * 60_000L
-                frenagens = 0; aceleracoes = 0; distanciaKm = 0.0
                 if (agora - paradoDesde > 15 * 60_000L || dirigindoDesde == 0L) dirigindoDesde = 0L
                 if (partidaReal) usoIncomum(agora)
             }
@@ -84,6 +81,27 @@ class Seguranca private constructor(private val ctx: Context) {
             else if (agora - semGiroDesde >= 10_000L) { motorLigado = false; semGiroDesde = 0L; paradoDesde = agora }
         }
         primeira = false
+    }
+
+    /**
+     * Sem OBD (Fit com CarPlay ou carro com Android Auto): a partida é detectada pelo GPS (começou a andar).
+     * Faz a mesma checagem de uso incomum / vigia total e zera a contagem de fadiga.
+     */
+    fun partidaPorGps() {
+        val agora = System.currentTimeMillis()
+        if (agora - paradoDesde > 15 * 60_000L || dirigindoDesde == 0L) dirigindoDesde = 0L
+        usoIncomum(agora)
+    }
+
+    /**
+     * Velocidade do GPS (serviço Vigia, com o launcher em segundo plano): quando o OBD não está lendo há mais de 5 s,
+     * a condução (frenagem, aceleração, excesso de velocidade) e a fadiga continuam sendo medidas por aqui.
+     */
+    fun amostraGps(velKmh: Float) {
+        val agora = System.currentTimeMillis()
+        if (agora - ultimaObd < 5_000L) return
+        if (velKmh >= 3f) { condicao(velKmh, agora); fadiga(velKmh, agora) }
+        else { janela.clear(); fadiga(0f, agora) }
     }
 
     private fun usoIncomum(agora: Long) {
@@ -108,23 +126,14 @@ class Seguranca private constructor(private val ctx: Context) {
         val ant = janela.lastOrNull()
         if (ant != null) {
             val dt = (agora - ant.t) / 1000f
-            if (dt in 0.15f..2f) {
+            if (dt in 0.15f..3.2f) {
                 val a = (vel - ant.v) / dt // km/h por segundo
-                if (a <= -11f && ant.v >= 15f && agora - ultimaFrenagem > 3_000) { frenagens++; ultimaFrenagem = agora }
-                if (a >= 9f && vel >= 8f && agora - ultimaAceleracao > 3_000) { aceleracoes++; ultimaAceleracao = agora }
-                distanciaKm += vel * dt / 3600.0
+                if (a <= -11f && ant.v >= 15f && agora - ultimaFrenagem > 3_000) { ComputadorBordo.obter(ctx).frenagemBrusca(); ultimaFrenagem = agora }
+                if (a >= 9f && vel >= 8f && agora - ultimaAceleracao > 3_000) { ComputadorBordo.obter(ctx).aceleracaoBrusca(); ultimaAceleracao = agora }
             }
         }
         janela.addLast(Ponto(agora, vel))
         while (janela.size > 1 && agora - janela.first().t > 3_000) janela.removeFirst()
-    }
-
-    /** Texto para o resumo da viagem (ex.: "condução 86/100 · 1 frenagem e 0 acelerações bruscas"), ou null sem dados. */
-    fun resumoConducao(): String? {
-        if (distanciaKm < 0.5) return null
-        val fator = 10.0 / maxOf(10.0, distanciaKm)
-        val nota = (100 - (6 * frenagens + 4 * aceleracoes) * fator).toInt().coerceIn(0, 100)
-        return "condução $nota/100 ($frenagens frenagens e $aceleracoes acelerações bruscas)"
     }
 
     // ---------- fadiga ----------

@@ -30,7 +30,10 @@ class VigiaService : Service() {
             LocalEstacionamento.obter(this@VigiaService).registrarPosicao(local)
             Telemetria.obter(this@VigiaService).posicao(local)
             // Sem OBD (ex.: Fit com CarPlay na frente) a viagem é medida pelo GPS mesmo com o launcher em segundo plano.
-            if (local.hasSpeed()) ComputadorBordo.obter(this@VigiaService).amostraGps(local.speed * 3.6f)
+            if (local.hasSpeed()) {
+                ComputadorBordo.obter(this@VigiaService).amostraGps(local.speed * 3.6f)
+                Seguranca.obter(this@VigiaService).amostraGps(local.speed * 3.6f)
+            }
         }
         override fun onProviderEnabled(provider: String) {}
         override fun onProviderDisabled(provider: String) {}

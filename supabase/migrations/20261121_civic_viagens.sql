@@ -1,0 +1,34 @@
+-- ===== Aplicada em 21/11/2026 como "civic_viagens" =====
+-- Viagens com modo de condução (Driving Score): uma linha por viagem, enviada pelo app ao terminar
+-- (funciona com OBD ou só com GPS, inclusive com CarPlay/Android Auto na frente).
+create table public.civic_viagens (
+  id bigserial primary key,
+  dispositivo text not null references public.civic_dispositivos(token) on delete cascade,
+  inicio timestamptz not null,
+  fim timestamptz not null,
+  distancia_km numeric not null default 0,
+  duracao_s integer not null default 0,
+  em_movimento_s integer not null default 0,
+  vel_media numeric, vel_max integer,
+  rpm_max integer,                 -- só com OBD
+  rpm_alto integer,                -- ocorrências de RPM elevado (só com OBD)
+  frenagens integer not null default 0,
+  aceleracoes integer not null default 0,
+  excessos integer not null default 0,   -- vezes que passou do limite de velocidade configurado
+  nota integer,                    -- Driving Score 0 a 100
+  consumo_km_l numeric,            -- consumo médio medido (só com OBD)
+  fonte text not null default 'gps' check (fonte in ('obd','gps')),
+  lat_ini double precision, lon_ini double precision,
+  lat_fim double precision, lon_fim double precision,
+  endereco_ini text, endereco_fim text,
+  simulado boolean not null default false,
+  versao_app text,
+  enviado_em timestamptz not null default now(),
+  unique (dispositivo, inicio)
+);
+create index civic_viagens_idx on public.civic_viagens(dispositivo, inicio desc);
+alter table public.civic_viagens enable row level security;
+create policy civic_viagem_inserir on public.civic_viagens for insert to anon with check (dispositivo = public.civic_token());
+create policy civic_viagem_atualizar on public.civic_viagens for update to anon using (dispositivo = public.civic_token()) with check (dispositivo = public.civic_token());
+create policy civic_dash_viagens on public.civic_viagens for select to authenticated using (dispositivo in (select public.civic_meus_dispositivos()));
+alter publication supabase_realtime add table public.civic_viagens;

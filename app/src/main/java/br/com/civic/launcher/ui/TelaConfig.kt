@@ -132,7 +132,13 @@ fun TelaConfig() {
                 BotaoPilula("Testar possível colisão (10 s)", Icons.Filled.Layers, Modifier.fillMaxWidth()) {
                     br.com.civic.launcher.Seguranca.obter(ctx).testarColisao()
                 }
-                Text("Fadiga (2 h sem pausa ou madrugada), frenagens/acelerações bruscas (nota no resumo da viagem) e colisão usam a velocidade e o rpm do OBD.", color = Cores.TextoSuave, fontSize = 13.sp)
+                Text("Limite de velocidade (conta excessos na nota de condução da viagem)", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(0 to "Desligado", 80 to "80", 100 to "100", 110 to "110", 120 to "120").forEach { (km, rotulo) ->
+                        Opcao(if (km == 0) rotulo else "$rotulo km/h", config.limiteVelocidade == km, Modifier.weight(1f)) { config.salvarLimiteVelocidade(km) }
+                    }
+                }
+                Text("Fadiga, frenagens/acelerações bruscas, excessos de velocidade e a nota de condução funcionam pelo GPS (inclusive com CarPlay ou Android Auto na frente e sem OBD). RPM elevado, consumo e colisão usam o OBD.", color = Cores.TextoSuave, fontSize = 13.sp)
             }
             Secao("Mapa de navegação") {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

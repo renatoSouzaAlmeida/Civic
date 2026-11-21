@@ -58,6 +58,15 @@ begin
           d = 3, case when d = 3 then '["P0420"]'::jsonb else '[]'::jsonb end, case when d = 2 then '["P0171"]'::jsonb else '[]'::jsonb end,
           70 + (d * 5) % 25, 2800 + (d * 130) % 900, km, dur, round((km / (dur / 3600.0))::numeric, 1),
           lat1, lon1, ini + make_interval(secs => dur), 12.5 + (d % 3) * 0.05, 10.2 + (d % 4) * 0.1, 'Boa');
+      -- Viagem com modo de condução (nota 0 a 100), para o dash.
+      insert into public.civic_viagens (dispositivo, inicio, fim, distancia_km, duracao_s, em_movimento_s, vel_media, vel_max, rpm_max, rpm_alto,
+          frenagens, aceleracoes, excessos, nota, consumo_km_l, fonte, lat_ini, lon_ini, lat_fim, lon_fim, endereco_ini, endereco_fim, simulado, versao_app)
+        values (tk, ini, ini + make_interval(secs => dur), km, dur, (dur * 0.88)::int, round((km / (dur / 3600.0))::numeric, 1), 70 + (d * 5) % 25, 2800 + (d * 130) % 900,
+          (d + t) % 4, (d * 3 + t) % 5, (d + 2 * t) % 4, (d * t) % 3,
+          greatest(40, 100 - 6 * ((d * 3 + t) % 5) - 4 * ((d + 2 * t) % 4) - 3 * ((d + t) % 4) - 5 * ((d * t) % 3)),
+          round((11.2 + ((d * 3 + t) % 8) * 0.25)::numeric, 1), 'obd', lat0, lon0, lat1, lon1,
+          case t when 1 then 'Rua Augusta, 200, Consolação, São Paulo (simulado)' else 'Av. Paulista, 1000, Bela Vista, São Paulo (simulado)' end,
+          case t when 1 then 'Av. Paulista, 1000, Bela Vista, São Paulo (simulado)' else 'Rua Augusta, 200, Consolação, São Paulo (simulado)' end, true, '1.0.simulado');
       -- abastecimento a cada ~12 dias (entrando na reserva), sempre gasolina e tanque cheio; o mais recente fica sem valor (aguardando o valor pago)
       if t = 2 and d % 12 = 1 then
         lit := round((33 + (d % 5) * 1.3)::numeric, 1);

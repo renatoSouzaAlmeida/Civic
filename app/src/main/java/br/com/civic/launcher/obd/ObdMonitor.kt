@@ -87,7 +87,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
         private set(novo) {
             dadosAtuais = novo
             alertas.avaliar(novo, demonstracao = demo)
-            br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo)
+            br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo, consumoInstantaneo = novo.consumoInstantaneo)
             if (!demo) HistoricoFalhas.obter(ctx).registrar(novo.codigos, novo.codigosPendentes)
             SaudeBateria.obter(ctx).amostra(novo.tensao, novo.rpm, demonstracao = demo)
             CorrecaoCombustivel.obter(ctx).amostra(novo, demonstracao = demo)
