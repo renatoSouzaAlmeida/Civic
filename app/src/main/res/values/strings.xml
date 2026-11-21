@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="divisor_descricao">Usado só para dividir a tela no modo Direção (mapa de um lado e o painel do carro do outro). Não lê o conteúdo da tela.</string>
+</resources>

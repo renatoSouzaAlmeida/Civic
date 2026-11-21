@@ -81,7 +81,31 @@ fun TelaConfig() {
                 Text("Para multimídias mais simples (ex.: Honda Fit): sem animações contínuas nem vibração ao tocar.", color = Cores.TextoSuave, fontSize = 15.sp)
             }
             Secao("Painel de direção") {
-                Text("Posição", color = Cores.TextoSuave, fontSize = 15.sp)
+                Text("Modo Direção", color = Cores.TextoSuave, fontSize = 15.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    br.com.civic.launcher.ModoDirecao.entries.forEach { m ->
+                        Opcao(m.rotulo, config.modoDirecao == m, Modifier.weight(1f)) { config.salvarModoDirecao(m) }
+                    }
+                }
+                Text(
+                    if (config.modoDirecao == br.com.civic.launcher.ModoDirecao.Dividido)
+                        "Tela dividida (experimental): o cockpit do Civic Renatin de um lado e o mapa do outro. Precisa da tela dividida da multimídia."
+                    else "Painel flutuante: o mapa em tela cheia e o painel do carro por cima (como sempre foi).",
+                    color = Cores.TextoSuave, fontSize = 13.sp,
+                )
+                if (config.modoDirecao == br.com.civic.launcher.ModoDirecao.Dividido) {
+                    var ativo by remember { mutableStateOf(br.com.civic.launcher.DivisorTelaService.ativo()) }
+                    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(2_000); ativo = br.com.civic.launcher.DivisorTelaService.ativo() } }
+                    Text(
+                        if (ativo) "Divisão automática: ligada (serviço de Acessibilidade ativo)." else "Divisão automática: desligada. Sem ela, divida a tela pelo botão da multimídia e toque em Direção.",
+                        color = if (ativo) Cores.Ok else Cores.Amarelo, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    )
+                    if (!ativo) BotaoPilula("Ligar a divisão automática (Acessibilidade)", Icons.Filled.Settings, Modifier.fillMaxWidth()) {
+                        ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                    BotaoPilula("Testar o modo Direção dividido", Icons.Filled.Navigation, Modifier.fillMaxWidth()) { br.com.civic.launcher.Direcao.iniciar(ctx) }
+                }
+                Text("Posição do painel flutuante", color = Cores.TextoSuave, fontSize = 15.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PosicaoPainel.entries.forEach { f ->
                         Opcao(f.rotulo, posicaoPainel == f, Modifier.weight(1f)) { posicaoPainel = f; PosicaoPainel.salvar(ctx, f) }

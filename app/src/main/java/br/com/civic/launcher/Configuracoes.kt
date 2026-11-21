@@ -9,6 +9,8 @@ enum class ImagemCarro(val rotulo: String) { Civic("Civic"), Fit("Fit") }
 
 /** Layout da tela do OBD: o atual e três propostas para comparar (a escolha final será feita em uso). */
 enum class LayoutObd(val rotulo: String) { Atual("Esportivo"), Cockpit("Cockpit"), Modular("Modular") }
+/** Como o modo Direção funciona: painel flutuante sobre o mapa (padrão) ou tela dividida (mapa de um lado, cockpit do outro). */
+enum class ModoDirecao(val rotulo: String) { Flutuante("Painel flutuante"), Dividido("Tela dividida") }
 enum class LayoutHome(val rotulo: String) { Padrao("Padrão"), Caixas("Caixas"), Painel("Painel") }
 
 /** Modelo do menu: B = barra fina embaixo; D = dock flutuante no centro. */
@@ -79,6 +81,7 @@ class Configuracoes private constructor(ctx: Context) {
     var hudEspelhado by mutableStateOf(prefs.getBoolean("hud_espelhado", true))
         private set
     var layoutObd by mutableStateOf(lerEnum("layout_obd", LayoutObd.Atual))
+    var modoDirecao by mutableStateOf(lerEnum("modo_direcao", ModoDirecao.Flutuante))
     var layoutHome by mutableStateOf(lerEnum("layout_home", LayoutHome.Padrao))
         private set
     var enderecoCasa by mutableStateOf(prefs.getString("endereco_casa", "") ?: "")
@@ -115,6 +118,7 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarVigia(v: Boolean) { vigiaTotal = v; prefs.edit().putBoolean("vigia_total", v).apply() }
     fun salvarHudEspelhado(v: Boolean) { hudEspelhado = v; prefs.edit().putBoolean("hud_espelhado", v).apply() }
     fun salvarLayoutObd(v: LayoutObd) { layoutObd = v; gravar("layout_obd", v.name) }
+    fun salvarModoDirecao(v: ModoDirecao) { modoDirecao = v; gravar("modo_direcao", v.name) }
     fun salvarLayoutHome(v: LayoutHome) { layoutHome = v; gravar("layout_home", v.name) }
     fun salvarMapa(v: MapaPreferido) { mapa = v; gravar("mapa", v.name) }
     fun salvarEstiloMenu(v: EstiloMenu) { estiloMenu = v; gravar("estilo_menu", v.name) }

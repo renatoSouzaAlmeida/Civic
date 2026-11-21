@@ -127,6 +127,10 @@ Decididas em conversa. O bloqueio de telas em movimento foi retirado da lista po
 - **Identificação dos aparelhos (21/11/2026):** cada aparelho envia modelo, versão do Android e nome do carro a cada sinal de vida (`civic_status`, views `civic_veiculos` e `civic_status_atual`); Config. > Status do app mostra "Este aparelho" com o ID de 8 letras, o mesmo que aparece na Casa Tech.
 - **Pendente de apuração:** o Fit (versão 1.1.4, segundo o dono) não aparece no banco com versão 1.1.x; verificar se tem internet própria. A junção dos aparelhos duplicados no banco (script de limpeza) aguarda confirmação.
 
+## Modo Direção em tela dividida (pedido do dono em 21/11/2026; a multimídia do Civic tem chip e aceita tela dividida)
+- [~] **Mapa de um lado e cockpit do outro** — *feito, experimental, a validar na multimídia do Civic:* Config. > Painel de direção > Modo Direção: *Painel flutuante* (padrão, como sempre) ou *Tela dividida*. Em tela dividida, Direção, o cartão do mapa, Casa/Trabalho e a rotina abrem o **cockpit** (velocímetro do OBD Modular com setas, farol e RPM, leituras de motor/bateria/tanque/consumo e Spotify) e o mapa **ao lado** (`FLAG_ACTIVITY_LAUNCH_ADJACENT`). Para dividir sozinho existe um serviço de **Acessibilidade opcional** que só pede ao Android "alternar tela dividida" (não lê a tela); sem ele, o dono divide pelo botão da multimídia e toca em Direção.
+  A validar: se a multimídia usa a tela dividida padrão do Android; de que lado fica cada painel; se o Waze e o Google Maps aceitam meia tela; sair da divisão (botão Fechar).
+
 ## Decisões tomadas por padrão (21/11/2026, "execute o restante")
 O dono pediu para executar o que faltava sem responder às perguntas; foram adotadas as recomendações abaixo (reversíveis; diga se quiser outra):
 - **P-1 CI:** mudanças só em `docs/`, `supabase/` e `.md` **não geram versão** (feito em `build-apk.yml` e CLAUDE.md).

@@ -81,6 +81,13 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Monitorar o carro (OBD/GPS) e avisar onde estacionou" />
         </service>
 
+        <!-- Opcional: dividir a tela sozinho no modo Direção (só executa a ação global "alternar tela dividida"; não lê nada da tela). -->
+        <service android:name=".DivisorTelaService" android:exported="false" android:label="Civic Renatin: dividir a tela"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/divisor_tela" />
+        </service>
+
         <receiver android:name=".InstalacaoReceiver" android:exported="false" />
         <!-- Liga o Vigia ao ligar o aparelho e depois de atualizar o app (o CarPlay do Fit abre direto, sem passar pelo launcher). -->
         <receiver android:name=".BootReceiver" android:exported="true">

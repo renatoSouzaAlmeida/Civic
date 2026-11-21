@@ -35,8 +35,10 @@ private fun Context.iniciarPainel(): Boolean {
     return true
 }
 
+private fun Context.emTelaDividida() = Configuracoes.obter(this).modoDirecao == ModoDirecao.Dividido
+
 fun Context.abrirNavegacaoComPainel() {
-    if (iniciarPainel()) abrirNavegacao()
+    if (emTelaDividida()) Direcao.iniciar(this) else if (iniciarPainel()) abrirNavegacao()
 }
 
 /**
@@ -45,17 +47,18 @@ fun Context.abrirNavegacaoComPainel() {
  */
 /** Navega até um endereço ou nome de local digitado (rotina diária), no mapa escolhido em Config. */
 fun Context.navegarPara(destino: String) {
-    if (!iniciarPainel()) return
+    if (!emTelaDividida() && !iniciarPainel()) return
     val mapa = Configuracoes.obter(this).mapa
     val intent = when (mapa) {
         MapaPreferido.Waze -> Intent(Intent.ACTION_VIEW, Uri.parse("waze://?q=${Uri.encode(destino)}&navigate=yes"))
         else -> Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q=${Uri.encode(destino)}"))
     }
-    runCatching { startActivity(intent.setPackage(mapa.pacote)) }.onFailure { abrirNavegacao() }
+    if (emTelaDividida()) Direcao.iniciar(this, intent.setPackage(mapa.pacote))
+    else runCatching { startActivity(intent.setPackage(mapa.pacote)) }.onFailure { abrirNavegacao() }
 }
 
 fun Context.navegarFavorito(destino: String) {
-    if (!iniciarPainel()) return
+    if (!emTelaDividida() && !iniciarPainel()) return
     val config = Configuracoes.obter(this)
     val mapa = config.mapa
     val endereco = if (destino == "Home") config.enderecoCasa else config.enderecoTrabalho
@@ -73,5 +76,6 @@ fun Context.navegarFavorito(destino: String) {
         abrirNavegacao()
         return
     }
-    runCatching { startActivity(intent.setPackage(mapa.pacote)) }.onFailure { abrirNavegacao() }
+    if (emTelaDividida()) Direcao.iniciar(this, intent.setPackage(mapa.pacote))
+    else runCatching { startActivity(intent.setPackage(mapa.pacote)) }.onFailure { abrirNavegacao() }
 }

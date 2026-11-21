@@ -230,7 +230,7 @@ internal fun FarolObd(d: DadosObd, tamanho: Dp) {
 }
 
 @Composable
-private fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier) {
+internal fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier) {
     val m = monitor.estado
     Row(modifier.cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

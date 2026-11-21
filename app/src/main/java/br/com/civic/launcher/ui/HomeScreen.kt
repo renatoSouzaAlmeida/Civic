@@ -80,7 +80,8 @@ fun HomeScreen(
         Box(Modifier.weight(1f).fillMaxWidth()) {
             // Com o dock, o conteúdo para acima dele (nada fica escondido embaixo do dock).
             Box(Modifier.fillMaxSize().padding(bottom = if (dock) ALTURA_DOCK + 10.dp else 0.dp)) {
-                when (tela) {
+                if (br.com.civic.launcher.Direcao.aberta) CockpitDividido(obd, monitor, sensores)
+                else when (tela) {
                     Tela.Inicio -> TelaInicio(monitor, sensores, obd)
                     Tela.Central -> TelaCentral(sensores, obd, monitor)
                     Tela.Veiculo -> TelaVeiculo()
@@ -88,16 +89,17 @@ fun HomeScreen(
                     Tela.Config -> TelaConfig()
                 }
             }
-            if (dock) DockNavegacao(tela, { tela = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+            if (dock) DockNavegacao(tela, { tela = it; br.com.civic.launcher.Direcao.aberta = false }, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
             // Alertas do motor por cima de qualquer tela.
             BannerAlerta(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.7f).padding(top = 4.dp))
         }
-        if (!dock) BarraNavegacao(tela, { tela = it }, Modifier.fillMaxWidth())
+        if (!dock) BarraNavegacao(tela, { tela = it; br.com.civic.launcher.Direcao.aberta = false }, Modifier.fillMaxWidth())
     }
 
     ModalNovaVersao(atualizador)
     ModalLocalizacaoSempre()
     ModalSemInternet()
+    br.com.civic.launcher.Direcao.AvisoSemDivisao()
     AlertaColisao()
     DialogosSos()
     if (Hud.aberto) ModoHud(obd, sensores)
