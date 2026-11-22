@@ -33,6 +33,7 @@ import java.util.Locale
 private val BRA = Locale("pt", "BR")
 private val FundoEscuro = Color(0xFF111827)
 
+@Composable
 private fun corDaNota(n: Int): Color = when { n >= 90 -> Cores.Ok; n >= 75 -> Cores.Destaque; n >= 55 -> Cores.Amarelo; else -> Cores.Vermelho }
 private fun mmss(ms: Long): String { val s = ms / 1000; return "%02d:%02d".format(BRA, s / 60, s % 60) }
 
