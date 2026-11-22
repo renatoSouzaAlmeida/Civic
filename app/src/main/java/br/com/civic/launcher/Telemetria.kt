@@ -202,10 +202,28 @@ class Telemetria private constructor(private val ctx: Context) {
         }
     }
 
-    /** Fila limitada: sem internet por muito tempo, descarta os mais antigos. */
+    fun pontosPendentes() = pontos.length()
+    fun eventosPendentes() = eventos.length()
+
+    /** Fila limitada (política de retenção): sem internet, descarta o que passou do tempo (pontos 24 h, eventos 7 dias) e, no máximo, 600 pontos e 100 eventos. */
     private fun limitar() {
         pontos = retirar(pontos, maxOf(0, pontos.length() - 600))
         eventos = retirar(eventos, maxOf(0, eventos.length() - 100))
+        val agora = System.currentTimeMillis()
+        pontos = semAntigos(pontos, agora - Sincronizacao.RETENCAO_PONTOS_MS)
+        eventos = semAntigos(eventos, agora - Sincronizacao.RETENCAO_EVENTOS_MS)
+    }
+
+    /** As listas estão em ordem de hora: tira do começo o que é mais velho que o corte. */
+    private fun semAntigos(a: JSONArray, corte: Long): JSONArray {
+        var n = 0
+        val f = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
+        while (n < a.length()) {
+            val t = runCatching { f.parse(a.getJSONObject(n).getString("em"))?.time }.getOrNull() ?: break
+            if (t >= corte) break
+            n++
+        }
+        return if (n == 0) a else retirar(a, n)
     }
 
     private fun retirar(a: JSONArray, qtd: Int): JSONArray = JSONArray().also { n -> for (i in qtd until a.length()) n.put(a.get(i)) }

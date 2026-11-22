@@ -186,6 +186,8 @@ class CaixaPreta private constructor(private val ctx: Context) {
     fun apagarTudo() { pasta.listFiles()?.forEach { it.delete() }; carregarEventos() }
 
     // ---------- nuvem ----------
+    fun pendentes(): Int = eventos.count { !it.enviado }
+
     /** Envia à Casa Tech os eventos ainda não enviados (sem internet, ficam guardados e saem depois). */
     fun enviarPendentes() {
         val nuvem = Nuvem.obter(ctx)

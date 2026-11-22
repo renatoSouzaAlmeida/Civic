@@ -215,11 +215,17 @@ class Nuvem private constructor(ctx: Context) {
 
     /** POST genérico de linhas (JSON) numa tabela civic_*; devolve true se o servidor aceitou. Sem internet = false. */
     fun enviarJson(caminho: String, corpo: String, prefer: String, aoTerminar: (Boolean) -> Unit) {
+        val canal = Sincronizacao.canalDe(caminho)
+        // Tentativas graduais: canal que falhou há pouco espera (o dado continua na fila do aparelho).
+        if (!Sincronizacao.podeTentar(canal)) { principal.post { aoTerminar(false) }; return }
         fila.execute {
             val ok = garantirCadastro() && http("POST", caminho, corpo, mapOf("Prefer" to "$prefer,return=minimal")).first in 200..299
-            principal.post { aoTerminar(ok) }
+            principal.post { Sincronizacao.resultado(canal, ok); aoTerminar(ok) }
         }
     }
+
+    /** Quantos avisos (estacionamento, alertas, SOS) estão na fila sem internet. */
+    fun avisosPendentes(): Int = lerFilaAvisos().length()
 
     fun removerAbastecimento(id: Long) {
         fila.execute {
@@ -351,6 +357,7 @@ class Nuvem private constructor(ctx: Context) {
 
     /** Envia os avisos que ficaram sem internet (chamado a cada 30 s pela telemetria). Avisos com mais de 48 h são descartados. */
     fun reenviarPendentes() {
+        if (!Sincronizacao.podeTentar("avisos")) return
         fila.execute {
             val a = lerFilaAvisos()
             if (a.length() == 0) return@execute
@@ -365,6 +372,7 @@ class Nuvem private constructor(ctx: Context) {
                 val c = JSONObject(item.getJSONObject("c").toString())
                 if (idade > 120_000L) c.put("mensagem", "⏱️ Enviado com atraso (${idade / 60_000} min): estava sem internet.\n" + c.optString("mensagem"))
                 val ok = garantirCadastro() && http("POST", "/functions/v1/civic-notificar", c.toString()).first in 200..299
+                Sincronizacao.resultado("avisos", ok)
                 if (!ok) { parou = true; restantes.put(item) }
             }
             prefs.edit().putString("fila_avisos", restantes.toString()).apply()

@@ -222,6 +222,9 @@ class ComputadorBordo private constructor(private val ctx: Context) {
 
     private var enviando = false
 
+    /** Quantas viagens ainda não subiram para a nuvem. */
+    fun viagensPendentes(): Int = runCatching { JSONArray(prefs.getString("fila_nuvem", "[]")).length() }.getOrDefault(0)
+
     /** Envia as viagens que ainda não subiram (sem internet ficam na fila; chamado também pela telemetria a cada 30 s). */
     fun enviarPendentes() {
         if (enviando) return

@@ -24,6 +24,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import br.com.civic.launcher.LocalEstacionamento
 import br.com.civic.launcher.Nuvem
+import br.com.civic.launcher.Sincronizacao
 import br.com.civic.launcher.Voz
 import br.com.civic.launcher.VigiaService
 import br.com.civic.launcher.obd.EstadoObd
@@ -103,6 +104,7 @@ fun SecaoStatusApp() {
                 else -> ItemStatus("Nuvem (Supabase)", NivelStatus.Atencao, "Sem resposta desde que o app abriu. Sem internet?")
             }
         )
+        Sincronizacao.resumo(ctx).let { (ok, texto) -> add(ItemStatus("Sincronização", if (ok) NivelStatus.Ok else NivelStatus.Atencao, texto)) }
         add(
             when {
                 !nuvem.vinculado -> ItemStatus("Telegram", NivelStatus.Erro, "Não vinculado: em \"Avisos no celular\" envie o código ao bot e toque em Vincular")
