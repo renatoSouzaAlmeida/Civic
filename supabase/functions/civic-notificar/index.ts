@@ -6,6 +6,8 @@
 //   { acao: "info" }                    -> nome do bot e se o aparelho já está vinculado
 //   { acao: "vincular" }                -> procura o código do aparelho nas mensagens do bot e grava o chat
 //   { acao: "enviar", tipo, mensagem }  -> registra o evento e envia ao Telegram (se vinculado)
+//       Todo evento pode trazer event_id (UUID do aparelho), ocorreu_em (ms), fonte, versao_app e payload_versao:
+//       com o mesmo event_id o reenvio é reconhecido (duplicado: true) e não repete o Telegram nem a linha.
 //   { acao: "localizacao", tipo, mensagem, lat, lon, data?, endereco?, idade_gps_s?, origem?, desconhecido? }
 //       -> envia o texto e o pino do mapa (onde parei o carro) e grava no histórico civic_estacionamentos
 //          (desconhecido = true quando o carro estacionou fora dos lugares de costume)
@@ -31,6 +33,37 @@ async function telegram(metodo: string, corpo: unknown) {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo),
   });
   return await r.json();
+}
+
+// Campos de confiabilidade que o app manda em cada evento: event_id (UUID gerado no aparelho), ocorreu_em (ms), fonte, versao_app, payload_versao.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function idDoEvento(corpo: Record<string, unknown>): string | null {
+  const id = String(corpo.event_id ?? "").toLowerCase();
+  return UUID.test(id) ? id : null;
+}
+
+// Evento já registrado? Então é um reenvio (resposta perdida ou fila sem internet): não manda o Telegram de novo.
+async function eventoJaRegistrado(token: string, id: string | null) {
+  if (!id) return null;
+  const r = await fetch(`${URL_BASE}/rest/v1/civic_eventos?dispositivo=eq.${encodeURIComponent(token)}&event_id=eq.${id}&select=enviado&limit=1`, { headers: cabecalhosDb });
+  const j = await r.json().catch(() => null);
+  return Array.isArray(j) && j.length ? j[0] : null;
+}
+
+async function gravarEvento(token: string, corpo: Record<string, unknown>, tipo: string, mensagem: string, enviado: boolean) {
+  const id = idDoEvento(corpo);
+  const quando = Number(corpo.ocorreu_em);
+  const fontes = ["app", "obd", "gps", "sensor", "usuario", "nuvem"];
+  await fetch(`${URL_BASE}/rest/v1/civic_eventos${id ? "?on_conflict=dispositivo,event_id" : ""}`, {
+    method: "POST", headers: id ? { ...cabecalhosDb, Prefer: "resolution=ignore-duplicates" } : cabecalhosDb,
+    body: JSON.stringify({
+      dispositivo: token, tipo, mensagem, enviado, event_id: id,
+      ocorreu_em: Number.isFinite(quando) && quando > 0 ? new Date(quando).toISOString() : null,
+      fonte: fontes.includes(String(corpo.fonte)) ? String(corpo.fonte) : null,
+      versao_app: corpo.versao_app ? String(corpo.versao_app).slice(0, 40) : null,
+      payload_versao: Number.isFinite(Number(corpo.payload_versao)) ? Number(corpo.payload_versao) : null,
+    }),
+  });
 }
 
 Deno.serve(async (req) => {
@@ -110,14 +143,14 @@ Deno.serve(async (req) => {
     const tipo = String(corpo.tipo ?? "aviso").slice(0, 40);
     const mensagem = String(corpo.mensagem ?? "").slice(0, 1000);
     if (!mensagem) return resposta({ erro: "mensagem vazia" }, 400);
+    const repetido = await eventoJaRegistrado(token, idDoEvento(corpo));
+    if (repetido) return resposta({ enviado: !!repetido.enviado, vinculado: !!disp.telegram_chat_id, duplicado: true });
     let enviado = false;
     if (disp.telegram_chat_id) {
       const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: mensagem });
       enviado = !!r?.ok;
     }
-    await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {
-      method: "POST", headers: cabecalhosDb, body: JSON.stringify({ dispositivo: token, tipo, mensagem, enviado }),
-    });
+    await gravarEvento(token, corpo, tipo, mensagem, enviado);
     return resposta({ enviado, vinculado: !!disp.telegram_chat_id });
   }
 
@@ -129,15 +162,15 @@ Deno.serve(async (req) => {
     }
     const tipo = String(corpo.tipo ?? "estacionamento").slice(0, 40);
     const mensagem = String(corpo.mensagem ?? "").slice(0, 1000);
+    const repetido = await eventoJaRegistrado(token, idDoEvento(corpo));
+    if (repetido) return resposta({ enviado: !!repetido.enviado, vinculado: !!disp.telegram_chat_id, historico: true, duplicado: true });
     let enviado = false;
     if (disp.telegram_chat_id) {
       const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: mensagem, disable_web_page_preview: true });
       await telegram("sendLocation", { chat_id: disp.telegram_chat_id, latitude: lat, longitude: lon });
       enviado = !!r?.ok;
     }
-    await fetch(`${URL_BASE}/rest/v1/civic_eventos`, {
-      method: "POST", headers: cabecalhosDb, body: JSON.stringify({ dispositivo: token, tipo, mensagem, enviado }),
-    });
+    await gravarEvento(token, corpo, tipo, mensagem, enviado);
     // Só o estacionamento (auto, manual ou simulado pela demonstração) entra no histórico; colisão e uso incomum só avisam.
     if (!["auto", "manual", "simulado"].includes(String(corpo.origem))) return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false });
     // Histórico de estacionamentos (alimenta o dashboard da Casa Tech) na mesma chamada do Telegram.

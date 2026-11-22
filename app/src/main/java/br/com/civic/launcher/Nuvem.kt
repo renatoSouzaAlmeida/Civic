@@ -15,6 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import java.util.UUID
 import java.util.concurrent.Executors
 
 /** Preços médios da ANP: gasolina comum, aditivada e etanol (R$/l). [fonte] = "municipio" ou "estado". */
@@ -320,6 +321,12 @@ class Nuvem private constructor(ctx: Context) {
     private fun definirVinculado(sim: Boolean) { vinculado = sim; prefs.edit().putBoolean("vinculado", sim).apply() }
 
     private fun funcao(corpo: JSONObject, aoTerminar: (JSONObject?) -> Unit) {
+        // Camada de eventos confiável: todo aviso nasce com um identificador próprio (gerado aqui, no aparelho) e a hora em que aconteceu.
+        // Se a resposta se perder ou o aviso for para a fila sem internet, o reenvio leva o MESMO event_id e a nuvem não duplica.
+        if (corpo.optString("acao") in ACOES_NA_FILA && !corpo.has("event_id")) {
+            corpo.put("event_id", UUID.randomUUID().toString()).put("ocorreu_em", System.currentTimeMillis()).put("fonte", "app")
+                .put("versao_app", runCatching { app.packageManager.getPackageInfo(app.packageName, 0).versionName }.getOrNull() ?: "?").put("payload_versao", 1)
+        }
         fila.execute {
             val r = if (!garantirCadastro()) null else {
                 val (status, texto) = http("POST", "/functions/v1/civic-notificar", corpo.toString())
