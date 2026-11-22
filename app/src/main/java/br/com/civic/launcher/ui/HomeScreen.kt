@@ -90,6 +90,9 @@ fun HomeScreen(
                 }
             }
             if (dock) DockNavegacao(tela, { tela = it; br.com.civic.launcher.Direcao.aberta = false }, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+            // "Estacionado": na Home (todas as opções), no OBD e na Direção em tela dividida; só com o carro parado.
+            if (br.com.civic.launcher.Direcao.aberta || tela == Tela.Inicio || tela == Tela.Central)
+                BotaoEstacionado(sensores, obd, Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = if (dock) 6.dp else 8.dp))
             // Alertas do motor por cima de qualquer tela.
             BannerAlerta(Modifier.align(Alignment.TopCenter).fillMaxWidth(0.7f).padding(top = 4.dp))
         }

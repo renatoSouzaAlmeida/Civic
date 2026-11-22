@@ -132,6 +132,8 @@ fun PainelDirecao(
                 }
             }
         }
+        // "Estacionado" (só com o carro parado); na faixa fina não cabe, lá fica só a Home.
+        if (!(larga && alto < 140.dp)) BotaoEstacionado(sensores, obd, Modifier.align(Alignment.BottomEnd).padding(8.dp))
     }
 }
 
