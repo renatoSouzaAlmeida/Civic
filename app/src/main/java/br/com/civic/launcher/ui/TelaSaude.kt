@@ -51,6 +51,21 @@ fun TelaSaude(obd: ObdMonitor) {
                 }
             }
         }
+        val leituras = obd.leituras(agora)
+        Secao("Qualidade dos dados do OBD") {
+            Text("Cada leitura mostra de onde vem, quando foi lida e se ainda vale. \"Atrasada\" quer dizer que o último valor é antigo: não use como medição de agora.", color = Cores.TextoSuave, fontSize = 13.sp)
+            leituras.forEach { l ->
+                val cor = when (l.estado) { br.com.civic.launcher.obd.EstadoLeitura.Atual -> Cores.Ok; br.com.civic.launcher.obd.EstadoLeitura.Atrasada -> Cores.Amarelo; else -> Cores.TextoSuave }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(l.campo, color = Cores.Texto, fontSize = 14.sp, modifier = Modifier.weight(1.2f))
+                    Text(if (l.valor != null) "${l.valor} ${l.unidade}" else "—", color = Cores.Texto, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text("${l.fonte.rotulo} · ${br.com.civic.launcher.obd.QualidadeDados.idade(l.em, agora)}", color = Cores.TextoSuave, fontSize = 12.sp, modifier = Modifier.weight(1.3f))
+                    Text(l.estado.rotulo, color = cor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(92.dp))
+                }
+            }
+            val total = obd.descartadas.values.sum()
+            if (total > 0) Text("$total leitura(s) impossível(is) descartada(s): ${obd.descartadas.entries.joinToString(", ") { "${it.key} ×${it.value}" }}.", color = Cores.Amarelo, fontSize = 12.sp)
+        }
         Text("Resumo do que o app mede. É indício para conversar com a oficina, não diagnóstico: um subsistema \"normal\" só vale para o que foi medido.", color = Cores.TextoSuave, fontSize = 12.sp)
     }
 }

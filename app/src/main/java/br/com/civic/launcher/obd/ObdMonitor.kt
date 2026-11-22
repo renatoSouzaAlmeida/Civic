@@ -84,7 +84,9 @@ class ObdMonitor private constructor(private val ctx: Context) {
     /** Últimos dados lidos. Cada atualização passa pelos alertas inteligentes do motor. */
     var dados: DadosObd
         get() = dadosAtuais
-        private set(novo) {
+        private set(bruto) {
+            // Camada de qualidade: valores impossíveis viram "sem dado" (e são contados) antes de chegar aos alertas e às telas.
+            val novo = if (demo) bruto else QualidadeDados.sanear(bruto) { campo -> descartadas.merge(campo, 1, Int::plus) }
             dadosAtuais = novo
             alertas.avaliar(novo, demonstracao = demo)
             br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo, consumoInstantaneo = novo.consumoInstantaneo)
@@ -108,6 +110,10 @@ class ObdMonitor private constructor(private val ctx: Context) {
             br.com.civic.launcher.AbastecimentoAuto.obter(ctx).amostra(novo.nivelCombustivel, novo.rpm, demonstracao = demo)
         }
     private val alertas = AlertasMotor.obter(ctx)
+    /** Quando cada PID respondeu pela última vez (a leitura só vale a partir daí; o valor antigo fica no painel até chegar outro). */
+    private val pidEm = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Quantas leituras impossíveis foram descartadas, por campo (desde que o app abriu). */
+    val descartadas = java.util.concurrent.ConcurrentHashMap<String, Int>()
     var encontrados by mutableStateOf<List<DispositivoBle>>(emptyList())
         private set
     var buscandoLista by mutableStateOf(false)
@@ -430,6 +436,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             return null
         }
         falhasPorPid[pid] = 0
+        pidEm[pid] = System.currentTimeMillis()
         val agora = System.currentTimeMillis()
         principal.post { ultimaRespostaEm = agora }
         return bruto.substring(i + prefixo.length).chunked(2).mapNotNull { it.toIntOrNull(16) }.toIntArray()
@@ -726,7 +733,26 @@ class ObdMonitor private constructor(private val ctx: Context) {
     }
 
     private fun lerTensao(): Float? =
-        Regex("([0-9]+\\.[0-9]+)").find(enviar("ATRV", 2_000).orEmpty())?.value?.toFloatOrNull()
+        Regex("([0-9]+\\.[0-9]+)").find(enviar("ATRV", 2_000).orEmpty())?.value?.toFloatOrNull()?.also { pidEm["ATRV"] = System.currentTimeMillis() }
+
+    /**
+     * As leituras do OBD com valor, unidade, fonte, hora e estado (Atual, Atrasada ou Indisponível), para as telas e o diagnóstico.
+     * A validade é de 10 s para o que o laço lê sempre e de 90 s para o que é lido de tempos em tempos.
+     */
+    fun leituras(agora: Long = System.currentTimeMillis()): List<LeituraQ> {
+        val d = dados
+        val vivo = estado == EstadoObd.Conectado && (ultimaRespostaEm == 0L || agora - ultimaRespostaEm < 10_000)
+        fun l(campo: String, rotulo: String, v: Number?, un: String, pid: String, validade: Long, casas: Int = 0) =
+            LeituraQ(rotulo, QualidadeDados.formatar(v, casas), un, FonteDado.Obd, pidEm[pid] ?: 0L, validade, QualidadeDados.estado(v, pidEm[pid] ?: 0L, validade, agora, vivo), descartadas[campo] ?: 0)
+        return listOf(
+            l("rpm", "Rotação", d.rpm, "rpm", "010C", 10_000), l("velocidade", "Velocidade", d.velocidade, "km/h", "010D", 10_000),
+            l("tensao", "Tensão", d.tensao, "V", "ATRV", 10_000, 1), l("tempMotor", "Temp. do motor", d.tempMotor, "°C", "0105", 90_000),
+            l("carga", "Carga do motor", d.carga, "%", "0104", 90_000), l("acelerador", "Acelerador", d.acelerador, "%", "0111", 90_000),
+            l("tempAdmissao", "Temp. de admissão", d.tempAdmissao, "°C", "010F", 90_000), l("map", "Pressão do coletor", d.map, "kPa", "010B", 90_000),
+            l("avanco", "Avanço da ignição", d.avanco, "°", "010E", 90_000, 1), l("nivelCombustivel", "Nível do tanque", d.nivelCombustivel, "%", "012F", 300_000),
+            l("stft", "Correção curta", d.stft, "%", "0106", 90_000, 1), l("ltft", "Correção longa", d.ltft, "%", "0107", 90_000, 1),
+        )
+    }
 
     private fun lerFalhas(d: DadosObd): DadosObd {
         var novo = d
