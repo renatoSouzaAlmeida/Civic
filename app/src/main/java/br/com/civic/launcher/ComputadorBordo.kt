@@ -16,6 +16,9 @@ import java.util.Locale
 /** Um ponto da linha do tempo da viagem. `tipo`: partida, frenagem, aceleracao, excesso, rpm, colisao, sos, alerta, estacionou. */
 data class EventoViagem(val em: Long, val tipo: String, val texto: String)
 
+/** Uma amostra da série da viagem (a cada ~10 s). -1 = sem leitura. `cons` é o km/l instantâneo vezes 10. */
+data class PontoViagem(val t: Int, val vel: Int, val rpm: Int, val acel: Int, val temp: Int, val cons: Int)
+
 /** Uma viagem: do carro começar a andar (ou o motor ligar) até ficar 5 min parado/desligado. */
 data class Viagem(
     val inicio: Long,
@@ -42,6 +45,10 @@ data class Viagem(
     val latFim: Double? = null, val lonFim: Double? = null,
     /** Linha do tempo: partida, frenagens e acelerações bruscas, excessos, RPM alto, possível colisão, SOS, alertas e estacionamento (no máx. 80; a partida fica sempre). */
     val eventos: List<EventoViagem> = emptyList(),
+    /** Série para a análise de condução (aceleração, rpm, temperatura e consumo ao longo da viagem; no máx. 240 pontos). */
+    val serie: List<PontoViagem> = emptyList(),
+    /** Tempo com o motor ligado e o carro parado (só com OBD). */
+    val marchaLentaMs: Long = 0,
 ) {
     fun comEvento(em: Long, tipo: String, texto: String): Viagem =
         copy(eventos = (if (eventos.size >= 80) eventos.filterIndexed { i, _ -> i != 1 } else eventos) + EventoViagem(em, tipo, texto))
@@ -88,6 +95,10 @@ class ComputadorBordo private constructor(private val ctx: Context) {
     private var acimaDesde = 0L
     private var ultimoExcesso = 0L
     private var consumoInst: Float? = null
+    private var acelPct: Int? = null
+    private var tempMotor: Int? = null
+    private var ultimoPonto = 0L
+    private var passoSerieMs = 10_000L
 
     private val verificador = object : Runnable {
         override fun run() {
@@ -102,10 +113,10 @@ class ComputadorBordo private constructor(private val ctx: Context) {
     }
 
     /** Velocidade e rotação vindas do OBD (prioridade sobre o GPS). */
-    fun amostraObd(velKmh: Int?, rpm: Int?, demonstracao: Boolean, consumoInstantaneo: Float? = null) {
+    fun amostraObd(velKmh: Int?, rpm: Int?, demonstracao: Boolean, consumoInstantaneo: Float? = null, acelerador: Int? = null, tempMotorC: Int? = null) {
         if (velKmh == null && rpm == null) return
         ultimaObd = System.currentTimeMillis()
-        consumoInst = consumoInstantaneo
+        consumoInst = consumoInstantaneo; acelPct = acelerador; tempMotor = tempMotorC
         amostra((velKmh ?: 0).toFloat(), rpm ?: 0, demonstracao, comObd = true)
     }
 
@@ -135,6 +146,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             v = Viagem(inicio = agora, fim = agora, demonstracao = demonstracao, latIni = p?.latitude, lonIni = p?.longitude)
                 .comEvento(agora, "partida", if (ligado) "Partida (motor ligado)" else "Partida (carro começou a andar)")
             ultimaAmostra = agora
+            ultimoPonto = 0L; passoSerieMs = 10_000L
             rpmAltoAtivo = false; excessoAtivo = false
         }
         // Integra a distância; lacunas grandes (sem sinal) não contam para não inventar km.
@@ -147,7 +159,17 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             velMaxima = maxOf(v.velMaxima, vel.toInt()),
             rpmMaximo = maxOf(v.rpmMaximo, rpm),
             comObd = v.comObd || comObd,
+            marchaLentaMs = v.marchaLentaMs + if (comObd && ligado && !andando) dt else 0,
         )
+        // Série da análise de condução: uma amostra a cada ~10 s; passando de 240 pontos, guarda um sim e um não e dobra o passo.
+        if (agora - ultimoPonto >= passoSerieMs) {
+            ultimoPonto = agora
+            val fresco = comObd && agora - ultimaObd < 5_000
+            var s = v.serie + PontoViagem(((agora - v.inicio) / 1000).toInt(), vel.toInt(), if (ligado) rpm else -1,
+                if (fresco) acelPct ?: -1 else -1, if (fresco) tempMotor ?: -1 else -1, if (fresco) consumoInst?.let { (it * 10).toInt() } ?: -1 else -1)
+            if (s.size > 240) { s = s.filterIndexed { i, _ -> i % 2 == 0 }; passoSerieMs *= 2 }
+            v = v.copy(serie = s)
+        }
         // RPM elevado (4.500 rpm ou mais): conta uma ocorrência por subida, com 10 s entre ocorrências.
         if (rpm >= 4_500) { if (!rpmAltoAtivo && agora - ultimoRpmAlto > 10_000) { v = v.copy(rpmAlto = v.rpmAlto + 1).comEvento(agora, "rpm", "RPM elevado ($rpm rpm)"); ultimoRpmAlto = agora }; rpmAltoAtivo = true }
         else if (rpm < 4_000) rpmAltoAtivo = false
@@ -208,6 +230,8 @@ class ComputadorBordo private constructor(private val ctx: Context) {
             if (v.comObd) { o.put("rpm_max", v.rpmMaximo).put("rpm_alto", v.rpmAlto) }
             v.consumoMedio?.let { o.put("consumo_km_l", Math.round(it * 10) / 10.0) }
             v.nota?.let { o.put("nota", it) }
+            if (v.serie.isNotEmpty()) o.put("serie", JSONArray().also { a -> v.serie.forEach { p -> a.put(JSONArray().put(p.t).put(p.vel).put(p.rpm).put(p.acel).put(p.temp).put(p.cons)) } })
+            if (v.comObd) o.put("marcha_lenta_s", v.marchaLentaMs / 1000)
             if (v.eventos.isNotEmpty()) o.put("eventos", JSONArray().also { a -> v.eventos.forEach { e -> a.put(JSONObject().put("em", iso(e.em)).put("tipo", e.tipo).put("texto", e.texto)) } })
             v.latIni?.let { o.put("lat_ini", it) }; v.lonIni?.let { o.put("lon_ini", it) }
             v.latFim?.let { o.put("lat_fim", it) }; v.lonFim?.let { o.put("lon_fim", it) }
@@ -233,7 +257,7 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         val nuvem = Nuvem.obter(ctx)
         // Mesmos campos em todas as linhas (nulos quando faltam), senão o banco recusa o lote com erro 400.
         val campos = listOf("inicio", "fim", "distancia_km", "duracao_s", "em_movimento_s", "vel_media", "vel_max", "frenagens", "aceleracoes", "excessos", "excesso_max_kmh", "excesso_s",
-            "fonte", "simulado", "versao_app", "rpm_max", "rpm_alto", "consumo_km_l", "nota", "lat_ini", "lon_ini", "lat_fim", "lon_fim", "endereco_ini", "endereco_fim", "eventos")
+            "fonte", "simulado", "versao_app", "rpm_max", "rpm_alto", "consumo_km_l", "nota", "lat_ini", "lon_ini", "lat_fim", "lon_fim", "endereco_ini", "endereco_fim", "eventos", "serie", "marcha_lenta_s")
         val lote = JSONArray(); for (i in 0 until fila.length()) lote.put(JSONObject(fila.getJSONObject(i).toString()).put("dispositivo", nuvem.token).also { o -> campos.forEach { k -> if (!o.has(k)) o.put(k, JSONObject.NULL) } })
         val n = fila.length()
         enviando = true
@@ -295,6 +319,8 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         .put("exm", v.excessoMaxKmh).put("exs", v.excessoMs)
         .put("fren", v.frenagens).put("acel", v.aceleracoes).put("exc", v.excessos).put("rpma", v.rpmAlto)
         .put("ck", v.consKm).put("cl", v.consLitros).put("obd", v.comObd)
+        .put("ml", v.marchaLentaMs)
+        .put("sr", JSONArray().also { a -> v.serie.forEach { p -> a.put(JSONArray().put(p.t).put(p.vel).put(p.rpm).put(p.acel).put(p.temp).put(p.cons)) } })
         .put("ev", JSONArray().also { a -> v.eventos.forEach { e -> a.put(JSONObject().put("t", e.em).put("k", e.tipo).put("x", e.texto)) } })
         .apply { v.latIni?.let { put("lai", it) }; v.lonIni?.let { put("loi", it) }; v.latFim?.let { put("laf", it) }; v.lonFim?.let { put("lof", it) } }
 
@@ -304,6 +330,8 @@ class ComputadorBordo private constructor(private val ctx: Context) {
         if (o.has("lai")) o.getDouble("lai") else null, if (o.has("loi")) o.getDouble("loi") else null,
         if (o.has("laf")) o.getDouble("laf") else null, if (o.has("lof")) o.getDouble("lof") else null,
         o.optJSONArray("ev")?.let { a -> (0 until a.length()).map { i -> a.getJSONObject(i).let { EventoViagem(it.getLong("t"), it.getString("k"), it.getString("x")) } } } ?: emptyList(),
+        o.optJSONArray("sr")?.let { a -> (0 until a.length()).map { i -> a.getJSONArray(i).let { p -> PontoViagem(p.getInt(0), p.getInt(1), p.getInt(2), p.getInt(3), p.getInt(4), p.getInt(5)) } } } ?: emptyList(),
+        o.optLong("ml", 0L),
     )
 
     companion object {

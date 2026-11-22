@@ -73,7 +73,9 @@ private fun AbaViagem() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         val atual = cb.atual
         // Resumo da condução (Driving Score): da viagem em andamento ou, se não houver, da última encerrada.
-        (atual ?: cb.historico.firstOrNull())?.let { CartaoConducao(it, andando = atual != null, cb.historico.drop(if (atual == null) 1 else 0).mapNotNull { h -> h.nota }.take(10), agora) }
+        // Análise de condução da viagem escolhida na lista (por padrão, a em andamento ou a última).
+        val escolhida = cb.historico.firstOrNull { it.inicio == linha } ?: atual ?: cb.historico.firstOrNull()
+        escolhida?.let { AnaliseViagem(it) }
         CartaoPneus()
         Secao(if (atual == null) "Viagem atual" else if (atual.demonstracao) "Viagem atual (demonstração)" else "Viagem atual") {
             if (atual == null) {
@@ -102,11 +104,11 @@ private fun AbaViagem() {
             )
             Text("Km do painel informado (ou do último abastecimento) + %.1f km medidos pelo app desde então.".format(BR, v.distanciaDesdeBase), color = Cores.TextoSuave, fontSize = 13.sp)
         }
-        (cb.historico.firstOrNull { it.inicio == linha } ?: atual ?: cb.historico.firstOrNull())?.let { LinhaDoTempoViagem(it) }
+        escolhida?.let { LinhaDoTempoViagem(it) }
         Secao("Últimas viagens (${cb.historico.size})") {
             if (cb.historico.isEmpty()) Text("As viagens encerradas aparecem aqui.", color = Cores.TextoSuave, fontSize = 15.sp)
             val fmt = remember { SimpleDateFormat("dd/MM HH:mm", BR) }
-            if (cb.historico.size >= 2) Text("Toque em duas viagens para compará-las.", color = Cores.TextoSuave, fontSize = 13.sp)
+            if (cb.historico.isNotEmpty()) Text("Toque numa viagem para ver a análise de condução e a linha do tempo dela. Use \"Comparar\" em duas viagens para vê-las lado a lado.", color = Cores.TextoSuave, fontSize = 13.sp)
             if (comparar.size == 2) {
                 val a = cb.historico.firstOrNull { it.inicio == comparar[0] }
                 val b = cb.historico.firstOrNull { it.inicio == comparar[1] }
@@ -115,8 +117,8 @@ private fun AbaViagem() {
             }
             cb.historico.forEach { h ->
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (h.inicio in comparar) Cores.Destaque.copy(alpha = 0.2f) else Cores.Chip)
-                        .clickable { comparar = if (h.inicio in comparar) comparar - h.inicio else (comparar + h.inicio).takeLast(2) }
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(if (h.inicio == escolhida?.inicio) Cores.Destaque.copy(alpha = 0.2f) else Cores.Chip)
+                        .clickable { linha = h.inicio }
                         .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -125,7 +127,9 @@ private fun AbaViagem() {
                         Text(cb.resumo(h), color = Cores.TextoSuave, fontSize = 13.sp)
                         h.resumoConducao()?.let { Text(it, color = Cores.TextoSuave, fontSize = 12.sp) }
                     }
-                    if (h.eventos.isNotEmpty()) TextButton(onClick = { linha = h.inicio }) { Text("Linha do tempo", fontSize = 13.sp) }
+                    TextButton(onClick = { comparar = if (h.inicio in comparar) comparar - h.inicio else (comparar + h.inicio).takeLast(2) }) {
+                        Text(if (h.inicio in comparar) "✓ Comparar" else "Comparar", fontSize = 13.sp)
+                    }
                     h.nota?.let { n ->
                         Text("$n", color = corNota(n), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
                         Text("/100", color = Cores.TextoSuave, fontSize = 12.sp, modifier = Modifier.padding(start = 2.dp, top = 8.dp))

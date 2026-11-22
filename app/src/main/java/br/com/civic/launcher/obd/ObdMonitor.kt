@@ -89,7 +89,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
             val novo = if (demo) bruto else QualidadeDados.sanear(bruto) { campo -> descartadas.merge(campo, 1, Int::plus) }
             dadosAtuais = novo
             alertas.avaliar(novo, demonstracao = demo)
-            br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo, consumoInstantaneo = novo.consumoInstantaneo)
+            br.com.civic.launcher.ComputadorBordo.obter(ctx).amostraObd(novo.velocidade, novo.rpm, demonstracao = demo, consumoInstantaneo = novo.consumoInstantaneo, acelerador = novo.acelerador, tempMotorC = novo.tempMotor)
             if (!demo) HistoricoFalhas.obter(ctx).registrar(novo.codigos, novo.codigosPendentes)
             SaudeBateria.obter(ctx).amostra(novo.tensao, novo.rpm, demonstracao = demo)
             CorrecaoCombustivel.obter(ctx).amostra(novo, demonstracao = demo)
