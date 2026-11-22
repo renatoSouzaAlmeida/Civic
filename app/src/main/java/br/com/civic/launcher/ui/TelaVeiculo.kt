@@ -44,13 +44,14 @@ fun TelaVeiculo() {
     var aba by remember { mutableIntStateOf(0) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         BarraAbas(
-            listOf(Aba("Viagem", Icons.Filled.Route), Aba("Abastecimentos", Icons.Filled.LocalGasStation), Aba("Manutenção", Icons.Filled.Build)),
+            listOf(Aba("Viagem", Icons.Filled.Route), Aba("Abastecimentos", Icons.Filled.LocalGasStation), Aba("Manutenção", Icons.Filled.Build), Aba("Painel", Icons.Filled.Info)),
             aba, Modifier.fillMaxWidth(),
         ) { aba = it }
         when (aba) {
             0 -> AbaViagem()
             1 -> AbaAbastecimentos()
-            else -> AbaManutencao()
+            2 -> AbaManutencao()
+            else -> TelaPainelCasaTech()
         }
     }
 }
