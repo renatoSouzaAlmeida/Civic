@@ -66,6 +66,23 @@ async function gravarEvento(token: string, corpo: Record<string, unknown>, tipo:
   });
 }
 
+// Endereço completo em todo aviso com coordenadas: se o texto tem o link do mapa e o app ainda não pôs o endereço (linha 🏠),
+// busca no OpenStreetMap (Nominatim, até 3,5 s; sem resposta, o aviso sai sem endereço em vez de atrasar).
+async function comEndereco(mensagem: string): Promise<{ texto: string; endereco: string | null }> {
+  if (mensagem.includes("🏠")) return { texto: mensagem, endereco: null };
+  const m = mensagem.match(/maps\.google\.com\/\?q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (!m) return { texto: mensagem, endereco: null };
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=pt-BR&lat=${m[1]}&lon=${m[2]}`, {
+      headers: { "User-Agent": "civic-renatin-notificar/1.0" }, signal: AbortSignal.timeout(3500),
+    });
+    const j = await r.json();
+    const endereco = String(j?.display_name ?? "").slice(0, 300);
+    if (!endereco) return { texto: mensagem, endereco: null };
+    return { texto: mensagem.replace("🗺️", `🏠 ${endereco}\n🗺️`), endereco };
+  } catch { return { texto: mensagem, endereco: null }; }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return resposta({ erro: "use POST" }, 405);
   const token = req.headers.get("x-civic-token") ?? "";
@@ -145,12 +162,13 @@ Deno.serve(async (req) => {
     if (!mensagem) return resposta({ erro: "mensagem vazia" }, 400);
     const repetido = await eventoJaRegistrado(token, idDoEvento(corpo));
     if (repetido) return resposta({ enviado: !!repetido.enviado, vinculado: !!disp.telegram_chat_id, duplicado: true });
+    const { texto: msgFinal } = await comEndereco(mensagem);
     let enviado = false;
     if (disp.telegram_chat_id) {
-      const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: mensagem });
+      const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: msgFinal });
       enviado = !!r?.ok;
     }
-    await gravarEvento(token, corpo, tipo, mensagem, enviado);
+    await gravarEvento(token, corpo, tipo, msgFinal, enviado);
     return resposta({ enviado, vinculado: !!disp.telegram_chat_id });
   }
 
@@ -164,13 +182,14 @@ Deno.serve(async (req) => {
     const mensagem = String(corpo.mensagem ?? "").slice(0, 1000);
     const repetido = await eventoJaRegistrado(token, idDoEvento(corpo));
     if (repetido) return resposta({ enviado: !!repetido.enviado, vinculado: !!disp.telegram_chat_id, historico: true, duplicado: true });
+    const { texto: msgFinal, endereco: enderecoNuvem } = await comEndereco(mensagem);
     let enviado = false;
     if (disp.telegram_chat_id) {
-      const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: mensagem, disable_web_page_preview: true });
+      const r = await telegram("sendMessage", { chat_id: disp.telegram_chat_id, text: msgFinal, disable_web_page_preview: true });
       await telegram("sendLocation", { chat_id: disp.telegram_chat_id, latitude: lat, longitude: lon });
       enviado = !!r?.ok;
     }
-    await gravarEvento(token, corpo, tipo, mensagem, enviado);
+    await gravarEvento(token, corpo, tipo, msgFinal, enviado);
     // Só o estacionamento (auto, manual ou simulado pela demonstração) entra no histórico; colisão e uso incomum só avisam.
     if (!["auto", "manual", "simulado"].includes(String(corpo.origem))) return resposta({ enviado, vinculado: !!disp.telegram_chat_id, historico: false });
     // Histórico de estacionamentos (alimenta o dashboard da Casa Tech) na mesma chamada do Telegram.
@@ -181,7 +200,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         dispositivo: token, lat, lon,
         data: Number.isFinite(quando) && quando > 0 ? new Date(quando).toISOString() : new Date().toISOString(),
-        endereco: corpo.endereco ? String(corpo.endereco).slice(0, 300) : null,
+        endereco: corpo.endereco ? String(corpo.endereco).slice(0, 300) : enderecoNuvem,
         idade_gps_s: Number.isFinite(idade) && idade >= 0 ? Math.round(idade) : null,
         origem: ["manual", "simulado"].includes(String(corpo.origem)) ? String(corpo.origem) : "auto",
         desconhecido: corpo.desconhecido === true,

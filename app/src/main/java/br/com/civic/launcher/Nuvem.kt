@@ -334,6 +334,7 @@ class Nuvem private constructor(ctx: Context) {
                 .put("versao_app", runCatching { app.packageManager.getPackageInfo(app.packageName, 0).versionName }.getOrNull() ?: "?").put("payload_versao", 1)
         }
         fila.execute {
+            runCatching { completarEndereco(corpo) }
             val r = if (!garantirCadastro()) null else {
                 val (status, texto) = http("POST", "/functions/v1/civic-notificar", corpo.toString())
                 if (status in 200..299) runCatching { JSONObject(texto) }.getOrNull() else null
@@ -342,6 +343,26 @@ class Nuvem private constructor(ctx: Context) {
             if (r == null && corpo.optString("acao") in ACOES_NA_FILA) guardarPendente(corpo)
             principal.post { aoTerminar(r) }
         }
+    }
+
+    /**
+     * Todo aviso que leva coordenadas (link do mapa) leva também o endereço completo: rua, número, bairro, cidade, estado e CEP.
+     * Usa o geocodificador do aparelho (até 4 s, para não atrasar um SOS); se ele não existir ou não achar, a função da nuvem
+     * tenta pelo OpenStreetMap. Roda na fila de envio (fora da tela principal). O texto já guardado na fila sem internet vai com o endereço.
+     */
+    private fun completarEndereco(corpo: JSONObject) {
+        if (corpo.optString("acao") !in ACOES_NA_FILA) return
+        val msg = corpo.optString("mensagem")
+        if (msg.contains("🏠")) return
+        val m = Regex("maps\\.google\\.com/\\?q=(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)").find(msg) ?: return
+        val lat = m.groupValues[1].toDouble(); val lon = m.groupValues[2].toDouble()
+        val endereco = runCatching {
+            val f = java.util.concurrent.FutureTask { LocalEstacionamento.obter(app).enderecoCompleto(lat, lon) }
+            Thread(f).start()
+            f.get(4, java.util.concurrent.TimeUnit.SECONDS)
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        corpo.put("mensagem", msg.replaceFirst("🗺️", "🏠 $endereco\n🗺️"))
+        corpo.put("endereco", endereco)
     }
 
     // ---------- fila de avisos sem internet ----------

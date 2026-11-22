@@ -215,6 +215,14 @@ class LocalEstacionamento private constructor(private val ctx: Context) {
         }
     }.getOrNull()
 
+    /** Endereço completo (rua, número, bairro, cidade, estado, CEP) do geocodificador do aparelho; nulo se ele não existir ou não achar. */
+    @Suppress("DEPRECATION")
+    fun enderecoCompleto(lat: Double, lon: Double): String? = runCatching {
+        if (!Geocoder.isPresent()) return null
+        val a = Geocoder(ctx, Locale("pt", "BR")).getFromLocation(lat, lon, 1)?.firstOrNull() ?: return null
+        a.getAddressLine(0)?.takeIf { it.isNotBlank() } ?: endereco(lat, lon)
+    }.getOrNull()
+
     private fun distancia(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val r = FloatArray(1); Location.distanceBetween(lat1, lon1, lat2, lon2, r); return r[0]
     }
