@@ -73,22 +73,24 @@ internal fun TituloCarro() {
     }
 }
 
-/** Placa no estilo Mercosul: faixa azul "BRASIL" em cima e os caracteres pretos em fundo branco. */
+/** Placa Mercosul discreta, escura e integrada à foto do carro: fundo grafite quase opaco, faixa "BRASIL" apagada e caracteres em cinza-claro. */
 @Composable
 internal fun PlacaMercosul(texto: String, largura: androidx.compose.ui.unit.Dp = 132.dp, altura: androidx.compose.ui.unit.Dp? = null) {
     val k = largura.value / 132f
-    val forma = androidx.compose.foundation.shape.RoundedCornerShape((6 * k).dp)
+    val forma = androidx.compose.foundation.shape.RoundedCornerShape((4 * k).dp)
+    val fundo = Color(0xFF12161D).copy(alpha = 0.94f)
+    val letras = Color(0xFFC3C9D4)
     Column(
-        Modifier.width(largura).then(if (altura != null) Modifier.height(altura) else Modifier).clip(forma).background(Color.White)
-            .border((1.5f * k).coerceAtLeast(1f).dp, Color(0xFF1F2937), forma),
+        Modifier.width(largura).then(if (altura != null) Modifier.height(altura) else Modifier).clip(forma).background(fundo)
+            .border((0.8f * k).coerceAtLeast(0.6f).dp, Color(0xFF2B323E), forma),
     ) {
-        Box(Modifier.fillMaxWidth().height((12 * k).dp).background(Color(0xFF1D4ED8)), contentAlignment = Alignment.Center) {
-            Text("BRASIL", color = Color.White, fontSize = (8 * k).sp, lineHeight = (9 * k).sp, fontWeight = FontWeight.Bold, letterSpacing = (1 * k).sp, maxLines = 1)
+        Box(Modifier.fillMaxWidth().height((10 * k).dp).background(Color(0xFF1A2232)), contentAlignment = Alignment.Center) {
+            Text("BRASIL", color = Color(0xFF7C879E), fontSize = (6.5f * k).sp, lineHeight = (8 * k).sp, fontWeight = FontWeight.Medium, letterSpacing = (1 * k).sp, maxLines = 1)
         }
         if (altura != null) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-            Text(texto, color = Color(0xFF111111), fontSize = ((altura.value - 12 * k) * 0.66f).sp, lineHeight = ((altura.value - 12 * k) * 0.7f).sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (1.5f * k).sp, maxLines = 1, softWrap = false)
+            Text(texto, color = letras, fontSize = ((altura.value - 10 * k) * 0.66f).sp, lineHeight = ((altura.value - 10 * k) * 0.7f).sp, fontWeight = FontWeight.Bold, letterSpacing = (1.5f * k).sp, maxLines = 1, softWrap = false)
         } else Text(
-            texto, color = Color(0xFF111111), fontSize = (20 * k).sp, lineHeight = (22 * k).sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (1.5f * k).sp,
+            texto, color = letras, fontSize = (20 * k).sp, lineHeight = (22 * k).sp, fontWeight = FontWeight.Bold, letterSpacing = (1.5f * k).sp,
             modifier = Modifier.fillMaxWidth().padding(vertical = (2 * k).dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
         )
     }
@@ -115,7 +117,7 @@ fun CartaoCarro(obd: ObdMonitor, modifier: Modifier) {
     val d = obd.dados
     Cartao(modifier) {
         FotoCarro(Modifier.fillMaxSize(), 0.55f)
-        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.fillMaxSize().padding(20.dp).escalarSeMenorQue(250.dp), verticalArrangement = Arrangement.SpaceBetween) {
             TituloCarro()
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {

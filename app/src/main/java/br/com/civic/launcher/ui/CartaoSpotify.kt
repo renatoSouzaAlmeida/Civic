@@ -59,7 +59,7 @@ fun CartaoSpotify(monitor: MediaMonitor, modifier: Modifier) {
             if (!abriu) Toast.makeText(ctx, "Ative o acesso às notificações do Civic Renatin nas Configurações", Toast.LENGTH_LONG).show()
         }
         Column(
-            Modifier.fillMaxSize().padding(if (compacto) 14.dp else 22.dp),
+            Modifier.fillMaxSize().padding(if (compacto) 14.dp else 22.dp).escalarSeMenorQue(210.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Capa, título e progresso cedem espaço; os controles abaixo nunca são espremidos.

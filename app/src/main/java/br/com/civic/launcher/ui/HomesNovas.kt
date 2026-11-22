@@ -160,7 +160,7 @@ fun HomeOusada(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonitor) {
 @Composable
 private fun ResumoObdCompacto(d: DadosObd, obd: ObdMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
-    Column(modifier.cartaoSuave().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+    Column(modifier.cartaoSuave().padding(horizontal = 16.dp, vertical = 12.dp).escalarSeMenorQue(120.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth()) {
             Texto2(d.rpm?.let { "%,d".format(BRN, it).replace(",", ".") } ?: "—", "RPM", Modifier.weight(1f))
             Texto2(d.tempMotor?.toString() ?: "—", "°C motor", Modifier.weight(1f))

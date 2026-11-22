@@ -113,7 +113,7 @@ fun HomeCaixasCompacta(monitor: MediaMonitor, sensores: Sensores, obd: ObdMonito
 private fun CaixaCarro(obd: ObdMonitor, modifier: Modifier) {
     Box(modifier.cartaoSuave()) {
         FotoCarro(Modifier.fillMaxSize(), 0.62f)
-        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.fillMaxSize().padding(20.dp).escalarSeMenorQue(280.dp), verticalArrangement = Arrangement.SpaceBetween) {
             TituloCarro()
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Setas e farol, como no painel do carro.
@@ -134,7 +134,7 @@ private fun CaixaCarro(obd: ObdMonitor, modifier: Modifier) {
 private fun CaixaResumoObd(obd: ObdMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
     val d = obd.dados
-    Column(modifier.cartaoSuave().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
+    Column(modifier.cartaoSuave().padding(16.dp).escalarSeMenorQue(250.dp), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Outlined.Speed, null, tint = Cores.Destaque, modifier = Modifier.size(20.dp))
@@ -272,7 +272,7 @@ private fun GradeLeituras(d: DadosObd, modifier: Modifier) {
 /** Ícone + valor grande na mesma linha, rótulo pequeno embaixo (como na proposta). */
 @Composable
 private fun Celula(icone: ImageVector?, valor: String, unidade: String, rotulo: String, modifier: Modifier, cor: Color = Cores.Destaque) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+    Column(modifier.escalarSeMenorQue(46.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (icone != null) Icon(icone, null, tint = cor, modifier = Modifier.size(20.dp))
             Text(valor, color = Cores.Texto, fontSize = 24.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -334,7 +334,7 @@ private fun MapaCompacto(sensores: Sensores, modifier: Modifier) {
 internal fun SpotifyLinha(monitor: MediaMonitor, modifier: Modifier) {
     val ctx = LocalContext.current
     val m = monitor.estado
-    Row(modifier.cartaoSuave().clickable { ctx.abrirSpotify() }.padding(horizontal = 14.dp, vertical = 10.dp),
+    Row(modifier.cartaoSuave().clickable { ctx.abrirSpotify() }.padding(horizontal = 14.dp, vertical = 10.dp).escalarSeMenorQue(100.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         if (m.capa != null) {
             androidx.compose.foundation.Image(m.capa.asImageBitmap(), null, Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)),
@@ -373,7 +373,7 @@ private fun Redondo(icone: ImageVector, tamanho: androidx.compose.ui.unit.Dp, fu
 internal fun ClimaLinha(clima: ClimaUi?, modifier: Modifier) {
     var aberto by remember { mutableStateOf(false) }
     if (aberto) ModalClima { aberto = false }
-    Column(modifier.cartaoSuave().clickable { aberto = true }.padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.SpaceEvenly) {
+    Column(modifier.cartaoSuave().clickable { aberto = true }.padding(horizontal = 14.dp, vertical = 8.dp).escalarSeMenorQue(96.dp), verticalArrangement = Arrangement.SpaceEvenly) {
         if (clima == null) {
             Text("Clima: precisa de internet", color = Cores.TextoSuave, fontSize = 14.sp)
             return@Column

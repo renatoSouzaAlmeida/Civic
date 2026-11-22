@@ -50,7 +50,7 @@ fun CartaoClima(clima: ClimaUi?, modifier: Modifier = Modifier) {
         val (icone, cor) = iconeCondicao(clima.condicao)
         val hora = remember(clima.atualizadoEm) { java.text.SimpleDateFormat("HH:mm", java.util.Locale("pt", "BR")).format(java.util.Date(clima.atualizadoEm)) }
         val corChuva = if (clima.chovendo || clima.chuva.startsWith("Chuva")) Cores.Waze else Cores.Ok
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp).escalarSeMenorQue(200.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.LocationOn, null, tint = Cores.TextoSuave, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(4.dp))
