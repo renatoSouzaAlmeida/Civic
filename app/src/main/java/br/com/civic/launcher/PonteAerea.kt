@@ -17,7 +17,12 @@ data class EventoCal(
     val id: String, val tipo: String, val titulo: String, val subtitulo: String?,
     val data: String, val dataFim: String?, val horaInicio: String?, val horaFim: String?,
     val passageiro: String?, val diaInteiro: Boolean, val cor: String,
+    /** Detalhes do evento (nos voos: origem, destino, companhia, número, situação, objetivo, localizador, assento, vaga, bilhete, trecho, escala, observações...). */
+    val detalhes: Map<String, Any?> = emptyMap(),
 ) {
+    fun texto(chave: String): String? = (detalhes[chave] as? String)?.trim()?.ifEmpty { null }
+    fun sim(chave: String): Boolean = detalhes[chave] as? Boolean ?: false
+
     /** O evento cobre este dia? (de `data` até `dataFim`, inclusive) */
     fun cobre(dia: LocalDate): Boolean {
         val ini = runCatching { LocalDate.parse(data) }.getOrNull() ?: return false
@@ -147,7 +152,8 @@ class PonteAerea private constructor(ctx: Context) {
             val o = arr.getJSONObject(i)
             fun s(k: String) = if (o.isNull(k)) null else o.optString(k).ifEmpty { null }
             lista.add(EventoCal(o.optString("id"), o.optString("tipo"), o.optString("titulo"), s("subtitulo"), o.optString("data"), s("data_fim"),
-                s("hora_inicio"), s("hora_fim"), s("passageiro"), o.optBoolean("dia_inteiro"), o.optString("cor", "#6B7280")))
+                s("hora_inicio"), s("hora_fim"), s("passageiro"), o.optBoolean("dia_inteiro"), o.optString("cor", "#6B7280"),
+                o.optJSONObject("detalhes")?.let { d -> d.keys().asSequence().associateWith { k -> if (d.isNull(k)) null else d.get(k) } } ?: emptyMap()))
         }
         eventos = lista
         passageiros = j.optJSONArray("passageiros")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString("nome")?.ifEmpty { null } } } ?: emptyList()

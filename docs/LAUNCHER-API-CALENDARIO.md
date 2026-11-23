@@ -166,7 +166,14 @@ Regras: o intervalo máximo é de **400 dias**; `ate` não pode ser menor que `d
       "passageiro": "Renato",
       "dia_inteiro": false,
       "cor": "#0058D4",
-      "detalhes": { "origem": "BSB", "destino": "CGH", "companhia": "Azul", "numero_voo": "AD1234", "passageiro": "Renato", "situacao": "pendente", "objetivo": "Trabalho" }
+      "detalhes": {
+        "origem": "BSB", "destino": "CGH", "companhia": "Azul", "numero_voo": "AD1234", "passageiro": "Renato",
+        "situacao": "pendente", "objetivo": "Trabalho",
+        "localizador": "ABC123", "assento": "12A", "vaga_garagem": "B-14",
+        "tipo_bilhete": "Azul", "tipo_trecho": "ida", "voo_nacional": true,
+        "escala": null, "escala_chegada": null, "escala_partida": null,
+        "remarcar": false, "observacoes": null
+      }
     },
     {
       "id": "feriado-…-2026-12-25",
@@ -195,13 +202,34 @@ No topo da resposta, `filtro_passageiro` repete o filtro aplicado (`null` = todo
 
 | `tipo` | Origem | Observações |
 |---|---|---|
-| `voo` | tabela `voos` | Sem cancelados. Tem `hora_inicio` (saída) e `hora_fim` (chegada). Filtrado por `passageiro`. |
+| `voo` | tabela `voos` | Sem cancelados. Tem `hora_inicio` (saída) e `hora_fim` (chegada). Filtrado por `passageiro`. O detalhe completo vem em `detalhes` (veja abaixo). |
 | `viagem` | tabela `viagens` | Período (`data` → `data_fim`), `dia_inteiro: true`. Aparece se se sobrepõe ao intervalo. |
 | `feriado` | `eventos_calendario` | Recorrentes já vêm projetadas para o ano certo. `detalhes.feriado_com_filhas` indica se é feriado com as filhas. |
 | `evento` | `eventos_calendario` | Eventos que não são feriado. Eventos "pessoais" (ocultáveis) **não** são enviados. |
 | `presencial` | rodízio configurado | Dia presencial da Alci (ida a trabalho). |
 | `familia` | tabela `filhas` | Dias marcados manualmente com as filhas. |
 | `fds_filhas` | configuração de FDS alternados | Fins de semana com as filhas, mesma conta da tela Calendário do app. |
+
+#### Detalhes do voo (`detalhes` dos eventos `voo`)
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `origem`, `destino` | texto | Aeroportos (ex.: `BSB`, `CGH`) |
+| `companhia`, `numero_voo` | texto | Ex.: `Azul`, `AD1234` |
+| `passageiro` | texto | Nome de quem voa |
+| `situacao` | texto | `pendente`, `concluido`, `remarcado`... (cancelados não vêm) |
+| `objetivo` | texto | `Trabalho`, `Pessoal`, `Lazer` ou `Passeio` |
+| `localizador` | texto | Código de reserva (útil no check-in) |
+| `assento` | texto | Ex.: `12A` |
+| `vaga_garagem` | texto | Vaga reservada no aeroporto/estacionamento, se houver |
+| `tipo_bilhete` | texto | Tarifa/tipo do bilhete |
+| `tipo_trecho` | texto | Ex.: `ida`, `volta` |
+| `voo_nacional` | booleano | `false` = internacional |
+| `escala`, `escala_chegada`, `escala_partida` | texto / `HH:MM` | Aeroporto e horários da escala, se houver |
+| `remarcar` | booleano | Marcado para remarcar no app |
+| `observacoes` | texto | Anotações do voo |
+
+Todo campo sem valor vem `null` (exceto `remarcar`, que é `false`). **Nunca** vêm valores em R$, pontos, voucher, forma de pagamento nem o código de compra — só o que serve na hora de viajar. Note que o `localizador` aparece na tela do carro: se isso incomodar, é uma linha para remover na rota.
 
 `proximo_voo` é o primeiro evento `voo` com `data >= hoje` dentro do intervalo, ou `null` — útil para um widget "próximo voo".
 
@@ -280,7 +308,7 @@ curl -s -H "Authorization: Bearer $LAUNCHER_TOKEN" \
 | Força bruta / abuso | 256 bits de entropia + rate limit de 60 req/10 min por token |
 | Timing attack | Comparação com `timingSafeEqual`, percorrendo todos os hashes |
 | Configuração esquecida | Fail-closed: sem `LAUNCHER_TOKEN_SHA256`, tudo é `401` |
-| Dados sensíveis na tela do carro | Resposta sem valores, pontos, localizador nem eventos pessoais |
+| Dados sensíveis na tela do carro | Resposta sem valores, pontos, voucher, pagamento, código de compra nem eventos pessoais (o localizador do voo vai, para uso no check-in) |
 | Navegador/terceiros | Sem CORS: o endpoint é para app nativo, não para páginas web |
 | Interceptação | Apenas HTTPS (Vercel força TLS) |
 

@@ -36,7 +36,7 @@ import java.util.Locale
 
 private val BRC = Locale("pt", "BR")
 
-private fun corHex(hex: String): Color = runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color(0xFF6B7280))
+internal fun corHex(hex: String): Color = runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrDefault(Color(0xFF6B7280))
 
 /**
  * Calendário padrão (grade do mês, semana de domingo a sábado, dia de hoje destacado). O botão "Ponte Aérea" liga os eventos do calendário do
@@ -49,9 +49,13 @@ fun TelaCalendario() {
     val pa = remember { PonteAerea.obter(ctx) }
     val hoje = remember { LocalDate.now() }
     var mes by remember { mutableStateOf(YearMonth.from(hoje)) }
-    var selecionado by remember { mutableStateOf(hoje) }
+    // Dia escolhido; nulo = nenhum dia (a lista mostra todos os eventos do mês). Trocar de mês ou de filtro limpa a escolha.
+    var selecionado by remember { mutableStateOf<LocalDate?>(hoje) }
     var ativo by remember { mutableStateOf(false) }
     var passageiro by remember { mutableStateOf<String?>(null) }
+    var voo by remember { mutableStateOf<EventoCal?>(null) }
+    fun irParaMes(m: YearMonth) { mes = m; selecionado = null }
+    fun filtrar(p: String?) { passageiro = p; selecionado = null }
 
     // Ligado, busca ~6 meses a partir do mês mostrado; ao navegar para fora do que já veio, busca de novo.
     LaunchedEffect(ativo, mes) {
@@ -70,9 +74,9 @@ fun TelaCalendario() {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Cabeçalho: mês, navegação, Hoje e o botão Ponte Aérea.
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Seta(Icons.Filled.ChevronLeft, "Mês anterior") { mes = mes.minusMonths(1) }
+            Seta(Icons.Filled.ChevronLeft, "Mês anterior") { irParaMes(mes.minusMonths(1)) }
             Text(mes.month.getDisplayName(TextStyle.FULL, BRC).replaceFirstChar { it.uppercase() } + " " + mes.year, color = Cores.Texto, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.widthIn(min = 190.dp))
-            Seta(Icons.Filled.ChevronRight, "Próximo mês") { mes = mes.plusMonths(1) }
+            Seta(Icons.Filled.ChevronRight, "Próximo mês") { irParaMes(mes.plusMonths(1)) }
             BotaoPilula("Hoje", Icons.Filled.Today) { mes = YearMonth.from(hoje); selecionado = hoje }
             Spacer(Modifier.weight(1f))
             Box(Modifier.clip(RoundedCornerShape(50)).then(if (ativo) Modifier.background(Cores.Destaque.copy(alpha = 0.25f)) else Modifier)) {
@@ -82,14 +86,15 @@ fun TelaCalendario() {
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val larga = maxWidth >= 760.dp
             if (larga) Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Grade(mes, hoje, selecionado, ::doDia, { selecionado = it }, Modifier.weight(1.7f).fillMaxHeight())
-                Painel(pa, ativo, selecionado, ::doDia, passageiro, { passageiro = it }, Modifier.weight(1f).fillMaxHeight())
+                Grade(mes, hoje, selecionado, ::doDia, { selecionado = if (selecionado == it) null else it }, Modifier.weight(1.7f).fillMaxHeight())
+                Painel(pa, ativo, mes, selecionado, eventos, passageiro, ::filtrar, { voo = it }, Modifier.weight(1f).fillMaxHeight())
             } else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Grade(mes, hoje, selecionado, ::doDia, { selecionado = it }, Modifier.fillMaxWidth().height(380.dp))
-                Painel(pa, ativo, selecionado, ::doDia, passageiro, { passageiro = it }, Modifier.fillMaxWidth())
+                Grade(mes, hoje, selecionado, ::doDia, { selecionado = if (selecionado == it) null else it }, Modifier.fillMaxWidth().height(380.dp))
+                Painel(pa, ativo, mes, selecionado, eventos, passageiro, ::filtrar, { voo = it }, Modifier.fillMaxWidth())
             }
         }
     }
+    voo?.let { CartaoEmbarque(it) { voo = null } }
 }
 
 @Composable
@@ -100,7 +105,7 @@ private fun Seta(icone: androidx.compose.ui.graphics.vector.ImageVector, descric
 }
 
 @Composable
-private fun Grade(mes: YearMonth, hoje: LocalDate, selecionado: LocalDate, doDia: (LocalDate) -> List<EventoCal>, aoEscolher: (LocalDate) -> Unit, modifier: Modifier) {
+private fun Grade(mes: YearMonth, hoje: LocalDate, selecionado: LocalDate?, doDia: (LocalDate) -> List<EventoCal>, aoEscolher: (LocalDate) -> Unit, modifier: Modifier) {
     val primeiro = mes.atDay(1)
     val deslocamento = primeiro.dayOfWeek.value % 7 // domingo = 0
     val semanas = listOf("Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb")
@@ -134,18 +139,25 @@ private fun Grade(mes: YearMonth, hoje: LocalDate, selecionado: LocalDate, doDia
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Painel(pa: PonteAerea, ativo: Boolean, dia: LocalDate, doDia: (LocalDate) -> List<EventoCal>, passageiro: String?, aoFiltrar: (String?) -> Unit, modifier: Modifier) {
+private fun Painel(
+    pa: PonteAerea, ativo: Boolean, mes: YearMonth, dia: LocalDate?, eventos: List<EventoCal>, passageiro: String?,
+    aoFiltrar: (String?) -> Unit, aoAbrirVoo: (EventoCal) -> Unit, modifier: Modifier,
+) {
     val fmtDia = remember { SimpleDateFormat("EEEE, dd 'de' MMMM", BRC) }
     val hora = remember { SimpleDateFormat("HH:mm", BRC) }
     Column(modifier.clip(RoundedCornerShape(20.dp)).background(Cores.Chip).padding(14.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(fmtDia.format(Date.from(dia.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())).replaceFirstChar { it.uppercase() }, color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            if (dia != null) fmtDia.format(Date.from(dia.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant())).replaceFirstChar { it.uppercase() }
+            else mes.month.getDisplayName(TextStyle.FULL, BRC).replaceFirstChar { it.uppercase() } + " " + mes.year,
+            color = Cores.Texto, fontSize = 20.sp, fontWeight = FontWeight.Bold,
+        )
         if (!ativo) {
             Text("Calendário simples. Toque em \"Ponte Aérea\" para ver aqui os voos, viagens, feriados e eventos do seu calendário do Ponte Aérea.", color = Cores.TextoSuave, fontSize = 14.sp)
             return@Column
         }
         if (!pa.temToken) { Text("Falta o token da API do Ponte Aérea: informe em Config. > Calendário.", color = Cores.Amarelo, fontSize = 14.sp, fontWeight = FontWeight.SemiBold); return@Column }
-        // Próximo voo e situação.
         pa.proximoVoo?.let { v ->
             Text("Próximo voo: ${v.titulo} · " + runCatching { LocalDate.parse(v.data).let { "%02d/%02d".format(it.dayOfMonth, it.monthValue) } }.getOrDefault(v.data) + (v.horaInicio?.let { " às $it" } ?: ""),
                 color = Cores.Destaque, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -158,15 +170,32 @@ private fun Painel(pa: PonteAerea, ativo: Boolean, dia: LocalDate, doDia: (Local
             } + (pa.situacao?.let { " · $it" } ?: ""),
             color = if (pa.situacao != null) Cores.Amarelo else Cores.TextoSuave, fontSize = 12.sp,
         )
-        // Filtro de passageiro (só afeta os voos).
-        if (pa.passageiros.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Opcao("Todos", passageiro == null, Modifier.weight(1f)) { aoFiltrar(null) }
-            pa.passageiros.take(3).forEach { n -> Opcao(n, passageiro == n, Modifier.weight(1f)) { aoFiltrar(n) } }
+        // Filtro de passageiro (só afeta os voos): lista todos os passageiros, os da API e os que aparecem nos voos.
+        val nomes = (pa.passageiros + pa.eventos.mapNotNull { if (it.tipo == "voo") it.passageiro else null }).distinct()
+        if (nomes.isNotEmpty()) {
+            Text("Passageiro (só voos)", color = Cores.TextoSuave, fontSize = 12.sp)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Opcao("Todos", passageiro == null, Modifier.widthIn(min = 90.dp)) { aoFiltrar(null) }
+                nomes.forEach { n -> Opcao(n, passageiro == n, Modifier.widthIn(min = 90.dp)) { aoFiltrar(n) } }
+            }
         }
-        val lista = doDia(dia)
-        if (lista.isEmpty()) Text("Nada neste dia.", color = Cores.TextoSuave, fontSize = 15.sp)
+        // Sem dia escolhido: todos os eventos do mês; com dia: só os dele.
+        val lista = (if (dia != null) eventos.filter { it.cobre(dia) } else eventos.filter { e ->
+            val ini = runCatching { LocalDate.parse(e.data) }.getOrNull(); val fim = e.dataFim?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: ini
+            ini != null && fim != null && !ini.isAfter(mes.atEndOfMonth()) && !fim.isBefore(mes.atDay(1))
+        }).sortedWith(compareBy({ it.data }, { it.horaInicio ?: "" }))
+        if (lista.isEmpty()) Text(if (dia != null) "Nada neste dia." else "Nada neste mês" + (passageiro?.let { " para $it" } ?: "") + ".", color = Cores.TextoSuave, fontSize = 15.sp)
+        var ultimaData = ""
         lista.forEach { e ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Cartao).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (dia == null && e.data != ultimaData) {
+                ultimaData = e.data
+                Text(runCatching { LocalDate.parse(e.data).let { d -> d.dayOfWeek.getDisplayName(TextStyle.SHORT, BRC).replaceFirstChar { c -> c.uppercase() } + ", %02d/%02d".format(d.dayOfMonth, d.monthValue) } }.getOrDefault(e.data),
+                    color = Cores.TextoSuave, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+            }
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Cores.Cartao).then(if (e.tipo == "voo") Modifier.clickable { aoAbrirVoo(e) } else Modifier).padding(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 Box(Modifier.width(5.dp).height(40.dp).clip(RoundedCornerShape(3.dp)).background(corHex(e.cor)))
                 Column(Modifier.weight(1f)) {
                     Text(e.titulo, color = Cores.Texto, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -174,7 +203,7 @@ private fun Painel(pa: PonteAerea, ativo: Boolean, dia: LocalDate, doDia: (Local
                     Text(
                         listOfNotNull(
                             if (e.diaInteiro) "Dia inteiro" else listOfNotNull(e.horaInicio, e.horaFim).joinToString(" – ").ifEmpty { null },
-                            when (e.tipo) { "voo" -> "Voo"; "viagem" -> "Viagem"; "feriado" -> "Feriado"; "presencial" -> "Presencial"; "familia" -> "Com as filhas"; "fds_filhas" -> "Fim de semana com as filhas"; else -> null },
+                            when (e.tipo) { "voo" -> "Voo · toque para ver o cartão de embarque"; "viagem" -> "Viagem"; "feriado" -> "Feriado"; "presencial" -> "Presencial"; "familia" -> "Com as filhas"; "fds_filhas" -> "Fim de semana com as filhas"; else -> null },
                         ).joinToString(" · "),
                         color = Cores.TextoSuave, fontSize = 12.sp,
                     )
