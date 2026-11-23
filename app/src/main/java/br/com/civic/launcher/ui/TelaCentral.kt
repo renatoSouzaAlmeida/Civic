@@ -67,8 +67,9 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor, aoIr
     val config = remember { br.com.civic.launcher.Configuracoes.obter(contextoConfig) }
 
     var vendoFalhas by remember { mutableStateOf(false) }
+    var abaDiagnostico by remember { mutableIntStateOf(0) }
     if (vendoFalhas) {
-        TelaDiagnostico(obd) { vendoFalhas = false }
+        TelaDiagnostico(obd, abaDiagnostico) { vendoFalhas = false; abaDiagnostico = 0 }
         return
     }
     val dividida = emTelaDividida()
@@ -77,13 +78,18 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor, aoIr
     val acoes = AcoesObd(
         aoVerDiagnostico = { vendoFalhas = true }, aoVerViagem = { aoIrTela(Tela.Veiculo) }, aoConfig = { escolhendo = true },
         aoMais = { listaLayouts = true }, aoSensores = { config.salvarLayoutObd(LayoutObd.Tecnico) },
+        aoVerDiagnosticoAba = { abaDiagnostico = it; vendoFalhas = true },
     )
     if (listaLayouts) AlertDialog(
         onDismissRequest = { listaLayouts = false },
         confirmButton = { TextButton(onClick = { listaLayouts = false }) { Text("Fechar", fontSize = 20.sp) } },
         title = { Text("Layout do OBD") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+                    TextButton(onClick = { obd.alternarDemonstracao(); listaLayouts = false }) { Text(if (obd.estado == br.com.civic.launcher.obd.EstadoObd.Demonstracao) "Parar demonstração" else "Demonstração", fontSize = 18.sp) }
+                    TextButton(onClick = { listaLayouts = false; escolhendo = true }) { Text("Escolher adaptador", fontSize = 18.sp) }
+                }
                 LayoutObd.entries.forEach { l ->
                     Text(l.rotulo + if (l == config.layoutObd) "  ✓" else "", fontSize = 20.sp,
                         modifier = Modifier.fillMaxWidth().clickable { config.salvarLayoutObd(l); listaLayouts = false }.padding(vertical = 12.dp))
@@ -92,10 +98,8 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor, aoIr
         },
     )
     if (config.layoutObd in listOf(LayoutObd.EsportivoNovo, LayoutObd.CockpitDigital, LayoutObd.Tecnico, LayoutObd.DirecaoSimples)) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SeletorLayoutObd(obd, { escolhendo = true })
-            Box(Modifier.weight(1f).fillMaxWidth()) { LayoutObdNovo(config.layoutObd, obd, vel, acoes) }
-        }
+        // Ocupa a tela toda: sem a linha de botões (Layout, Demo e Adaptador ficam no "Mais").
+        Box(Modifier.fillMaxSize()) { LayoutObdNovo(config.layoutObd, obd, monitor, vel, acoes) }
     } else BoxWithConstraints(Modifier.fillMaxSize()) {
         val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
         if (dividida) {

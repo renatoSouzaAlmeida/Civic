@@ -13,6 +13,12 @@ import androidx.compose.material.icons.filled.Eco
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.ui.graphics.asImageBitmap
+import br.com.civic.launcher.abrirSpotify
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,22 +96,20 @@ internal fun temaObd(): TemaObd {
 }
 
 /**
- * Prancheta de projeto: o layout é montado sempre em [largura] dp (como na proposta) e escalado por igual para caber no espaço,
- * em tela cheia ou dividida, sem cortar nada. A altura acompanha o espaço disponível entre [alturaMin] e [alturaMax].
+ * Prancheta de projeto: o layout é montado em pelo menos [largura] x [alturaMin] dp (como a proposta) e escalado por igual para
+ * **ocupar todo o espaço**, em tela cheia ou dividida: a medida que sobra (largura ou altura) é dada ao próprio layout, que a distribui.
  */
 @Composable
-internal fun PranchetaObd(largura: Dp = 1280.dp, alturaMin: Dp = 520.dp, alturaMax: Dp = 720.dp, modifier: Modifier = Modifier, conteudo: @Composable () -> Unit) {
+internal fun PranchetaObd(largura: Dp = 1280.dp, alturaMin: Dp = 430.dp, modifier: Modifier = Modifier, conteudo: @Composable () -> Unit) {
     Layout(conteudo, modifier) { medidos, c ->
-        val wP = largura.roundToPx()
-        val disponivelW = if (c.hasBoundedWidth) c.maxWidth else wP
-        val disponivelH = if (c.hasBoundedHeight) c.maxHeight else alturaMax.roundToPx()
-        var e = disponivelW.toFloat() / wP
-        val hP = (disponivelH / e).roundToInt().coerceIn(alturaMin.roundToPx(), alturaMax.roundToPx())
-        if (hP * e > disponivelH) e = disponivelH.toFloat() / hP
+        val wRef = largura.roundToPx(); val hRef = alturaMin.roundToPx()
+        val disponivelW = if (c.hasBoundedWidth) c.maxWidth else wRef
+        val disponivelH = if (c.hasBoundedHeight) c.maxHeight else hRef
+        val e = min(disponivelW.toFloat() / wRef, disponivelH.toFloat() / hRef)
+        val wP = (disponivelW / e).roundToInt(); val hP = (disponivelH / e).roundToInt()
         val p = medidos.first().measure(Constraints.fixed(wP, hP))
-        val w = (wP * e).roundToInt(); val h = (hP * e).roundToInt()
         layout(disponivelW, disponivelH) {
-            p.placeWithLayer((disponivelW - w) / 2, (disponivelH - h) / 2) { scaleX = e; scaleY = e; transformOrigin = TransformOrigin(0f, 0f) }
+            p.placeWithLayer(0, 0) { scaleX = e; scaleY = e; transformOrigin = TransformOrigin(0f, 0f) }
         }
     }
 }
@@ -192,23 +196,23 @@ internal fun InfoObd(t: TemaObd, icone: ImageVector, rotulo: String, valor: Stri
 
 /** Selo "ECO Assist": folha verde num círculo com brilho e a barra em segmentos verdes (mais segmentos = condução mais econômica). */
 @Composable
-internal fun EcoAssist(t: TemaObd, modifier: Modifier = Modifier, compacto: Boolean = false) {
+internal fun EcoAssist(t: TemaObd, modifier: Modifier = Modifier, compacto: Boolean = false, grande: Boolean = false) {
     val eco = br.com.civic.launcher.obd.EcoConducao.obter()
     val ativo = eco.nivel != null
     val cheios = if (!ativo) 0 else ((1f - eco.nota) * 5f).roundToInt().coerceIn(1, 5)
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(if (compacto) 32.dp else 42.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(if (grande) 64.dp else if (compacto) 32.dp else 42.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
                 val r = size.minDimension / 2
                 if (ativo) for (k in 3 downTo 1) drawCircle(t.verde.copy(alpha = 0.10f * k), r * (0.8f + 0.12f * k))
                 drawCircle(if (ativo) t.verde else t.suave.copy(alpha = 0.4f), r * 0.78f)
             }
-            Icon(Icons.Filled.Eco, null, tint = Color.White, modifier = Modifier.size(if (compacto) 18.dp else 24.dp))
+            Icon(Icons.Filled.Eco, null, tint = Color.White, modifier = Modifier.size(if (grande) 36.dp else if (compacto) 18.dp else 24.dp))
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("ECO Assist", color = t.texto, fontSize = if (compacto) 12.sp else 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("ECO Assist", color = t.texto, fontSize = if (grande) 18.sp else if (compacto) 12.sp else 14.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                repeat(5) { i -> Box(Modifier.size(width = if (compacto) 16.dp else 22.dp, height = 7.dp).clip(RoundedCornerShape(2.dp)).background(if (i < cheios) t.verde else t.suave.copy(alpha = 0.35f))) }
+                repeat(5) { i -> Box(Modifier.size(width = if (grande) 30.dp else if (compacto) 16.dp else 22.dp, height = if (grande) 10.dp else 7.dp).clip(RoundedCornerShape(2.dp)).background(if (i < cheios) t.verde else t.suave.copy(alpha = 0.35f))) }
             }
         }
     }
@@ -335,4 +339,36 @@ private fun DrawScope.skyline(t: TemaObd, base: Float) {
             yy += 11f
         }
     }
+}
+
+/** Controle do Spotify no estilo dos layouts novos: capa, música e artista, anterior / tocar-pausar / próxima. Tocar no texto abre o Spotify. */
+@Composable
+internal fun SpotifyObd(t: TemaObd, monitor: br.com.civic.launcher.MediaMonitor, modifier: Modifier = Modifier) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val m = monitor.estado
+    Row(
+        modifier.clip(RoundedCornerShape(16.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(16.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (m.capa != null) androidx.compose.foundation.Image(m.capa.asImageBitmap(), null, Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else Icon(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_spotify), null, tint = Color(0xFF1ED760), modifier = Modifier.size(40.dp))
+        Column(Modifier.weight(1f).clickable { ctx.abrirSpotify() }) {
+            Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = t.texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(when { !m.permitido -> "Toque para ativar capa e título"; m.temSessao -> m.artista; else -> "Toque para abrir" }, color = t.suave, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
+        BotaoMidia(t, Icons.Filled.SkipPrevious, false) { monitor.anterior() }
+        BotaoMidia(t, if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, true) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
+        BotaoMidia(t, Icons.Filled.SkipNext, false) { monitor.proxima() }
+    }
+}
+
+
+@Composable
+private fun BotaoMidia(t: TemaObd, icone: ImageVector, principal: Boolean, aoTocar: () -> Unit) {
+    Box(
+        Modifier.size(if (principal) 46.dp else 38.dp).clip(CircleShape)
+            .background(if (principal) Brush.verticalGradient(listOf(Color(0xFF3B8DFF), Color(0xFF1764E8))) else Brush.verticalGradient(listOf(t.vidro, t.vidro)))
+            .border(1.dp, if (principal) t.neon else t.bordaVidro, CircleShape).clickable(onClick = aoTocar),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icone, null, tint = if (principal) Color.White else t.texto, modifier = Modifier.size(if (principal) 26.dp else 22.dp)) }
 }

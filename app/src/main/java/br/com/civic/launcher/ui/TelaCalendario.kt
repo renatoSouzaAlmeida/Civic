@@ -173,10 +173,26 @@ private fun Painel(
         // Filtro de passageiro (só afeta os voos): lista todos os passageiros, os da API e os que aparecem nos voos.
         val nomes = (pa.passageiros + pa.eventos.mapNotNull { if (it.tipo == "voo") it.passageiro else null }).distinct()
         if (nomes.isNotEmpty()) {
-            Text("Passageiro (só voos)", color = Cores.TextoSuave, fontSize = 12.sp)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Opcao("Todos", passageiro == null, Modifier.widthIn(min = 90.dp)) { aoFiltrar(null) }
-                nomes.forEach { n -> Opcao(n, passageiro == n, Modifier.widthIn(min = 90.dp)) { aoFiltrar(n) } }
+            // Combo: ocupa uma linha só, com todos os passageiros na lista.
+            var aberto by remember { mutableStateOf(false) }
+            Box {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Cores.Cartao).border(1.dp, Cores.Borda, RoundedCornerShape(12.dp))
+                        .clickable { aberto = true }.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Passageiro (voos): ", color = Cores.TextoSuave, fontSize = 14.sp)
+                    Text(passageiro ?: "Todos", color = Cores.Texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.ArrowDropDown, null, tint = Cores.Texto)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
+                    (listOf<String?>(null) + nomes).forEach { n ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text((n ?: "Todos") + if (n == passageiro) "  ✓" else "", fontSize = 18.sp) },
+                            onClick = { aberto = false; aoFiltrar(n) },
+                        )
+                    }
+                }
             }
         }
         // Sem dia escolhido: todos os eventos do mês; com dia: só os dele.

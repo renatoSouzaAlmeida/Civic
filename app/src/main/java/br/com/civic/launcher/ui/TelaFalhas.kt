@@ -37,8 +37,8 @@ import java.util.Locale
 
 /** Diagnóstico do OBD: abas Falhas (DTC), Bateria (saúde na partida) e Mistura (correção de combustível). */
 @Composable
-fun TelaDiagnostico(obd: ObdMonitor, aoVoltar: () -> Unit) {
-    var aba by remember { mutableIntStateOf(0) }
+fun TelaDiagnostico(obd: ObdMonitor, abaInicial: Int = 0, aoVoltar: () -> Unit) {
+    var aba by remember { mutableIntStateOf(abaInicial) }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BotaoPilula("Voltar", Icons.Filled.ArrowBack) { aoVoltar() }

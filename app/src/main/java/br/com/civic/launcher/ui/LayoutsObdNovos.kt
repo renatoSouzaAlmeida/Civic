@@ -36,6 +36,7 @@ import br.com.civic.launcher.ComputadorBordo
 import br.com.civic.launcher.Configuracoes
 import br.com.civic.launcher.ImagemCarro
 import br.com.civic.launcher.LayoutObd
+import br.com.civic.launcher.MediaMonitor
 import br.com.civic.launcher.R
 import br.com.civic.launcher.Veiculo
 import br.com.civic.launcher.obd.DadosObd
@@ -44,7 +45,7 @@ import br.com.civic.launcher.obd.NivelEco
 import br.com.civic.launcher.obd.ObdMonitor
 
 /** Ações comuns dos layouts novos (abas e menu). */
-internal class AcoesObd(val aoVerDiagnostico: () -> Unit, val aoVerViagem: () -> Unit, val aoConfig: () -> Unit, val aoMais: () -> Unit, val aoSensores: () -> Unit)
+internal class AcoesObd(val aoVerDiagnostico: () -> Unit, val aoVerViagem: () -> Unit, val aoConfig: () -> Unit, val aoMais: () -> Unit, val aoSensores: () -> Unit, val aoVerDiagnosticoAba: (Int) -> Unit = { aoVerDiagnostico() })
 
 // ------------------------------------------- dados -------------------------------------------
 
@@ -84,11 +85,10 @@ private fun abasPadrao(a: AcoesObd, comViagem: Boolean): List<AbaObd> = buildLis
 
 /** Layout 01 (Esportivo): conta-giros neon no centro com a velocidade, estrada com luzes azuis e a traseira do carro; leituras dos dois lados. */
 @Composable
-internal fun LayoutEsportivoNovo(obd: ObdMonitor, vel: Float, a: AcoesObd) {
+internal fun LayoutEsportivoNovo(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a: AcoesObd) {
     val t = temaObd(); val d = obd.dados; val v = valores(d)
     PranchetaObd {
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)).background(t.fundo).padding(horizontal = 22.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CabecalhoObdNovo(t, obd, a.aoConfig)
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(t.fundo).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Canvas(Modifier.fillMaxSize()) { estradaNeon(t, size.height * 0.62f, cidade = false) }
                 // Centro: conta-giros com a velocidade.
@@ -112,16 +112,17 @@ internal fun LayoutEsportivoNovo(obd: ObdMonitor, vel: Float, a: AcoesObd) {
                         InfoObd(t, Icons.Filled.BatteryChargingFull, "Tensão", fmt1(d.tensao), "V")
                         InfoObd(t, Icons.Filled.LocalGasStation, "Combustível", fmt0(d.nivelCombustivel), "%")
                     }
-                    LuzesObd(d, Modifier.padding(start = 6.dp, bottom = 4.dp), tamanho = 34.dp)
+                    LuzesObd(d, Modifier.padding(start = 6.dp, bottom = 4.dp), tamanho = 52.dp)
                 }
-                Column(Modifier.align(Alignment.TopEnd).width(240.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(Modifier.align(Alignment.TopEnd).width(320.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         InfoObd(t, Icons.Filled.LocalGasStation, "Consumo Inst.", fmt1(d.consumoInstantaneo), "km/l")
                         InfoObd(t, Icons.Filled.EvStation, "Consumo Médio", fmt1(v.consumoMedio?.toFloat()), "km/l")
                         InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km")
                         InfoObd(t, Icons.Filled.Place, "Trip (viagem)", fmt1(v.tripKm?.toFloat()), "km")
                     }
-                    EcoAssist(t, Modifier.padding(bottom = 4.dp))
+                    SpotifyObd(t, monitor, Modifier.fillMaxWidth())
+                    EcoAssist(t, Modifier.padding(bottom = 4.dp), grande = true)
                 }
             }
             AbasObdNovo(t, abasPadrao(a, comViagem = false), 0)
@@ -133,12 +134,11 @@ internal fun LayoutEsportivoNovo(obd: ObdMonitor, vel: Float, a: AcoesObd) {
 
 /** Layout 02 (Cockpit digital): conta-giros e velocímetro neon dos lados, o Civic no centro com aura azul, marcha, modo ECO e 7 leituras embaixo. */
 @Composable
-internal fun LayoutCockpitDigital(obd: ObdMonitor, vel: Float, a: AcoesObd) {
+internal fun LayoutCockpitDigital(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a: AcoesObd) {
     val t = temaObd(); val d = obd.dados; val v = valores(d)
     val cfg = Configuracoes.obter(LocalContext.current)
     PranchetaObd {
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)).background(t.fundo).padding(horizontal = 22.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CabecalhoObdNovo(t, obd, a.aoConfig)
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(t.fundo).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 MostradorNeon(t, (d.rpm ?: 0) / 8000f, (0..8).map { it.toString() }, Modifier.weight(1f).fillMaxHeight(), vermelhoDesde = 0.75f, tamanhoRotulo = 18.sp) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -147,6 +147,10 @@ internal fun LayoutCockpitDigital(obd: ObdMonitor, vel: Float, a: AcoesObd) {
                     }
                 }
                 Box(Modifier.weight(1.45f).fillMaxHeight()) {
+                    Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        SetaObd(d, esquerda = true, tamanho = 46.dp)
+                        SetaObd(d, esquerda = false, tamanho = 46.dp)
+                    }
                     Column(Modifier.align(Alignment.TopCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(Modifier.size(width = 38.dp, height = 28.dp).border(2.dp, t.texto, RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
                             Text("H", color = t.texto, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
@@ -174,6 +178,7 @@ internal fun LayoutCockpitDigital(obd: ObdMonitor, vel: Float, a: AcoesObd) {
                 }
             }
             Row(Modifier.fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SpotifyObd(t, monitor, Modifier.weight(3.2f).fillMaxHeight())
                 Ladrilho(t, Icons.Filled.LocalGasStation, "${fmt0(d.nivelCombustivel)} %", "Combustível", Modifier.weight(1f))
                 Ladrilho(t, Icons.Filled.Thermostat, "${fmt0(d.tempMotor)} °C", "Temp. Motor", Modifier.weight(1f))
                 Ladrilho(t, Icons.Filled.Air, "${fmt0(d.tempAdmissao)} °C", "Temp. Admissão", Modifier.weight(1f))
@@ -225,30 +230,32 @@ private fun ModosConducao(t: TemaObd) {
 
 /** Layout 03 (Técnico / Diagnóstico): menu à esquerda, o carro em raio-X com o motor aceso e os sensores, tabela de leituras e a situação OBD embaixo. */
 @Composable
-internal fun LayoutTecnico(obd: ObdMonitor, vel: Float, a: AcoesObd) {
+internal fun LayoutTecnico(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a: AcoesObd) {
     val t = temaObd(); val d = obd.dados
     val cfg = Configuracoes.obter(LocalContext.current)
     PranchetaObd {
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)).background(t.fundo).padding(horizontal = 22.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            CabecalhoObdNovo(t, obd, a.aoConfig)
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(t.fundo).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Menu.
-                Column(Modifier.width(230.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.width(310.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // As mesmas opções da tela de diagnóstico: Falhas, Bateria, Mistura e Saúde (Resumo é esta tela).
                     listOf(
-                        Icons.Filled.Dashboard to "Resumo", Icons.Filled.Settings to "Motor", Icons.Filled.LocalGasStation to "Combustível", Icons.Filled.ShowChart to "Mistura (Fuel Trim)",
-                        Icons.Filled.Sensors to "Sensores", Icons.Filled.ListAlt to "Modo 06", Icons.Outlined.ReportProblem to "Falhas (DTC)",
-                    ).forEachIndexed { i, (ic, rotulo) ->
+                        Triple(Icons.Filled.Dashboard, "Resumo", -1), Triple(Icons.Outlined.ReportProblem, "Falhas (DTC)", 0), Triple(Icons.Filled.BatteryChargingFull, "Bateria", 1),
+                        Triple(Icons.Filled.Tune, "Mistura", 2), Triple(Icons.Filled.CheckCircle, "Saúde", 3), Triple(Icons.Filled.GridView, "Mais (layout, demo, adaptador)", -2),
+                    ).forEachIndexed { i, (ic, rotulo, aba) ->
                         val sel = i == 0
                         Row(
                             Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(10.dp))
                                 .then(if (sel) Modifier.background(Brush.horizontalGradient(listOf(Color(0xFF3B8DFF), Color(0xFF1764E8)))).border(1.dp, t.neon, RoundedCornerShape(10.dp)) else Modifier)
-                                .clickable { if (!sel) a.aoVerDiagnostico() }.padding(horizontal = 12.dp),
+                                .clickable { when { aba >= 0 -> a.aoVerDiagnosticoAba(aba); aba == -2 -> a.aoMais() } }.padding(horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Icon(ic, null, tint = if (sel) Color.White else t.texto, modifier = Modifier.size(20.dp))
                             Text(rotulo, color = if (sel) Color.White else t.texto, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium)
                         }
                     }
+                    Spacer(Modifier.weight(1f))
+                    SpotifyObd(t, monitor, Modifier.fillMaxWidth())
                 }
                 // Carro em raio-X.
                 Box(Modifier.weight(1f).fillMaxHeight()) {
@@ -282,6 +289,11 @@ internal fun LayoutTecnico(obd: ObdMonitor, vel: Float, a: AcoesObd) {
                         drawLine(cor, Offset(size.width * 0.86f, size.height * 0.16f), Offset(size.width * 0.66f, size.height * 0.38f), 2f)
                         drawLine(cor, Offset(size.width * 0.06f, size.height * 0.54f), Offset(size.width * 0.28f, size.height * 0.52f), 2f)
                         drawLine(cor, Offset(size.width * 0.86f, size.height * 0.74f), Offset(size.width * 0.66f, size.height * 0.62f), 2f)
+                    }
+                    // Setas acima do carro.
+                    Row(Modifier.align(Alignment.TopCenter).padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(70.dp)) {
+                        SetaObd(d, esquerda = true, tamanho = 44.dp)
+                        SetaObd(d, esquerda = false, tamanho = 44.dp)
                     }
                     NoSensor(t, Icons.Filled.Settings, Modifier.align(Alignment.TopStart).offset(x = 70.dp, y = 8.dp))
                     NoSensor(t, Icons.Filled.BatteryChargingFull, Modifier.align(Alignment.TopEnd).offset(x = (-40).dp, y = 8.dp))
@@ -356,22 +368,21 @@ private fun Situacao(t: TemaObd, icone: ImageVector, cor: Color, titulo: String,
 
 /** Layout 04 (Direção simplificada, alta legibilidade): velocidade enorme sob um arco neon, cidade e estrada ao fundo, ECO Assist no alto e 6 leituras grandes. */
 @Composable
-internal fun LayoutDirecaoSimples(obd: ObdMonitor, vel: Float, a: AcoesObd) {
+internal fun LayoutDirecaoSimples(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a: AcoesObd) {
     val t = temaObd(); val d = obd.dados; val v = valores(d)
     PranchetaObd {
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)).background(t.fundo).padding(horizontal = 22.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            CabecalhoObdNovo(t, obd, a.aoConfig)
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(t.fundo).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 Canvas(Modifier.fillMaxSize()) { estradaNeon(t, size.height * 0.58f, cidade = true) }
                 // Arco da velocidade (0 a 200 km/h).
-                Canvas(Modifier.align(Alignment.TopCenter).padding(top = 34.dp).fillMaxWidth(0.42f).aspectRatio(1.6f)) {
+                Canvas(Modifier.align(Alignment.TopCenter).padding(top = 64.dp).fillMaxWidth(0.42f).aspectRatio(1.6f)) {
                     val r = size.width / 2 * 0.92f
                     val tl = Offset(size.width / 2 - r, size.height * 0.95f - r); val tam = Size(r * 2, r * 2)
                     drawArc(t.suave.copy(alpha = 0.25f), 200f, 140f, false, tl, tam, style = Stroke(size.width * 0.035f))
                     arcoComBrilho(t.neon, 200f, 140f * (vel / 200f).coerceIn(0f, 1f), tl, tam, size.width * 0.035f, 4, 1.2f)
                 }
-                EcoAssist(t, Modifier.align(Alignment.TopCenter), compacto = true)
-                Column(Modifier.align(Alignment.TopCenter).padding(top = 92.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                EcoAssist(t, Modifier.align(Alignment.TopCenter), grande = true)
+                Column(Modifier.align(Alignment.TopCenter).padding(top = 116.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("%.0f".format(BRO, vel), color = t.texto, fontSize = 120.sp, lineHeight = 118.sp, fontWeight = FontWeight.ExtraBold, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                     Text("km/h", color = t.texto, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 }
@@ -385,12 +396,17 @@ internal fun LayoutDirecaoSimples(obd: ObdMonitor, vel: Float, a: AcoesObd) {
                         InfoObd(t, Icons.Filled.Thermostat, "Temp. Motor", fmt0(d.tempMotor), "°C", grande = true, rotuloEmbaixo = true)
                         InfoObd(t, Icons.Filled.BatteryChargingFull, "Tensão", fmt1(d.tensao), "V", grande = true, rotuloEmbaixo = true)
                     }
-                    LuzesObd(d, Modifier.padding(start = 6.dp, bottom = 4.dp), tamanho = 36.dp, farolPrimeiro = false)
+                    LuzesObd(d, Modifier.padding(start = 6.dp, bottom = 4.dp), tamanho = 54.dp, farolPrimeiro = false)
                 }
-                Column(Modifier.align(Alignment.TopEnd).padding(top = 10.dp).width(240.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    InfoObd(t, Icons.Filled.EvStation, "Cons. Médio", fmt1(v.consumoMedio?.toFloat()), "km/l", grande = true, rotuloEmbaixo = true)
-                    InfoObd(t, Icons.Filled.LocalGasStation, "Combustível", fmt0(d.nivelCombustivel), "%", grande = true, rotuloEmbaixo = true)
-                    InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km", grande = true, rotuloEmbaixo = true)
+                Column(Modifier.align(Alignment.TopEnd).width(320.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Box(Modifier.align(Alignment.End).size(40.dp).clip(CircleShape).background(t.vidro).border(1.dp, t.bordaVidro, CircleShape).clickable(onClick = a.aoMais),
+                            contentAlignment = Alignment.Center) { Icon(Icons.Filled.MoreHoriz, "Layout, demonstração e adaptador", tint = t.texto, modifier = Modifier.size(24.dp)) }
+                        InfoObd(t, Icons.Filled.EvStation, "Cons. Médio", fmt1(v.consumoMedio?.toFloat()), "km/l", grande = true, rotuloEmbaixo = true)
+                        InfoObd(t, Icons.Filled.LocalGasStation, "Combustível", fmt0(d.nivelCombustivel), "%", grande = true, rotuloEmbaixo = true)
+                        InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km", grande = true, rotuloEmbaixo = true)
+                    }
+                    SpotifyObd(t, monitor, Modifier.fillMaxWidth().padding(bottom = 4.dp))
                 }
             }
         }
@@ -399,12 +415,12 @@ internal fun LayoutDirecaoSimples(obd: ObdMonitor, vel: Float, a: AcoesObd) {
 
 /** Os 4 layouts novos, para a TelaCentral escolher pelo LayoutObd. */
 @Composable
-internal fun LayoutObdNovo(layout: LayoutObd, obd: ObdMonitor, vel: Float, a: AcoesObd): Boolean {
+internal fun LayoutObdNovo(layout: LayoutObd, obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a: AcoesObd): Boolean {
     when (layout) {
-        LayoutObd.EsportivoNovo -> LayoutEsportivoNovo(obd, vel, a)
-        LayoutObd.CockpitDigital -> LayoutCockpitDigital(obd, vel, a)
-        LayoutObd.Tecnico -> LayoutTecnico(obd, vel, a)
-        LayoutObd.DirecaoSimples -> LayoutDirecaoSimples(obd, vel, a)
+        LayoutObd.EsportivoNovo -> LayoutEsportivoNovo(obd, monitor, vel, a)
+        LayoutObd.CockpitDigital -> LayoutCockpitDigital(obd, monitor, vel, a)
+        LayoutObd.Tecnico -> LayoutTecnico(obd, monitor, vel, a)
+        LayoutObd.DirecaoSimples -> LayoutDirecaoSimples(obd, monitor, vel, a)
         else -> return false
     }
     return true
