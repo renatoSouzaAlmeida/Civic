@@ -98,8 +98,11 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor, aoIr
         },
     )
     if (config.layoutObd in listOf(LayoutObd.EsportivoNovo, LayoutObd.CockpitDigital, LayoutObd.Tecnico, LayoutObd.DirecaoSimples)) {
-        // Ocupa a tela toda: sem a linha de botões (Layout, Demo e Adaptador ficam no "Mais").
-        Box(Modifier.fillMaxSize()) { LayoutObdNovo(config.layoutObd, obd, monitor, vel, acoes) }
+        // Mesmo tamanho dos outros layouts: a linha de troca de layout (Layout, Demo e Adaptador) em cima e o layout no espaço abaixo.
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SeletorLayoutObd(obd, { escolhendo = true })
+            Box(Modifier.weight(1f).fillMaxWidth()) { LayoutObdNovo(config.layoutObd, obd, monitor, vel, acoes) }
+        }
     } else BoxWithConstraints(Modifier.fillMaxSize()) {
         val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
         if (dividida) {
