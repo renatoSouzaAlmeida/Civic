@@ -350,11 +350,14 @@ internal fun SpotifyObd(t: TemaObd, monitor: br.com.civic.launcher.MediaMonitor,
         modifier.clip(RoundedCornerShape(16.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(16.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (m.capa != null) androidx.compose.foundation.Image(m.capa.asImageBitmap(), null, Modifier.size(46.dp).clip(RoundedCornerShape(10.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-        else Icon(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_spotify), null, tint = Color(0xFF1ED760), modifier = Modifier.size(40.dp))
+        // Capa do álbum em destaque (72 dp); sem capa, o logo do Spotify no mesmo espaço.
+        if (m.capa != null) androidx.compose.foundation.Image(m.capa.asImageBitmap(), null, Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, t.bordaVidro, RoundedCornerShape(12.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else Box(Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+            Icon(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_spotify), null, tint = Color(0xFF1ED760), modifier = Modifier.size(44.dp))
+        }
         Column(Modifier.weight(1f).clickable { ctx.abrirSpotify() }) {
-            Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = t.texto, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(when { !m.permitido -> "Toque para ativar capa e título"; m.temSessao -> m.artista; else -> "Toque para abrir" }, color = t.suave, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = t.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(when { !m.permitido -> "Toque para ativar capa e título"; m.temSessao -> m.artista; else -> "Toque para abrir" }, color = t.suave, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
         BotaoMidia(t, Icons.Filled.SkipPrevious, false) { monitor.anterior() }
         BotaoMidia(t, if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, true) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
@@ -366,9 +369,9 @@ internal fun SpotifyObd(t: TemaObd, monitor: br.com.civic.launcher.MediaMonitor,
 @Composable
 private fun BotaoMidia(t: TemaObd, icone: ImageVector, principal: Boolean, aoTocar: () -> Unit) {
     Box(
-        Modifier.size(if (principal) 46.dp else 38.dp).clip(CircleShape)
+        Modifier.size(if (principal) 54.dp else 44.dp).clip(CircleShape)
             .background(if (principal) Brush.verticalGradient(listOf(Color(0xFF3B8DFF), Color(0xFF1764E8))) else Brush.verticalGradient(listOf(t.vidro, t.vidro)))
             .border(1.dp, if (principal) t.neon else t.bordaVidro, CircleShape).clickable(onClick = aoTocar),
         contentAlignment = Alignment.Center,
-    ) { Icon(icone, null, tint = if (principal) Color.White else t.texto, modifier = Modifier.size(if (principal) 26.dp else 22.dp)) }
+    ) { Icon(icone, null, tint = if (principal) Color.White else t.texto, modifier = Modifier.size(if (principal) 30.dp else 24.dp)) }
 }

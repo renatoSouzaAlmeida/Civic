@@ -114,7 +114,7 @@ internal fun LayoutEsportivoNovo(obd: ObdMonitor, monitor: MediaMonitor, vel: Fl
                     }
                     LuzesObd(d, Modifier.padding(start = 6.dp, bottom = 4.dp), tamanho = 52.dp)
                 }
-                Column(Modifier.align(Alignment.TopEnd).width(320.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.align(Alignment.TopEnd).width(360.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         InfoObd(t, Icons.Filled.LocalGasStation, "Consumo Inst.", fmt1(d.consumoInstantaneo), "km/l")
                         InfoObd(t, Icons.Filled.EvStation, "Consumo Médio", fmt1(v.consumoMedio?.toFloat()), "km/l")
@@ -177,8 +177,8 @@ internal fun LayoutCockpitDigital(obd: ObdMonitor, monitor: MediaMonitor, vel: F
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SpotifyObd(t, monitor, Modifier.weight(3.2f).fillMaxHeight())
+            Row(Modifier.fillMaxWidth().height(92.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                SpotifyObd(t, monitor, Modifier.weight(3.6f).fillMaxHeight())
                 Ladrilho(t, Icons.Filled.LocalGasStation, "${fmt0(d.nivelCombustivel)} %", "Combustível", Modifier.weight(1f))
                 Ladrilho(t, Icons.Filled.Thermostat, "${fmt0(d.tempMotor)} °C", "Temp. Motor", Modifier.weight(1f))
                 Ladrilho(t, Icons.Filled.Air, "${fmt0(d.tempAdmissao)} °C", "Temp. Admissão", Modifier.weight(1f))
@@ -237,7 +237,7 @@ internal fun LayoutTecnico(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a
         Column(Modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(t.fundo).padding(horizontal = 16.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Menu.
-                Column(Modifier.width(310.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.width(340.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     // As mesmas opções da tela de diagnóstico: Falhas, Bateria, Mistura e Saúde (Resumo é esta tela).
                     listOf(
                         Triple(Icons.Filled.Dashboard, "Resumo", -1), Triple(Icons.Outlined.ReportProblem, "Falhas (DTC)", 0), Triple(Icons.Filled.BatteryChargingFull, "Bateria", 1),
@@ -398,7 +398,7 @@ internal fun LayoutDirecaoSimples(obd: ObdMonitor, monitor: MediaMonitor, vel: F
                     }
                     LuzesObd(d, Modifier.padding(start = 6.dp, bottom = 4.dp), tamanho = 54.dp, farolPrimeiro = false)
                 }
-                Column(Modifier.align(Alignment.TopEnd).width(320.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.align(Alignment.TopEnd).width(360.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Box(Modifier.align(Alignment.End).size(40.dp).clip(CircleShape).background(t.vidro).border(1.dp, t.bordaVidro, CircleShape).clickable(onClick = a.aoMais),
                             contentAlignment = Alignment.Center) { Icon(Icons.Filled.MoreHoriz, "Layout, demonstração e adaptador", tint = t.texto, modifier = Modifier.size(24.dp)) }
