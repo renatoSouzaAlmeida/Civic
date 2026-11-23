@@ -85,6 +85,7 @@ fun HomeScreen(
                     Tela.Inicio -> TelaInicio(monitor, sensores, obd)
                     Tela.Central -> TelaCentral(sensores, obd, monitor)
                     Tela.Veiculo -> TelaVeiculo()
+                    Tela.Calendario -> TelaCalendario()
                     Tela.Apps -> TelaApps()
                     Tela.Config -> TelaConfig()
                 }

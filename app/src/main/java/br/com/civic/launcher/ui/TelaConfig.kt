@@ -167,6 +167,7 @@ fun TelaConfig() {
             }
             SecaoGeofence()
             SecaoSos()
+            SecaoCalendario()
             SecaoCaixaPreta()
             SecaoTpms()
             Secao("Mapa de navegação") {

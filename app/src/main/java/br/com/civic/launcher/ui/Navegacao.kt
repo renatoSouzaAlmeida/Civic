@@ -34,7 +34,7 @@ import br.com.civic.launcher.abrir
 import br.com.civic.launcher.abrirSpotify
 import br.com.civic.launcher.abrirNavegacaoComPainel
 
-enum class Tela { Inicio, Central, Veiculo, Apps, Config }
+enum class Tela { Inicio, Central, Veiculo, Calendario, Apps, Config }
 
 private class Item(
     val rotulo: String,
@@ -61,6 +61,7 @@ private val itens = listOf(
     Item("Favorito", Icons.Filled.Star, null) { abrirFixado(it, Atalhos.FAVORITO, "favorito") },
     Item("Spotify", Icons.Filled.MusicNote, null, R.drawable.ic_spotify) { it.abrirSpotify() },
     Item("Veículo", Icons.Filled.CarRepair, Tela.Veiculo),
+    Item("Calendário", Icons.Filled.CalendarMonth, Tela.Calendario),
     Item("Apps", Icons.Filled.Apps, Tela.Apps),
     Item("Config.", Icons.Filled.Settings, Tela.Config),
 )
