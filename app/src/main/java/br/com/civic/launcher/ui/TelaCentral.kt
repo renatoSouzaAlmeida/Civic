@@ -59,7 +59,7 @@ import br.com.civic.launcher.obd.ObdMonitor
  * posicionados com a mesma geometria ([GeoPainel]).
  */
 @Composable
-fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
+fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor, aoIrTela: (Tela) -> Unit = {}) {
     val d = obd.dados
     val vel = d.velocidade?.toFloat() ?: sensores.velocidadeKmh ?: 0f
     var escolhendo by remember { mutableStateOf(false) }
@@ -72,7 +72,31 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
         return
     }
     val dividida = emTelaDividida()
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    // Layouts novos (01 a 04): uma prancheta fiel à proposta, escalada para caber em tela cheia ou dividida.
+    var listaLayouts by remember { mutableStateOf(false) }
+    val acoes = AcoesObd(
+        aoVerDiagnostico = { vendoFalhas = true }, aoVerViagem = { aoIrTela(Tela.Veiculo) }, aoConfig = { escolhendo = true },
+        aoMais = { listaLayouts = true }, aoSensores = { config.salvarLayoutObd(LayoutObd.Tecnico) },
+    )
+    if (listaLayouts) AlertDialog(
+        onDismissRequest = { listaLayouts = false },
+        confirmButton = { TextButton(onClick = { listaLayouts = false }) { Text("Fechar", fontSize = 20.sp) } },
+        title = { Text("Layout do OBD") },
+        text = {
+            Column {
+                LayoutObd.entries.forEach { l ->
+                    Text(l.rotulo + if (l == config.layoutObd) "  ✓" else "", fontSize = 20.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { config.salvarLayoutObd(l); listaLayouts = false }.padding(vertical = 12.dp))
+                }
+            }
+        },
+    )
+    if (config.layoutObd in listOf(LayoutObd.EsportivoNovo, LayoutObd.CockpitDigital, LayoutObd.Tecnico, LayoutObd.DirecaoSimples)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SeletorLayoutObd(obd, { escolhendo = true })
+            Box(Modifier.weight(1f).fillMaxWidth()) { LayoutObdNovo(config.layoutObd, obd, vel, acoes) }
+        }
+    } else BoxWithConstraints(Modifier.fillMaxSize()) {
         val largura = maxWidth // lido aqui: dentro da coluna aninhada o Kotlin não deixa ler maxWidth
         if (dividida) {
             // Meia tela: cada layout tem a sua versão compacta (mesma cara, reorganizada para caber).
@@ -83,6 +107,7 @@ fun TelaCentral(sensores: Sensores, obd: ObdMonitor, monitor: MediaMonitor) {
                         LayoutObd.Atual -> PainelEsportivo(obd, d, vel, monitor, Modifier.fillMaxSize(), comInfos = true, aoVerFalhas = { vendoFalhas = true }) { escolhendo = true }
                         LayoutObd.Cockpit -> LayoutCockpit(obd, monitor, vel, compacto = true) { vendoFalhas = true }
                         LayoutObd.Modular -> LayoutModular(obd, monitor, vel, compacto = true) { vendoFalhas = true }
+                        else -> {}
                     }
                 }
             }

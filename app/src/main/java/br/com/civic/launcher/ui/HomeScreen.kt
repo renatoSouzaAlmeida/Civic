@@ -83,7 +83,7 @@ fun HomeScreen(
                 if (br.com.civic.launcher.Direcao.aberta) CockpitDividido(obd, monitor, sensores)
                 else when (tela) {
                     Tela.Inicio -> TelaInicio(monitor, sensores, obd)
-                    Tela.Central -> TelaCentral(sensores, obd, monitor)
+                    Tela.Central -> TelaCentral(sensores, obd, monitor) { tela = it }
                     Tela.Veiculo -> TelaVeiculo()
                     Tela.Calendario -> TelaCalendario()
                     Tela.Apps -> TelaApps()

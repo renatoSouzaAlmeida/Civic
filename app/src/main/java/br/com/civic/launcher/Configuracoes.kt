@@ -8,7 +8,10 @@ import androidx.compose.runtime.setValue
 enum class ImagemCarro(val rotulo: String) { Civic("Civic"), Fit("Fit") }
 
 /** Layout da tela do OBD: o atual e três propostas para comparar (a escolha final será feita em uso). */
-enum class LayoutObd(val rotulo: String) { Atual("Esportivo"), Cockpit("Cockpit"), Modular("Modular") }
+enum class LayoutObd(val rotulo: String) {
+    Atual("Esportivo"), Cockpit("Cockpit"), Modular("Modular"),
+    EsportivoNovo("01 · Esportivo (novo)"), CockpitDigital("02 · Cockpit digital"), Tecnico("03 · Técnico / Diagnóstico"), DirecaoSimples("04 · Direção simplificada"),
+}
 /** Como o modo Direção funciona: painel flutuante sobre o mapa (padrão) ou tela dividida (mapa de um lado, cockpit do outro). */
 enum class ModoDirecao(val rotulo: String) { Flutuante("Painel flutuante"), Dividido("Tela dividida") }
 enum class LayoutHome(val rotulo: String) { Padrao("Padrão"), Caixas("Caixas"), Painel("Painel"), Ousada("Ousada"), Esportiva("Esportiva"), NovaLinha("Nova linha") }
