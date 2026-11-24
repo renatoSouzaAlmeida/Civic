@@ -8,6 +8,7 @@
 //   { acao: "enviar", tipo, mensagem }  -> registra o evento e envia ao Telegram (se vinculado)
 //       Todo evento pode trazer event_id (UUID do aparelho), ocorreu_em (ms), fonte, versao_app e payload_versao:
 //       com o mesmo event_id o reenvio é reconhecido (duplicado: true) e não repete o Telegram nem a linha.
+//       Todo aviso com o link do mapa (coordenadas) sai também com o endereço completo (linha 🏠).
 //   { acao: "localizacao", tipo, mensagem, lat, lon, data?, endereco?, idade_gps_s?, origem?, desconhecido? }
 //       -> envia o texto e o pino do mapa (onde parei o carro) e grava no histórico civic_estacionamentos
 //          (desconhecido = true quando o carro estacionou fora dos lugares de costume)
@@ -54,7 +55,7 @@ async function gravarEvento(token: string, corpo: Record<string, unknown>, tipo:
   const id = idDoEvento(corpo);
   const quando = Number(corpo.ocorreu_em);
   const fontes = ["app", "obd", "gps", "sensor", "usuario", "nuvem"];
-  await fetch(`${URL_BASE}/rest/v1/civic_eventos${id ? "?on_conflict=dispositivo,event_id" : ""}`, {
+  const r = await fetch(`${URL_BASE}/rest/v1/civic_eventos${id ? "?on_conflict=dispositivo,event_id" : ""}`, {
     method: "POST", headers: id ? { ...cabecalhosDb, Prefer: "resolution=ignore-duplicates" } : cabecalhosDb,
     body: JSON.stringify({
       dispositivo: token, tipo, mensagem, enviado, event_id: id,
@@ -64,23 +65,50 @@ async function gravarEvento(token: string, corpo: Record<string, unknown>, tipo:
       payload_versao: Number.isFinite(Number(corpo.payload_versao)) ? Number(corpo.payload_versao) : null,
     }),
   });
+  if (!r.ok) console.warn(`civic_eventos: gravação recusada (HTTP ${r.status}) ${await r.text().catch(() => "")}`.slice(0, 300));
 }
 
 // Endereço completo em todo aviso com coordenadas: se o texto tem o link do mapa e o app ainda não pôs o endereço (linha 🏠),
-// busca no OpenStreetMap (Nominatim, até 3,5 s; sem resposta, o aviso sai sem endereço em vez de atrasar).
+// tenta, nesta ordem, OpenStreetMap (Nominatim), Photon e BigDataCloud, cada um com até 3 s. Sem resposta, o aviso sai sem endereço.
+async function buscarJson(url: string, ms = 3000) {
+  const r = await fetch(url, { headers: { "User-Agent": "CivicRenatin/1.2 (avisos do carro)", "Accept-Language": "pt-BR" }, signal: AbortSignal.timeout(ms) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return await r.json();
+}
+
+async function enderecoDe(lat: string, lon: string): Promise<string | null> {
+  const tentativas: [string, () => Promise<string | null>][] = [
+    ["nominatim", async () => {
+      const j = await buscarJson(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=pt-BR&lat=${lat}&lon=${lon}`);
+      return j?.display_name ? String(j.display_name) : null;
+    }],
+    ["photon", async () => {
+      const p = (await buscarJson(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=1`))?.features?.[0]?.properties;
+      if (!p) return null;
+      const rua = [p.street ?? p.name, p.housenumber].filter(Boolean).join(", ");
+      const resto = [p.district ?? p.locality, [p.city, p.state].filter(Boolean).join(" - "), p.postcode, p.country].filter(Boolean).join(", ");
+      return [rua, resto].filter(Boolean).join(" - ") || null;
+    }],
+    ["bigdatacloud", async () => {
+      const j = await buscarJson(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`);
+      const t = [j?.locality, [j?.city, j?.principalSubdivision].filter(Boolean).join(" - "), j?.postcode, j?.countryName].filter(Boolean).join(", ");
+      return t || null;
+    }],
+  ];
+  for (const [nome, f] of tentativas) {
+    try { const e = await f(); if (e) return e.slice(0, 300); console.warn(`endereço: ${nome} sem resultado`); }
+    catch (err) { console.warn(`endereço: ${nome} falhou (${err instanceof Error ? err.message : err})`); }
+  }
+  return null;
+}
+
 async function comEndereco(mensagem: string): Promise<{ texto: string; endereco: string | null }> {
   if (mensagem.includes("🏠")) return { texto: mensagem, endereco: null };
   const m = mensagem.match(/maps\.google\.com\/\?q=(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (!m) return { texto: mensagem, endereco: null };
-  try {
-    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=pt-BR&lat=${m[1]}&lon=${m[2]}`, {
-      headers: { "User-Agent": "civic-renatin-notificar/1.0" }, signal: AbortSignal.timeout(3500),
-    });
-    const j = await r.json();
-    const endereco = String(j?.display_name ?? "").slice(0, 300);
-    if (!endereco) return { texto: mensagem, endereco: null };
-    return { texto: mensagem.replace("🗺️", `🏠 ${endereco}\n🗺️`), endereco };
-  } catch { return { texto: mensagem, endereco: null }; }
+  const endereco = await enderecoDe(m[1], m[2]);
+  if (!endereco) return { texto: mensagem, endereco: null };
+  return { texto: mensagem.replace("🗺️", `🏠 ${endereco}\n🗺️`), endereco };
 }
 
 Deno.serve(async (req) => {

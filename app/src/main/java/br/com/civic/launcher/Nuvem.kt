@@ -347,22 +347,49 @@ class Nuvem private constructor(ctx: Context) {
 
     /**
      * Todo aviso que leva coordenadas (link do mapa) leva também o endereço completo: rua, número, bairro, cidade, estado e CEP.
-     * Usa o geocodificador do aparelho (até 4 s, para não atrasar um SOS); se ele não existir ou não achar, a função da nuvem
-     * tenta pelo OpenStreetMap. Roda na fila de envio (fora da tela principal). O texto já guardado na fila sem internet vai com o endereço.
+     * A busca é feita **no aparelho**, porque os serviços gratuitos de endereço recusam chamadas vindas do servidor da nuvem:
+     *  1. geocodificador do Android (até 3 s; a multimídia costuma não ter);
+     *  2. OpenStreetMap / Nominatim (até 3 s);
+     *  3. Photon, também do OpenStreetMap (até 3 s), só se ainda houver tempo (no máximo ~7 s no total, para não atrasar um SOS).
+     * Roda na fila de envio (fora da tela principal) e de novo quando o aviso sai da fila sem internet.
      */
     private fun completarEndereco(corpo: JSONObject) {
         if (corpo.optString("acao") !in ACOES_NA_FILA) return
         val msg = corpo.optString("mensagem")
         if (msg.contains("🏠")) return
         val m = Regex("maps\\.google\\.com/\\?q=(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)").find(msg) ?: return
-        val lat = m.groupValues[1].toDouble(); val lon = m.groupValues[2].toDouble()
+        val lat = m.groupValues[1]; val lon = m.groupValues[2]
+        val inicio = System.currentTimeMillis()
         val endereco = runCatching {
-            val f = java.util.concurrent.FutureTask { LocalEstacionamento.obter(app).enderecoCompleto(lat, lon) }
+            val f = java.util.concurrent.FutureTask { LocalEstacionamento.obter(app).enderecoCompleto(lat.toDouble(), lon.toDouble()) }
             Thread(f).start()
-            f.get(4, java.util.concurrent.TimeUnit.SECONDS)
-        }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+            f.get(3, java.util.concurrent.TimeUnit.SECONDS)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: enderecoNominatim(lat, lon)
+            ?: (if (System.currentTimeMillis() - inicio < 4_500) enderecoPhoton(lat, lon) else null)
+            ?: return
         corpo.put("mensagem", msg.replaceFirst("🗺️", "🏠 $endereco\n🗺️"))
         corpo.put("endereco", endereco)
+    }
+
+    private fun getJson(url: String): JSONObject? = runCatching {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.setRequestProperty("User-Agent", "CivicRenatin/1.2 (Android; avisos do carro)")
+        c.setRequestProperty("Accept-Language", "pt-BR")
+        c.connectTimeout = 3_000; c.readTimeout = 3_000
+        try { if (c.responseCode == 200) JSONObject(c.inputStream.bufferedReader().readText()) else null } finally { c.disconnect() }
+    }.getOrNull()
+
+    private fun enderecoNominatim(lat: String, lon: String): String? =
+        getJson("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=pt-BR&lat=$lat&lon=$lon")
+            ?.optString("display_name")?.trim()?.ifEmpty { null }?.take(300)
+
+    private fun enderecoPhoton(lat: String, lon: String): String? {
+        val p = getJson("https://photon.komoot.io/reverse?lat=$lat&lon=$lon&limit=1")?.optJSONArray("features")?.optJSONObject(0)?.optJSONObject("properties") ?: return null
+        fun c(k: String) = p.optString(k).trim().ifEmpty { null }
+        val rua = listOfNotNull(c("street") ?: c("name"), c("housenumber")).joinToString(", ")
+        val resto = listOfNotNull(c("district") ?: c("locality"), listOfNotNull(c("city"), c("state")).joinToString(" - ").ifEmpty { null }, c("postcode"), c("country")).joinToString(", ")
+        return listOf(rua, resto).filter { it.isNotEmpty() }.joinToString(" - ").ifEmpty { null }?.take(300)
     }
 
     // ---------- fila de avisos sem internet ----------
@@ -391,6 +418,7 @@ class Nuvem private constructor(ctx: Context) {
                 val idade = agora - item.getLong("t")
                 if (idade > 48 * 3_600_000L) continue
                 val c = JSONObject(item.getJSONObject("c").toString())
+                runCatching { completarEndereco(c) } // sem internet na hora do aviso, o endereço não veio: tenta agora
                 if (idade > 120_000L) c.put("mensagem", "⏱️ Enviado com atraso (${idade / 60_000} min): estava sem internet.\n" + c.optString("mensagem"))
                 val ok = garantirCadastro() && http("POST", "/functions/v1/civic-notificar", c.toString()).first in 200..299
                 Sincronizacao.resultado("avisos", ok)
