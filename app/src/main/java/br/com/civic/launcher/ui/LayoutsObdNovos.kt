@@ -116,13 +116,14 @@ internal fun LayoutEsportivoNovo(obd: ObdMonitor, monitor: MediaMonitor, vel: Fl
                 }
                 Column(Modifier.align(Alignment.TopEnd).width(360.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        InfoObd(t, Icons.Filled.LocalGasStation, "Consumo Inst.", fmt1(d.consumoInstantaneo), "km/l")
-                        InfoObd(t, Icons.Filled.EvStation, "Consumo Médio", fmt1(v.consumoMedio?.toFloat()), "km/l")
-                        InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km")
-                        InfoObd(t, Icons.Filled.Place, "Trip (viagem)", fmt1(v.tripKm?.toFloat()), "km")
+                        // Alinhados à direita, junto da borda.
+                        InfoObd(t, Icons.Filled.LocalGasStation, "Consumo Inst.", fmt1(d.consumoInstantaneo), "km/l", Modifier.fillMaxWidth(), direita = true)
+                        InfoObd(t, Icons.Filled.EvStation, "Consumo Médio", fmt1(v.consumoMedio?.toFloat()), "km/l", Modifier.fillMaxWidth(), direita = true)
+                        InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km", Modifier.fillMaxWidth(), direita = true)
+                        InfoObd(t, Icons.Filled.Place, "Trip (viagem)", fmt1(v.tripKm?.toFloat()), "km", Modifier.fillMaxWidth(), direita = true)
                     }
                     SpotifyObd(t, monitor, Modifier.fillMaxWidth().height(124.dp))
-                    EcoAssist(t, Modifier.padding(bottom = 4.dp), grande = true)
+                    EcoAssist(t, Modifier.align(Alignment.End).padding(bottom = 4.dp), grande = true)
                 }
             }
             AbasObdNovo(t, abasPadrao(a, comViagem = false), 0)
