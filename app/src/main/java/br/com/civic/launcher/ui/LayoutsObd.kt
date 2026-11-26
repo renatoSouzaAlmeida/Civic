@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -235,7 +236,7 @@ internal fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier, ta
     Row(modifier.cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         // Capa do álbum quando o Spotify informa; senão, a nota musical no mesmo espaço.
-        if (m.capa != null) androidx.compose.foundation.Image(androidx.compose.ui.graphics.asImageBitmap(m.capa), null,
+        if (m.capa != null) androidx.compose.foundation.Image(m.capa.asImageBitmap(), null,
             Modifier.size(tamanhoCapa).clip(RoundedCornerShape(12.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
         else Box(Modifier.size(tamanhoCapa).clip(RoundedCornerShape(12.dp)).background(Cores.Chip), contentAlignment = Alignment.Center) {
             Icon(Icons.Filled.MusicNote, null, tint = Cores.Destaque, modifier = Modifier.size(tamanhoCapa * 0.58f))
