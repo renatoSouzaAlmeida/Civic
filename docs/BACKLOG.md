@@ -257,3 +257,5 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 - **Correção:** a busca agora é feita **no aparelho** (geocodificador do Android → Nominatim → Photon, no máximo ~7 s no total) e é **refeita quando o aviso sai da fila sem internet**. A função continua tentando no servidor como última reserva (falha rápido, sem atrasar).
 - **Bug corrigido junto:** desde a camada de eventos confiável, os avisos com `event_id` não eram gravados em `civic_eventos` (o índice único parcial não serve para o `on_conflict`); trocado por restrição única normal (migration `20261124_eventos_event_id_unico.sql`). Testado: grava e reconhece o reenvio como duplicado.
 - **Fora desta entrega:** a resposta do comando `/onde` do bot mostra a posição atual só com coordenadas (a última vaga já vem com endereço).
+- [x] **Ajuste (26/11/2026):** Cockpit em tela dividida com o Spotify maior (capa do álbum em 80 dp); a mini música de todos os layouts antigos passou a mostrar a capa quando o Spotify informa.
+

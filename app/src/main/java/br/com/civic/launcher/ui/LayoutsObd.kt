@@ -230,12 +230,15 @@ internal fun FarolObd(d: DadosObd, tamanho: Dp) {
 }
 
 @Composable
-internal fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier) {
+internal fun MiniMusica(monitor: MediaMonitor, modifier: Modifier = Modifier, tamanhoCapa: Dp = 44.dp) {
     val m = monitor.estado
     Row(modifier.cartaoSuave(RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Cores.Chip), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.MusicNote, null, tint = Cores.Destaque, modifier = Modifier.size(26.dp))
+        // Capa do álbum quando o Spotify informa; senão, a nota musical no mesmo espaço.
+        if (m.capa != null) androidx.compose.foundation.Image(androidx.compose.ui.graphics.asImageBitmap(m.capa), null,
+            Modifier.size(tamanhoCapa).clip(RoundedCornerShape(12.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else Box(Modifier.size(tamanhoCapa).clip(RoundedCornerShape(12.dp)).background(Cores.Chip), contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.MusicNote, null, tint = Cores.Destaque, modifier = Modifier.size(tamanhoCapa * 0.58f))
         }
         Column(Modifier.weight(1f)) {
             Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Música", color = Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
@@ -281,7 +284,7 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: 
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val altura = maxHeight
             // Os mostradores ficam abaixo dos cartões de música e diagnóstico (66 dp + folga).
-            val gauge = minOf(maxHeight - 84.dp, maxWidth * (if (compacto) 0.31f else 0.255f))
+            val gauge = minOf(maxHeight - (if (compacto) 116.dp else 84.dp), maxWidth * (if (compacto) 0.31f else 0.255f))
             // Paisagem: morros suaves no horizonte e uma estrada larga em perspectiva (asfalto, bordas e faixas tracejadas).
             val asfalto = Cores.SegVazio; val morro = Cores.Destaque
             Canvas(Modifier.fillMaxSize()) {
@@ -324,8 +327,9 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: 
                     Offset(0f, hz - size.height * 0.08f), Size(size.width, size.height * 0.18f))
             }
             if (compacto) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MiniMusica(monitor, Modifier.weight(1.5f).height(66.dp))
-                CartaoDiagnostico(d, Modifier.weight(1f).height(66.dp), aoVerFalhas)
+                // Tela dividida: Spotify maior, com a capa do álbum à vista.
+                MiniMusica(monitor, Modifier.weight(1.7f).height(98.dp), tamanhoCapa = 80.dp)
+                CartaoDiagnostico(d, Modifier.weight(1f).height(98.dp), aoVerFalhas)
             } else Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MiniMusica(monitor, Modifier.width(360.dp).height(66.dp))
                 CartaoDiagnostico(d, Modifier.width(210.dp).height(66.dp), aoVerFalhas)
