@@ -72,7 +72,9 @@ internal fun SpotifyGrande(
     }
 
     BoxWithConstraints(modifier) {
-        val largo = maxWidth >= maxHeight * 1.45f
+        // Lidos aqui: dentro das colunas aninhadas o Kotlin não deixa ler maxWidth/maxHeight.
+        val w = maxWidth; val h = maxHeight
+        val largo = w >= h * 1.45f
         if (largo) Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Capa(Modifier.fillMaxHeight().aspectRatio(1f))
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
@@ -80,11 +82,11 @@ internal fun SpotifyGrande(
                     Text(titulo, color = texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(sub, color = suave, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Controles(if (maxHeight >= 110.dp) 44.dp else 36.dp)
+                Controles(if (h >= 110.dp) 44.dp else 36.dp)
             }
         } else Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // Estreito: a capa ocupa o que sobra depois do texto e dos controles (cerca de 100 dp).
-            val lado = minOf(maxWidth, (maxHeight - 104.dp).coerceAtLeast(48.dp))
+            val lado = minOf(w, (h - 104.dp).coerceAtLeast(48.dp))
             Capa(Modifier.size(lado))
             Column(Modifier.fillMaxWidth().clickable { ctx.abrirSpotify() }, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(titulo, color = texto, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
