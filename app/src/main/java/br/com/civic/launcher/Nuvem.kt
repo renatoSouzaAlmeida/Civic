@@ -358,18 +358,23 @@ class Nuvem private constructor(ctx: Context) {
         val msg = corpo.optString("mensagem")
         if (msg.contains("🏠")) return
         val m = Regex("maps\\.google\\.com/\\?q=(-?\\d+\\.\\d+),(-?\\d+\\.\\d+)").find(msg) ?: return
-        val lat = m.groupValues[1]; val lon = m.groupValues[2]
+        val endereco = buscarEndereco(m.groupValues[1], m.groupValues[2]) ?: return
+        corpo.put("mensagem", msg.replaceFirst("🗺️", "🏠 $endereco\n🗺️"))
+        corpo.put("endereco", endereco)
+    }
+
+    /** Endereço completo de uma posição (geocodificador do aparelho → Nominatim → Photon). Bloqueia: chamar fora da tela principal. */
+    fun enderecoAgora(lat: Double, lon: Double): String? = buscarEndereco("%.6f".format(Locale.US, lat), "%.6f".format(Locale.US, lon))
+
+    private fun buscarEndereco(lat: String, lon: String): String? {
         val inicio = System.currentTimeMillis()
-        val endereco = runCatching {
+        return runCatching {
             val f = java.util.concurrent.FutureTask { LocalEstacionamento.obter(app).enderecoCompleto(lat.toDouble(), lon.toDouble()) }
             Thread(f).start()
             f.get(3, java.util.concurrent.TimeUnit.SECONDS)
         }.getOrNull()?.takeIf { it.isNotBlank() }
             ?: enderecoNominatim(lat, lon)
             ?: (if (System.currentTimeMillis() - inicio < 4_500) enderecoPhoton(lat, lon) else null)
-            ?: return
-        corpo.put("mensagem", msg.replaceFirst("🗺️", "🏠 $endereco\n🗺️"))
-        corpo.put("endereco", endereco)
     }
 
     private fun getJson(url: String): JSONObject? = runCatching {

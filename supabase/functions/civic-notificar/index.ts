@@ -102,6 +102,21 @@ async function enderecoDe(lat: string, lon: string): Promise<string | null> {
   return null;
 }
 
+function distancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = 6371000, p = Math.PI / 180;
+  const a = Math.sin((lat2 - lat1) * p / 2) ** 2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * Math.sin((lon2 - lon1) * p / 2) ** 2;
+  return 2 * r * Math.asin(Math.sqrt(a));
+}
+
+// A nuvem (civic-vigia) já avisou esta vaga quando o carro parou de dar sinal? Então o aviso atrasado da multimídia (ao religar) não repete.
+async function vagaJaAvisadaPelaNuvem(token: string, lat: number, lon: number, quando: number): Promise<boolean> {
+  const ref = Number.isFinite(quando) && quando > 0 ? quando : Date.now();
+  const desde = new Date(ref - 6 * 3600_000).toISOString();
+  const r = await fetch(`${URL_BASE}/rest/v1/civic_estacionamentos?dispositivo=eq.${encodeURIComponent(token)}&origem=eq.nuvem&data=gte.${desde}&select=lat,lon`, { headers: cabecalhosDb });
+  const j = await r.json().catch(() => null);
+  return Array.isArray(j) && j.some((v) => distancia(Number(v.lat), Number(v.lon), lat, lon) < 200);
+}
+
 async function comEndereco(mensagem: string): Promise<{ texto: string; endereco: string | null }> {
   if (mensagem.includes("🏠")) return { texto: mensagem, endereco: null };
   const m = mensagem.match(/maps\.google\.com\/\?q=(-?\d+\.\d+),(-?\d+\.\d+)/);
@@ -210,6 +225,9 @@ Deno.serve(async (req) => {
     const mensagem = String(corpo.mensagem ?? "").slice(0, 1000);
     const repetido = await eventoJaRegistrado(token, idDoEvento(corpo));
     if (repetido) return resposta({ enviado: !!repetido.enviado, vinculado: !!disp.telegram_chat_id, historico: true, duplicado: true });
+    if (tipo === "estacionamento" && String(corpo.origem) === "auto" && await vagaJaAvisadaPelaNuvem(token, lat, lon, Number(corpo.data))) {
+      return resposta({ enviado: true, vinculado: !!disp.telegram_chat_id, historico: true, duplicado: true, avisado_pela_nuvem: true });
+    }
     const { texto: msgFinal, endereco: enderecoNuvem } = await comEndereco(mensagem);
     let enviado = false;
     if (disp.telegram_chat_id) {

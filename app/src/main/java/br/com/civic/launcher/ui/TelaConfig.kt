@@ -165,6 +165,13 @@ fun TelaConfig() {
                 }
                 Text("Fadiga, frenagens/acelerações bruscas, excessos de velocidade e a nota de condução funcionam pelo GPS (inclusive com CarPlay ou Android Auto na frente e sem OBD). RPM elevado, consumo e colisão usam o OBD.", color = Cores.TextoSuave, fontSize = 13.sp)
             }
+            Secao("Ao ligar a multimídia") {
+                Text("Abre o launcher sozinho quando a multimídia liga ou acorda (algumas abrem a tela do fabricante por cima, mesmo com o launcher como padrão). Precisa da permissão \"Sobrepor a outros apps\". No Fit com CarPlay, desligue.", color = Cores.TextoSuave, fontSize = 13.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Opcao("Abrir o launcher", config.abrirAoLigar, Modifier.weight(1f)) { config.salvarAbrirAoLigar(true) }
+                    Opcao("Não abrir", !config.abrirAoLigar, Modifier.weight(1f)) { config.salvarAbrirAoLigar(false) }
+                }
+            }
             SecaoGeofence()
             SecaoSos()
             SecaoCalendario()

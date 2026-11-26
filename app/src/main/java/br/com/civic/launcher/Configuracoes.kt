@@ -82,6 +82,8 @@ class Configuracoes private constructor(ctx: Context) {
     var geofenceTelegram by mutableStateOf(prefs.getBoolean("geofence_telegram", true))
         private set
     var geofenceFaixa by mutableStateOf(prefs.getBoolean("geofence_faixa", true))
+    /** Abrir o launcher sozinho quando a multimídia liga (algumas multimídias abrem a tela do fabricante por cima). No Fit com CarPlay, desligar. */
+    var abrirAoLigar by mutableStateOf(prefs.getBoolean("abrir_ao_ligar", true))
         private set
     /** Limite de velocidade (km/h) para contar excessos na viagem; 0 = não contar. */
     var limiteVelocidade by mutableStateOf(prefs.getInt("limite_velocidade", 110))
@@ -159,6 +161,7 @@ class Configuracoes private constructor(ctx: Context) {
     fun salvarTpmsTodos(v: Boolean) { tpmsMostrarTodos = v; prefs.edit().putBoolean("tpms_todos", v).apply() }
     fun salvarGeofenceTelegram(v: Boolean) { geofenceTelegram = v; prefs.edit().putBoolean("geofence_telegram", v).apply() }
     fun salvarGeofenceFaixa(v: Boolean) { geofenceFaixa = v; prefs.edit().putBoolean("geofence_faixa", v).apply() }
+    fun salvarAbrirAoLigar(v: Boolean) { abrirAoLigar = v; prefs.edit().putBoolean("abrir_ao_ligar", v).apply() }
     fun salvarLimiteVelocidade(v: Int) { limiteVelocidade = v; prefs.edit().putInt("limite_velocidade", v).apply() }
     fun salvarVigia(v: Boolean) { vigiaTotal = v; prefs.edit().putBoolean("vigia_total", v).apply() }
     fun salvarHudEspelhado(v: Boolean) { hudEspelhado = v; prefs.edit().putBoolean("hud_espelhado", v).apply() }

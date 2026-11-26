@@ -45,6 +45,15 @@ class Telemetria private constructor(private val ctx: Context) {
     private var ultimaSincVeiculo = 0L
     private var porGps = false
     private var ultimoMovimento = 0L
+    // Vigia do silêncio: a multimídia apaga junto com a chave, então a nuvem precisa saber, ANTES disso, onde o carro parou.
+    // Ao parar, manda na hora o ponto e o status com o endereço (resolvido aqui no aparelho); se o carro parar de dar sinal,
+    // a nuvem avisa no Telegram a partir dessa última posição.
+    private var parado = false
+    @Volatile private var enderecoParado: String? = null
+    private var latEnd = 0.0
+    private var lonEnd = 0.0
+    private var ultimoEnd = 0L
+    @Volatile private var buscandoEnd = false
 
     private val aoDesligar = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -141,12 +150,33 @@ class Telemetria private constructor(private val ctx: Context) {
                 }
             } else if (velocidade > 3f) ultimoMovimento = agora
         }
-        if ((motorLigado || velocidade > 3f) && agora - ultimoPonto >= 15_000) {
+        val acabouDeParar = velocidade < 3f && !parado && motorLigado
+        if ((motorLigado || velocidade > 3f) && (agora - ultimoPonto >= 15_000 || acabouDeParar)) {
             ultimoPonto = agora
             pontos.put(JSONObject().put("em", iso(agora)).put("lat", local.latitude).put("lon", local.longitude)
                 .put("vel", Math.round(velocidade * 10) / 10.0).put("viagem", viagem))
             limitar(); gravar("pontos", pontos)
         }
+        parado = velocidade < 3f
+        if (velocidade > 8f) enderecoParado = null
+        if (acabouDeParar) enviar(forcarStatus = true) // a nuvem fica com a posição da parada antes de a chave ser desligada
+        if (parado && motorLigado) enderecoDaParada(local)
+    }
+
+    /** Resolve o endereço de onde o carro parou (no aparelho; a nuvem não consegue) e manda no status. */
+    private fun enderecoDaParada(local: Location) {
+        val agora = System.currentTimeMillis()
+        val r = FloatArray(1); Location.distanceBetween(latEnd, lonEnd, local.latitude, local.longitude, r)
+        if (buscandoEnd || (enderecoParado != null && r[0] < 40f) || agora - ultimoEnd < 20_000L) return
+        buscandoEnd = true; ultimoEnd = agora
+        val lat = local.latitude; val lon = local.longitude
+        Thread {
+            val e = runCatching { Nuvem.obter(ctx).enderecoAgora(lat, lon) }.getOrNull()
+            principal.post {
+                buscandoEnd = false
+                if (e != null) { enderecoParado = e; latEnd = lat; lonEnd = lon; enviar(forcarStatus = true) }
+            }
+        }.start()
     }
 
     /** Simulação (demonstração do OBD): registra o "motor ligou" e o "motor desligou" da viagem simulada e envia já. */
@@ -198,6 +228,7 @@ class Telemetria private constructor(private val ctx: Context) {
                 .put("nome_carro", Configuracoes.obter(ctx).let { c -> listOf(c.nomeCarro, c.modeloEAno).filter { it.isNotBlank() }.joinToString(" · ") })
             posicao?.let { s.put("lat", it.latitude).put("lon", it.longitude).put("vel", Math.round(velocidade * 10) / 10.0) }
             tensao?.let { s.put("tensao", it.toDouble()) }
+            s.put("endereco", if (velocidade < 3f) enderecoParado ?: JSONObject.NULL else JSONObject.NULL)
             nuvem.enviarJson("/rest/v1/civic_status?on_conflict=dispositivo", JSONArray().put(s).toString(), "resolution=merge-duplicates") { fim() }
         }
     }

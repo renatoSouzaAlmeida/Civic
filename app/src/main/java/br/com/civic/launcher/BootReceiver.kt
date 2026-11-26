@@ -13,8 +13,11 @@ import androidx.core.content.ContextCompat
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            Intent.ACTION_BOOT_COMPLETED, "android.intent.action.QUICKBOOT_POWERON", "com.htc.intent.action.QUICKBOOT_POWERON", Intent.ACTION_MY_PACKAGE_REPLACED ->
+            Intent.ACTION_BOOT_COMPLETED, "android.intent.action.QUICKBOOT_POWERON", "com.htc.intent.action.QUICKBOOT_POWERON", Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 runCatching { ContextCompat.startForegroundService(context, Intent(context, VigiaService::class.java)) }
+                // Ao ligar a multimídia, o launcher vem para a frente (algumas abrem a tela do fabricante por cima). Não na atualização do app.
+                if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) AbrirLauncher.agendar(context)
+            }
         }
     }
 }

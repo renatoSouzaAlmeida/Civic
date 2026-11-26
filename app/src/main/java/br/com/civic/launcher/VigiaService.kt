@@ -57,7 +57,20 @@ class VigiaService : Service() {
         runCatching { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 60_000L, 0f, ouvinteRede, Looper.getMainLooper()) }
     }
 
+    // Multimídias que suspendem em vez de desligar: ao acordar (tela apagada por mais de 1 min), traz o launcher para a frente.
+    private var apagouEm = 0L
+    private val tela = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: android.content.Context, i: Intent) {
+            when (i.action) {
+                Intent.ACTION_SCREEN_OFF -> apagouEm = System.currentTimeMillis()
+                Intent.ACTION_SCREEN_ON -> if (apagouEm > 0 && System.currentTimeMillis() - apagouEm > 60_000L) { apagouEm = 0; AbrirLauncher.agendar(this@VigiaService) }
+            }
+        }
+    }
+    private var telaRegistrada = false
+
     override fun onDestroy() {
+        if (telaRegistrada) runCatching { unregisterReceiver(tela) }
         ativo = false
         runCatching { val lm = getSystemService(LocationManager::class.java); lm.removeUpdates(ouvinteGps); lm.removeUpdates(ouvinteRede) }
         super.onDestroy()
@@ -83,6 +96,9 @@ class VigiaService : Service() {
         }.isSuccess
         if (!ok) runCatching { startForeground(ID, n) }
         ativo = true
+        if (!telaRegistrada) runCatching {
+            registerReceiver(tela, android.content.IntentFilter().apply { addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF) }); telaRegistrada = true
+        }
         ligarGps()
         // Os objetos abaixo vivem no processo; só garantimos que existem.
         Telemetria.obter(this)

@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
     // Reinicia ao voltar das Configurações (onde o acesso às notificações é concedido).
     override fun onStart() {
         super.onStart()
+        visivel = true
         // O painel de direção só aparece sobre o Waze; ao voltar para o launcher ele sai.
         stopService(Intent(this, PainelService::class.java))
         monitor.iniciar()
@@ -90,8 +91,14 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onStop() {
+        visivel = false
         monitor.parar()
         sensores.parar()
         super.onStop()
+    }
+
+    companion object {
+        /** O launcher está na frente (para não reabrir por cima de si mesmo). */
+        @Volatile var visivel = false
     }
 }
