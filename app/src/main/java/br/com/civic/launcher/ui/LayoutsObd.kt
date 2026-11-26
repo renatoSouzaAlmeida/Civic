@@ -536,8 +536,9 @@ private fun ModularCompacto(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, 
             CartaoMetricaCompacta("Média da viagem", Icons.Outlined.Timeline, viagem?.velMedia?.let { "%.0f".format(BR, it) } ?: "—", "km/h", Modifier.weight(1f).fillMaxHeight()) {}
             CartaoMetricaCompacta("Distância", Icons.Outlined.Timeline, viagem?.distanciaKm?.let { "%.1f".format(BR, it) } ?: "—", "km", Modifier.weight(1f).fillMaxHeight()) {}
         }
-        Row(Modifier.fillMaxWidth().height(64.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniMusica(monitor, Modifier.weight(1.5f).fillMaxHeight())
+        // Tela dividida: Spotify maior, com a capa do álbum à vista (como no Cockpit).
+        Row(Modifier.fillMaxWidth().height(98.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniMusica(monitor, Modifier.weight(1.7f).fillMaxHeight(), tamanhoCapa = 80.dp)
             CartaoDiagnostico(d, Modifier.weight(1f).fillMaxHeight(), aoVerFalhas)
         }
     }

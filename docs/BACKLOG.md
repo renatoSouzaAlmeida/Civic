@@ -259,3 +259,5 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 - **Fora desta entrega:** a resposta do comando `/onde` do bot mostra a posição atual só com coordenadas (a última vaga já vem com endereço).
 - [x] **Ajuste (26/11/2026):** Cockpit em tela dividida com o Spotify maior (capa do álbum em 80 dp); a mini música de todos os layouts antigos passou a mostrar a capa quando o Spotify informa.
 
+- [x] **Ajuste (26/11/2026):** Modular em tela dividida com o Spotify maior (capa do álbum em 80 dp), igual ao Cockpit.
+
