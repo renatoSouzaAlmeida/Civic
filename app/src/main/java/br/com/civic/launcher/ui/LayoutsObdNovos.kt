@@ -383,12 +383,13 @@ internal fun LayoutDirecaoSimples(obd: ObdMonitor, monitor: MediaMonitor, vel: F
                     arcoComBrilho(t.neon, 200f, 140f * (vel / 200f).coerceIn(0f, 1f), tl, tam, size.width * 0.035f, 4, 1.2f)
                 }
                 EcoAssist(t, Modifier.align(Alignment.TopCenter), grande = true)
-                Column(Modifier.align(Alignment.TopCenter).padding(top = 116.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.align(Alignment.TopCenter).padding(top = 104.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("%.0f".format(BRO, vel), color = t.texto, fontSize = 120.sp, lineHeight = 118.sp, fontWeight = FontWeight.ExtraBold, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                     Text("km/h", color = t.texto, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(R.drawable.carro_traseira), null, Modifier.width(190.dp), contentScale = ContentScale.Fit)
+                    // A traseira real do Civic é mais alta que a ilustração antiga: menor, para não encostar no "km/h".
+                    Image(painterResource(R.drawable.carro_traseira), null, Modifier.width(148.dp), contentScale = ContentScale.Fit)
                     SeloMarcha(t, marcha(d, vel), 36.dp)
                 }
                 Column(Modifier.align(Alignment.TopStart).padding(top = 10.dp).width(260.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {

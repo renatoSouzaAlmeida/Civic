@@ -271,3 +271,5 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 - [x] **Carro real nas cenas do OBD** (26/11/2026): Esportivo, 01 Esportivo novo e Direção simplificada usam a **traseira real do Civic** enviada pelo dono (recortada sem o fundo, os logos e a aura; 720 x 575, WebP de 59 KB), com o tamanho ajustado em cada tela. Falta a traseira do Fit (hoje o Fit também mostra a do Civic).
 - [x] **Ajuste (26/11/2026):** 01 Esportivo com consumo, autonomia, trip e ECO Assist alinhados à direita.
 
+- [x] **Ajuste (26/11/2026):** Direção simplificada: carro menor e velocidade um pouco mais alta, para a traseira real do Civic não cobrir o "km/h".
+
