@@ -258,14 +258,14 @@ internal fun CartaoDiagnostico(d: DadosObd, modifier: Modifier = Modifier, aoVer
     val n = d.codigos.size + d.codigosPendentes.size
     val ok = n == 0 && !d.luzMotor
     val cor = if (ok) Cores.Ok else Cores.Amarelo
-    Row(modifier.cartaoSuave(RoundedCornerShape(20.dp)).clickable(onClick = aoVerFalhas).padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(modifier.cartaoSuave(RoundedCornerShape(16.dp)).clickable(onClick = aoVerFalhas).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
-            Text("Diagnóstico", color = Cores.TextoSuave, fontSize = 13.sp)
-            Text(if (ok) "OK" else "$n falha(s)", color = cor, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text("Diagnóstico", color = Cores.TextoSuave, fontSize = 12.sp, maxLines = 1)
+            Text(if (ok) "OK" else "$n falha(s)", color = cor, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
-        Box(Modifier.size(42.dp).clip(CircleShape).background(cor), contentAlignment = Alignment.Center) {
-            Icon(if (ok) Icons.Filled.Check else Icons.Filled.Warning, null, tint = Color.White, modifier = Modifier.size(26.dp))
+        Box(Modifier.size(28.dp).clip(CircleShape).background(cor), contentAlignment = Alignment.Center) {
+            Icon(if (ok) Icons.Filled.Check else Icons.Filled.Warning, null, tint = Color.White, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -285,7 +285,7 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: 
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val altura = maxHeight
             // Os mostradores ficam abaixo dos cartões de música e diagnóstico (66 dp + folga).
-            val gauge = minOf(maxHeight - (if (compacto) 116.dp else 84.dp), maxWidth * (if (compacto) 0.31f else 0.255f))
+            val gauge = minOf(maxHeight - 128.dp, maxWidth * (if (compacto) 0.31f else 0.255f))
             // Paisagem: morros suaves no horizonte e uma estrada larga em perspectiva (asfalto, bordas e faixas tracejadas).
             val asfalto = Cores.SegVazio; val morro = Cores.Destaque
             Canvas(Modifier.fillMaxSize()) {
@@ -328,12 +328,12 @@ fun LayoutCockpit(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: 
                     Offset(0f, hz - size.height * 0.08f), Size(size.width, size.height * 0.18f))
             }
             if (compacto) Row(Modifier.align(Alignment.TopCenter).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Tela dividida: Spotify maior, com a capa do álbum à vista.
-                MiniMusica(monitor, Modifier.weight(1.7f).height(98.dp), tamanhoCapa = 80.dp)
-                CartaoDiagnostico(d, Modifier.weight(1f).height(98.dp), aoVerFalhas)
+                // Spotify grande (capa e controles) e o Diagnóstico menor.
+                SpotifyGrande(monitor, Modifier.weight(2.3f).height(112.dp).cartaoSuave(RoundedCornerShape(20.dp)).padding(8.dp))
+                CartaoDiagnostico(d, Modifier.weight(0.8f).height(60.dp), aoVerFalhas)
             } else Row(Modifier.align(Alignment.TopEnd), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MiniMusica(monitor, Modifier.width(360.dp).height(66.dp))
-                CartaoDiagnostico(d, Modifier.width(210.dp).height(66.dp), aoVerFalhas)
+                SpotifyGrande(monitor, Modifier.width(440.dp).height(112.dp).cartaoSuave(RoundedCornerShape(20.dp)).padding(8.dp))
+                CartaoDiagnostico(d, Modifier.width(160.dp).height(56.dp), aoVerFalhas)
             }
             DialPremium((d.rpm ?: 0) / 8000f, listOf("0", "1", "2", "3", "4", "5", "6", "7", "8"), Modifier.align(Alignment.BottomStart).padding(start = 6.dp, bottom = 4.dp).size(gauge), zonaVermelhaDesde = 0.8f) { lado ->
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -481,7 +481,7 @@ fun LayoutModular(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, compacto: 
                 Text("Sistemas monitorados", color = Cores.TextoSuave, fontSize = 12.sp)
                 Text(if (d.luzMotor) "Luz de injeção acesa" else if ((d.rpm ?: 0) > 400) "Pronto para dirigir" else "Motor desligado", color = if (d.luzMotor) Cores.Amarelo else Cores.Texto, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             }
-            MiniMusicaVertical(monitor, Modifier.weight(1f).fillMaxWidth())
+            SpotifyGrande(monitor, Modifier.weight(1f).fillMaxWidth().cartaoSuave(RoundedCornerShape(20.dp)).padding(10.dp))
         }
     }
 }
@@ -536,10 +536,10 @@ private fun ModularCompacto(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, 
             CartaoMetricaCompacta("Média da viagem", Icons.Outlined.Timeline, viagem?.velMedia?.let { "%.0f".format(BR, it) } ?: "—", "km/h", Modifier.weight(1f).fillMaxHeight()) {}
             CartaoMetricaCompacta("Distância", Icons.Outlined.Timeline, viagem?.distanciaKm?.let { "%.1f".format(BR, it) } ?: "—", "km", Modifier.weight(1f).fillMaxHeight()) {}
         }
-        // Tela dividida: Spotify maior, com a capa do álbum à vista (como no Cockpit).
-        Row(Modifier.fillMaxWidth().height(98.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniMusica(monitor, Modifier.weight(1.7f).fillMaxHeight(), tamanhoCapa = 80.dp)
-            CartaoDiagnostico(d, Modifier.weight(1f).fillMaxHeight(), aoVerFalhas)
+        // Spotify grande (capa e controles) e o Diagnóstico menor.
+        Row(Modifier.fillMaxWidth().height(112.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            SpotifyGrande(monitor, Modifier.weight(2.3f).fillMaxHeight().cartaoSuave(RoundedCornerShape(20.dp)).padding(8.dp))
+            CartaoDiagnostico(d, Modifier.weight(0.8f).height(60.dp), aoVerFalhas)
         }
     }
 }

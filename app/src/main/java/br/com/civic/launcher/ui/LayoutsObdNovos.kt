@@ -121,7 +121,7 @@ internal fun LayoutEsportivoNovo(obd: ObdMonitor, monitor: MediaMonitor, vel: Fl
                         InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km")
                         InfoObd(t, Icons.Filled.Place, "Trip (viagem)", fmt1(v.tripKm?.toFloat()), "km")
                     }
-                    SpotifyObd(t, monitor, Modifier.fillMaxWidth())
+                    SpotifyObd(t, monitor, Modifier.fillMaxWidth().height(124.dp))
                     EcoAssist(t, Modifier.padding(bottom = 4.dp), grande = true)
                 }
             }
@@ -177,7 +177,7 @@ internal fun LayoutCockpitDigital(obd: ObdMonitor, monitor: MediaMonitor, vel: F
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth().height(92.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().height(116.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SpotifyObd(t, monitor, Modifier.weight(3.6f).fillMaxHeight())
                 Ladrilho(t, Icons.Filled.LocalGasStation, "${fmt0(d.nivelCombustivel)} %", "Combustível", Modifier.weight(1f))
                 Ladrilho(t, Icons.Filled.Thermostat, "${fmt0(d.tempMotor)} °C", "Temp. Motor", Modifier.weight(1f))
@@ -255,7 +255,7 @@ internal fun LayoutTecnico(obd: ObdMonitor, monitor: MediaMonitor, vel: Float, a
                         }
                     }
                     Spacer(Modifier.weight(1f))
-                    SpotifyObd(t, monitor, Modifier.fillMaxWidth())
+                    SpotifyObd(t, monitor, Modifier.fillMaxWidth().height(130.dp))
                 }
                 // Carro em raio-X.
                 Box(Modifier.weight(1f).fillMaxHeight()) {
@@ -402,11 +402,12 @@ internal fun LayoutDirecaoSimples(obd: ObdMonitor, monitor: MediaMonitor, vel: F
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Box(Modifier.align(Alignment.End).size(40.dp).clip(CircleShape).background(t.vidro).border(1.dp, t.bordaVidro, CircleShape).clickable(onClick = a.aoMais),
                             contentAlignment = Alignment.Center) { Icon(Icons.Filled.MoreHoriz, "Layout, demonstração e adaptador", tint = t.texto, modifier = Modifier.size(24.dp)) }
-                        InfoObd(t, Icons.Filled.EvStation, "Cons. Médio", fmt1(v.consumoMedio?.toFloat()), "km/l", grande = true, rotuloEmbaixo = true)
-                        InfoObd(t, Icons.Filled.LocalGasStation, "Combustível", fmt0(d.nivelCombustivel), "%", grande = true, rotuloEmbaixo = true)
-                        InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km", grande = true, rotuloEmbaixo = true)
+                        // Alinhados à direita, junto da borda.
+                        InfoObd(t, Icons.Filled.EvStation, "Cons. Médio", fmt1(v.consumoMedio?.toFloat()), "km/l", Modifier.fillMaxWidth(), grande = true, rotuloEmbaixo = true, direita = true)
+                        InfoObd(t, Icons.Filled.LocalGasStation, "Combustível", fmt0(d.nivelCombustivel), "%", Modifier.fillMaxWidth(), grande = true, rotuloEmbaixo = true, direita = true)
+                        InfoObd(t, Icons.Filled.AddRoad, "Autonomia", fmt0(v.autonomiaKm), "km", Modifier.fillMaxWidth(), grande = true, rotuloEmbaixo = true, direita = true)
                     }
-                    SpotifyObd(t, monitor, Modifier.fillMaxWidth().padding(bottom = 4.dp))
+                    SpotifyObd(t, monitor, Modifier.fillMaxWidth().height(124.dp).padding(bottom = 4.dp))
                 }
             }
         }

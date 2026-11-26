@@ -312,7 +312,7 @@ private fun PainelEsportivo(
         // Diagnóstico em evidência: botão grande na ponta direita da linha azul, acima do Spotify.
         BotaoDiagnostico(
             d.codigos.size + d.codigosPendentes.size,
-            Modifier.offset(dp(g.w - 16f - 210f), dp(g.yBerco - 24f)).width(210.dp).height(48.dp),
+            Modifier.offset(dp(g.w - 16f - 160f), dp(g.yBerco - 19f)).width(160.dp).height(38.dp),
         ) { aoVerFalhas() }
 
         if (comInfos) {
@@ -525,11 +525,11 @@ private fun BotaoDiagnostico(codigos: Int, modifier: Modifier, aoClicar: () -> U
         Row(
             Modifier.fillMaxSize().clip(forma)
                 .background(Brush.verticalGradient(if (alerta) listOf(Color(0xFFFFB020), Color(0xFFD97706)) else listOf(Color(0xFF4D9BFF), Color(0xFF1F66E0))))
-                .border(1.dp, Color(0xE6AAD2FF), forma).clickable { aoClicar() }.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .border(1.dp, Color(0xE6AAD2FF), forma).clickable { aoClicar() }.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(painterResource(R.drawable.ic_motor), null, tint = Color.White, modifier = Modifier.size(30.dp))
-            Text("Diagnóstico", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Icon(painterResource(R.drawable.ic_motor), null, tint = Color.White, modifier = Modifier.size(22.dp))
+            Text("Diagnóstico", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
         if (alerta) Box(
             Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp).size(22.dp).clip(CircleShape).background(Color(0xFFEF4444))
@@ -552,39 +552,11 @@ private fun BotaoRedondoPainel(icone: androidx.compose.ui.graphics.painter.Paint
     ) { Icon(icone, null, tint = p.texto, modifier = Modifier.size(20.dp)) }
 }
 
-/** Spotify com a capa do álbum à esquerda; à direita título, artista e anterior / tocar / próxima. */
+/** Spotify do Esportivo: o componente comum dos layouts do OBD (capa grande e controles sempre visíveis), nas cores do painel. */
 @Composable
 private fun SpotifyPainel(monitor: MediaMonitor, modifier: Modifier) {
-    val ctx = LocalContext.current
     val p = coresPainel()
-    val m = monitor.estado
-    val capa = remember(m.capa) { m.capa?.asImageBitmap() }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        val formaCapa = RoundedCornerShape(16.dp)
-        Box(
-            Modifier.fillMaxHeight().aspectRatio(1f).clip(formaCapa)
-                .background(Brush.linearGradient(listOf(Color(0xFF4D9BFF), Color(0xFF15367F))))
-                .border(1.dp, p.borda, formaCapa).clickable { ctx.abrirSpotify() },
-            contentAlignment = Alignment.Center,
-        ) {
-            if (capa != null) Image(capa, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            else Icon(painterResource(R.drawable.ic_spotify), null, tint = Color.White, modifier = Modifier.fillMaxSize(0.4f))
-        }
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
-            Column(Modifier.clickable { ctx.abrirSpotify() }) {
-                Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = p.texto, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    when { !m.permitido -> "Toque para ativar"; m.temSessao -> m.artista; else -> "Nada tocando" },
-                    color = p.suave, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BotaoMidia(Icons.Filled.SkipPrevious, false) { monitor.anterior() }
-                BotaoMidia(if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, true) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
-                BotaoMidia(Icons.Filled.SkipNext, false) { monitor.proxima() }
-            }
-        }
-    }
+    SpotifyGrande(monitor, modifier, p.texto, p.suave, p.trilho, p.Azul, p.borda)
 }
 
 @Composable

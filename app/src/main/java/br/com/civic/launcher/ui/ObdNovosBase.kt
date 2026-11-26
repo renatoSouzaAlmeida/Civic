@@ -177,20 +177,27 @@ internal fun AbasObdNovo(t: TemaObd, abas: List<AbaObd>, ativa: Int, modifier: M
 
 /** Linha de informação com ícone em caixinha, rótulo pequeno e valor (colunas laterais dos layouts 1 e 4). */
 @Composable
-internal fun InfoObd(t: TemaObd, icone: ImageVector, rotulo: String, valor: String, unidade: String, modifier: Modifier = Modifier, grande: Boolean = false, rotuloEmbaixo: Boolean = false) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+internal fun InfoObd(t: TemaObd, icone: ImageVector, rotulo: String, valor: String, unidade: String, modifier: Modifier = Modifier, grande: Boolean = false, rotuloEmbaixo: Boolean = false, direita: Boolean = false) {
+    // [direita] = texto alinhado à direita e o ícone depois dele (coluna da direita dos layouts).
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp, if (direita) Alignment.End else Alignment.Start)) {
+        if (direita) TextoInfo(t, rotulo, valor, unidade, grande, rotuloEmbaixo, Alignment.End)
         Box(
             Modifier.size(if (grande) 48.dp else 40.dp).clip(RoundedCornerShape(10.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) { Icon(icone, null, tint = t.texto, modifier = Modifier.size(if (grande) 28.dp else 24.dp)) }
-        Column {
-            if (!rotuloEmbaixo) Text(rotulo, color = t.suave, fontSize = 12.sp, maxLines = 1)
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(valor, color = t.texto, fontSize = if (grande) 28.sp else 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                if (unidade.isNotEmpty()) Text(" $unidade", color = t.texto, fontSize = if (grande) 15.sp else 13.sp, modifier = Modifier.padding(bottom = if (grande) 4.dp else 2.dp), maxLines = 1)
-            }
-            if (rotuloEmbaixo) Text(rotulo, color = t.suave, fontSize = 12.sp, maxLines = 1)
+        if (!direita) TextoInfo(t, rotulo, valor, unidade, grande, rotuloEmbaixo, Alignment.Start)
+    }
+}
+
+@Composable
+private fun TextoInfo(t: TemaObd, rotulo: String, valor: String, unidade: String, grande: Boolean, rotuloEmbaixo: Boolean, alinhamento: Alignment.Horizontal) {
+    Column(horizontalAlignment = alinhamento) {
+        if (!rotuloEmbaixo) Text(rotulo, color = t.suave, fontSize = 12.sp, maxLines = 1)
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(valor, color = t.texto, fontSize = if (grande) 28.sp else 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            if (unidade.isNotEmpty()) Text(" $unidade", color = t.texto, fontSize = if (grande) 15.sp else 13.sp, modifier = Modifier.padding(bottom = if (grande) 4.dp else 2.dp), maxLines = 1)
         }
+        if (rotuloEmbaixo) Text(rotulo, color = t.suave, fontSize = 12.sp, maxLines = 1)
     }
 }
 
@@ -341,30 +348,14 @@ private fun DrawScope.skyline(t: TemaObd, base: Float) {
     }
 }
 
-/** Controle do Spotify no estilo dos layouts novos: capa, música e artista, anterior / tocar-pausar / próxima. Tocar no texto abre o Spotify. */
+/** Spotify dos layouts novos: o mesmo Spotify grande dos demais (capa e controles sempre visíveis), num cartão de vidro nas cores do layout. */
 @Composable
 internal fun SpotifyObd(t: TemaObd, monitor: br.com.civic.launcher.MediaMonitor, modifier: Modifier = Modifier) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val m = monitor.estado
-    Row(
-        modifier.clip(RoundedCornerShape(16.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(16.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        // Capa do álbum em destaque (72 dp); sem capa, o logo do Spotify no mesmo espaço.
-        if (m.capa != null) androidx.compose.foundation.Image(m.capa.asImageBitmap(), null, Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, t.bordaVidro, RoundedCornerShape(12.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-        else Box(Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-            Icon(androidx.compose.ui.res.painterResource(br.com.civic.launcher.R.drawable.ic_spotify), null, tint = Color(0xFF1ED760), modifier = Modifier.size(44.dp))
-        }
-        Column(Modifier.weight(1f).clickable { ctx.abrirSpotify() }) {
-            Text(if (m.temSessao && m.titulo.isNotEmpty()) m.titulo else "Spotify", color = t.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(when { !m.permitido -> "Toque para ativar capa e título"; m.temSessao -> m.artista; else -> "Toque para abrir" }, color = t.suave, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        }
-        BotaoMidia(t, Icons.Filled.SkipPrevious, false) { monitor.anterior() }
-        BotaoMidia(t, if (m.tocando) Icons.Filled.Pause else Icons.Filled.PlayArrow, true) { if (m.temSessao || !m.permitido) monitor.alternar() else ctx.abrirSpotify() }
-        BotaoMidia(t, Icons.Filled.SkipNext, false) { monitor.proxima() }
-    }
+    SpotifyGrande(
+        monitor, modifier.clip(RoundedCornerShape(16.dp)).background(t.vidro).border(1.dp, t.bordaVidro, RoundedCornerShape(16.dp)).padding(8.dp),
+        t.texto, t.suave, t.bordaVidro.copy(alpha = 0.6f), t.azul, t.bordaVidro,
+    )
 }
-
 
 @Composable
 private fun BotaoMidia(t: TemaObd, icone: ImageVector, principal: Boolean, aoTocar: () -> Unit) {
