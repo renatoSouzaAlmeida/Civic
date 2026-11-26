@@ -261,3 +261,5 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 
 - [x] **Ajuste (26/11/2026):** Modular em tela dividida com o Spotify maior (capa do álbum em 80 dp), igual ao Cockpit.
 
+- [x] **Validação (26/11/2026):** o dono validou o launcher no Civic, na multimídia de tela maior.
+
