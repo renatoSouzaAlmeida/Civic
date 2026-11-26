@@ -181,8 +181,9 @@ private class GeoPainel(val w: Float, val h: Float, u: Float) {
     val yFuga = cy + rT * 0.55f                    // ponto de fuga da estrada (escondido atrás do conta-giros)
     val baseEsq = w * 0.25f
     val baseDir = w * 0.75f
-    val larguraCarro = w * 0.19f
-    val alturaCarro = larguraCarro * 448f / 720f
+    // Traseira real do Civic (720 x 575): um pouco mais estreita que a ilustração antiga, para ter a mesma presença na estrada.
+    val larguraCarro = w * 0.17f
+    val alturaCarro = larguraCarro * 575f / 720f
 }
 
 /** Cores do painel conforme o tema (dia claro / noite escuro). */

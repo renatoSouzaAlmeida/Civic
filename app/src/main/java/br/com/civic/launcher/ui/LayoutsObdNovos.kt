@@ -103,7 +103,7 @@ internal fun LayoutEsportivoNovo(obd: ObdMonitor, monitor: MediaMonitor, vel: Fl
                     }
                     Text("x1000", color = t.suave, fontSize = 12.sp, modifier = Modifier.align(Alignment.BottomStart).padding(start = 40.dp, bottom = 46.dp))
                 }
-                Image(painterResource(R.drawable.carro_traseira), null, Modifier.align(Alignment.BottomCenter).width(250.dp), contentScale = ContentScale.Fit)
+                Image(painterResource(R.drawable.carro_traseira), null, Modifier.align(Alignment.BottomCenter).width(215.dp), contentScale = ContentScale.Fit)
                 // Colunas laterais.
                 Column(Modifier.align(Alignment.TopStart).width(260.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -388,7 +388,7 @@ internal fun LayoutDirecaoSimples(obd: ObdMonitor, monitor: MediaMonitor, vel: F
                     Text("km/h", color = t.texto, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(painterResource(R.drawable.carro_traseira), null, Modifier.width(220.dp), contentScale = ContentScale.Fit)
+                    Image(painterResource(R.drawable.carro_traseira), null, Modifier.width(190.dp), contentScale = ContentScale.Fit)
                     SeloMarcha(t, marcha(d, vel), 36.dp)
                 }
                 Column(Modifier.align(Alignment.TopStart).padding(top = 10.dp).width(260.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
