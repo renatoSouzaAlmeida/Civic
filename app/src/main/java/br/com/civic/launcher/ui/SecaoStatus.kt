@@ -104,6 +104,12 @@ fun SecaoStatusApp() {
                 else -> ItemStatus("Nuvem (Supabase)", NivelStatus.Atencao, "Sem resposta desde que o app abriu. Sem internet?")
             }
         )
+        add(
+            if (br.com.civic.launcher.LauncherPadrao.ehPadrao(ctx)) ItemStatus("Launcher padrão", NivelStatus.Ok, "É a tela inicial do Android")
+            else ItemStatus("Launcher padrão", NivelStatus.Atencao, "Não é a tela inicial: a multimídia abre o launcher do fabricante", "Tornar padrão") {
+                abrir(Intent(Settings.ACTION_HOME_SETTINGS)) // escolha do app de tela inicial (o pedido oficial fica em Config. > Launcher padrão)
+            }
+        )
         Sincronizacao.resumo(ctx).let { (ok, texto) -> add(ItemStatus("Sincronização", if (ok) NivelStatus.Ok else NivelStatus.Atencao, texto)) }
         add(
             when {

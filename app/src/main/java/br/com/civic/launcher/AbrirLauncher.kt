@@ -23,8 +23,7 @@ object AbrirLauncher {
 
     private fun abrir(ctx: Context) {
         if (MainActivity.visivel) return
-        runCatching {
-            ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
-        }
+        // Pela "tela inicial" (Início), não como app: assim o Android trata o launcher como o principal.
+        LauncherPadrao.abrirComoInicio(ctx)
     }
 }
