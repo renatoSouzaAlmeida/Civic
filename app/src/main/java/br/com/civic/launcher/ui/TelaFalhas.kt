@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -35,7 +36,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Diagnóstico do OBD: abas Falhas (DTC), Bateria (saúde na partida) e Mistura (correção de combustível). */
+/** Diagnóstico do OBD: abas Falhas (DTC), Bateria (saúde na partida), Mistura (correção de combustível), Saúde e Análise do adaptador. */
 @Composable
 fun TelaDiagnostico(obd: ObdMonitor, abaInicial: Int = 0, aoVoltar: () -> Unit) {
     var aba by remember { mutableIntStateOf(abaInicial) }
@@ -48,6 +49,7 @@ fun TelaDiagnostico(obd: ObdMonitor, abaInicial: Int = 0, aoVoltar: () -> Unit) 
                     Aba("Bateria", Icons.Filled.BatteryChargingFull),
                     Aba("Mistura", Icons.Filled.Tune),
                     Aba("Saúde", Icons.Filled.CheckCircle),
+                    Aba("Análise", Icons.Filled.Search),
                 ),
                 aba, Modifier.weight(1f),
             ) { aba = it }
@@ -57,7 +59,8 @@ fun TelaDiagnostico(obd: ObdMonitor, abaInicial: Int = 0, aoVoltar: () -> Unit) 
                 0 -> TelaFalhas(obd)
                 1 -> TelaBateria(obd)
                 2 -> TelaMistura(obd)
-                else -> TelaSaude(obd)
+                3 -> TelaSaude(obd)
+                else -> TelaAnaliseAdaptador(obd)
             }
         }
     }

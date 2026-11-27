@@ -164,6 +164,8 @@ class ObdMonitor private constructor(private val ctx: Context) {
     /** Teste de diagnóstico pedido pela tela ("catalisador", "modo06" ou "cambio"). */
     @Volatile private var tarefaDiag: String? = null
     @Volatile private var tarefaCan: Boolean? = null // null = nada; false = captura "apagado"; true = captura "aceso"
+    /** Análise do adaptador: "varredura" ou a chave de um PassoAnalise (captura CAN guiada). */
+    @Volatile private var tarefaAnalise: String? = null
     var capturaBase by mutableStateOf<Map<String, List<IntArray>>>(emptyMap())
         private set
     var capturaLigado by mutableStateOf<Map<String, List<IntArray>>>(emptyMap())
@@ -461,6 +463,7 @@ class ObdMonitor private constructor(private val ctx: Context) {
                 principal.post { ocupadoFalhas = false; situacaoFalhas = if (qtd == 0) "Nenhum código de falha no carro." else "Leitura concluída: $qtd código(s)." }
             }
             tarefaDiag?.let { t -> tarefaDiag = null; executarTarefaDiag(t, d) }
+            tarefaAnalise?.let { t -> tarefaAnalise = null; executarAnalise(t) }
             tarefaCan?.let { ligado ->
                 tarefaCan = null
                 val quadros = escutarCan(5_000)
@@ -690,6 +693,81 @@ class ObdMonitor private constructor(private val ctx: Context) {
         val medio = if (kmAcum > 0.3 && litrosAcum > 0.01) (kmAcum / litrosAcum).toFloat() else d.consumoMedio
         val inst = if (vel > 3 && litrosHora > 0.05) (vel / litrosHora).toFloat().coerceAtMost(60f) else null
         return d.copy(consumoMedio = medio, consumoInstantaneo = inst)
+    }
+
+    // ---------- análise do adaptador ----------
+
+    /** Pede a varredura completa ("varredura") ou um passo da captura guiada (chave de PassoAnalise). */
+    fun pedirAnalise(tarefa: String) {
+        val a = AnaliseAdaptador.obter(ctx)
+        if (demo) { a.situacao = "Desligue a demonstração para analisar o adaptador."; return }
+        if (estado != EstadoObd.Conectado) { a.situacao = "Conecte o adaptador OBD primeiro (ignição ligada)."; return }
+        if (a.ocupado) return
+        a.ocupado = true
+        a.situacao = if (tarefa == "varredura") "Varrendo o que o carro informa… (leva até 1 min)"
+        else "Escutando o CAN por 5 s: ${PassoAnalise.entries.firstOrNull { it.chave == tarefa }?.instrucao.orEmpty()}"
+        tarefaAnalise = tarefa
+    }
+
+    private fun executarAnalise(tarefa: String) {
+        val a = AnaliseAdaptador.obter(ctx)
+        val msg = runCatching {
+            if (tarefa == "varredura") {
+                val linhas = varrer()
+                principal.post { a.varredura = linhas; a.varreduraEm = System.currentTimeMillis() }
+                "Varredura concluída: ${linhas.count { it.codigo.startsWith("01") && it.bruto.isNotEmpty() }} PIDs do modo 01 responderam."
+            } else {
+                val passo = PassoAnalise.entries.first { it.chave == tarefa }
+                val quadros = escutarCan(5_000)
+                val resumo = a.resumir(quadros)
+                principal.post { a.capturas[passo] = resumo }
+                if (quadros.isEmpty()) "Nenhum quadro CAN recebido em \"${passo.rotulo}\": a tomada OBD deste carro pode não passar o CAN de carroceria."
+                else "${passo.rotulo}: ${quadros.values.sumOf { it.size }} quadros de ${quadros.size} IDs."
+            }
+        }.getOrElse { "Não foi possível concluir: ${it.message ?: "erro"}" }
+        principal.post { a.situacao = msg; a.ocupado = false }
+    }
+
+    /** Pergunta tudo o que o carro diz suportar (sem a pausa de PIDs que falham) e os dados do adaptador e do carro. */
+    private fun varrer(): List<LinhaVarredura> {
+        val saida = ArrayList<LinhaVarredura>()
+        fun at(cmd: String, nome: String) { saida += LinhaVarredura(cmd, nome, enviar(cmd, 3_000).orEmpty().replace(">", "").trim().replace(Regex("\\s+"), " "), null) }
+        at("ATI", "Versão do ELM327"); at("AT@1", "Descrição do adaptador"); at("ATDP", "Protocolo"); at("ATDPN", "Protocolo (número)"); at("ATRV", "Tensão na tomada")
+        fun pedir(cmd: String): IntArray? {
+            val hex = limparHex(enviar(cmd, 3_000).orEmpty())
+            val p = "%02X".format(cmd.take(2).toInt(16) + 0x40) + cmd.drop(2)
+            val i = hex.indexOf(p)
+            return if (i < 0 || hex.contains("NODATA")) null else hex.substring(i + p.length).chunked(2).mapNotNull { it.toIntOrNull(16) }.toIntArray()
+        }
+        // Modo 01: blocos de suportados 0100, 0120 … 01E0.
+        val sup = sortedSetOf<Int>()
+        var base = 0
+        while (base <= 0xE0) {
+            val b = pedir("01%02X".format(base))?.takeIf { it.size >= 4 } ?: break
+            for (i in 0..31) if ((b[i / 8] shr (7 - i % 8)) and 1 == 1) sup += base + i + 1
+            saida += LinhaVarredura("01%02X".format(base), "Suportados %02X–%02X".format(base + 1, base + 0x20), b.joinToString(" ") { "%02X".format(it) }, null)
+            if (!sup.contains(base + 0x20)) break
+            base += 0x20
+        }
+        if (sup.isNotEmpty()) suportados = sup
+        // Marcha e hodômetro são perguntados mesmo sem aparecer na lista (alguns carros respondem assim mesmo).
+        val alvo = (sup.filter { it % 0x20 != 0 } + listOf(0xA4, 0xA6)).distinct().sorted()
+        for (pid in alvo) {
+            if (Thread.currentThread().isInterrupted) break
+            val b = pedir("01%02X".format(pid))
+            val nome = (AnaliseAdaptador.NOMES[pid] ?: "PID %02X".format(pid)) + if (pid !in sup) " (fora da lista)" else ""
+            saida += LinhaVarredura("01%02X".format(pid), nome, b?.joinToString(" ") { "%02X".format(it) }.orEmpty(), b?.let { AnaliseAdaptador.traduzir(pid, it) } ?: if (b == null) "sem resposta" else null)
+        }
+        // Modo 09: VIN, calibração, nome do módulo.
+        for ((cmd, nome) in listOf("0900" to "Modo 09 suportados", "0902" to "VIN (chassi)", "0904" to "Calibração", "090A" to "Nome do módulo")) {
+            val b = pedir(cmd)
+            val texto = b?.filter { it in 0x20..0x7E }?.map { it.toChar() }?.joinToString("")?.trim()
+            saida += LinhaVarredura(cmd, nome, b?.joinToString(" ") { "%02X".format(it) }.orEmpty(), if (b == null) "sem resposta" else if (cmd == "0900") null else texto)
+        }
+        // Teste rápido do CAN: quantos IDs passam pela tomada em 2 s.
+        val q = escutarCan(2_000)
+        saida += LinhaVarredura("ATMA", "Tráfego CAN na tomada (2 s)", q.keys.sorted().joinToString(" "), if (q.isEmpty()) "nenhum quadro" else "${q.size} IDs, ${q.values.sumOf { it.size }} quadros")
+        return saida
     }
 
     // ---------- luzes-espia pelo CAN (experimental) ----------
