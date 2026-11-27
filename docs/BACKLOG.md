@@ -273,3 +273,4 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 
 - [x] **Ajuste (26/11/2026):** Direção simplificada: carro menor e velocidade um pouco mais alta, para a traseira real do Civic não cobrir o "km/h".
 
+- [!] **Revertido (27/11/2026):** a mudança "launcher principal de verdade" (papel de tela inicial, `stateNotNeeded`, filtros de tela inicial e do ícone separados, abrir sempre como Início) deixou a multimídia com **tela preta e uma barra ao lado ao abrir qualquer app** (Waze e Spotify rodando por trás). Desfeita por inteiro para voltar ao comportamento anterior. Investigar com calma antes de tentar de novo (provável conflito da multimídia com o launcher como tela inicial + tela dividida).
