@@ -165,21 +165,6 @@ fun TelaConfig() {
                 }
                 Text("Fadiga, frenagens/acelerações bruscas, excessos de velocidade e a nota de condução funcionam pelo GPS (inclusive com CarPlay ou Android Auto na frente e sem OBD). RPM elevado, consumo e colisão usam o OBD.", color = Cores.TextoSuave, fontSize = 13.sp)
             }
-            Secao("Launcher padrão") {
-                val ctxP = LocalContext.current
-                var padrao by remember { mutableStateOf(br.com.civic.launcher.LauncherPadrao.ehPadrao(ctxP)) }
-                val pedir = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
-                    padrao = br.com.civic.launcher.LauncherPadrao.ehPadrao(ctxP)
-                }
-                Text(
-                    if (padrao) "O Civic Renatin é a tela inicial do Android: abre sozinho ao ligar a multimídia e ao tocar em Início, como os launchers da Play Store."
-                    else "O Civic Renatin ainda NÃO é a tela inicial: a multimídia abre o launcher do fabricante e o Civic Renatin vira um app comum (aparece nos recentes). Toque em \"Tornar padrão\" e escolha o Civic Renatin.",
-                    color = if (padrao) Cores.Ok else Cores.Amarelo, fontSize = 13.sp,
-                )
-                if (!padrao) BotaoPilula("Tornar padrão", Icons.Filled.Home, Modifier.fillMaxWidth()) {
-                    runCatching { pedir.launch(br.com.civic.launcher.LauncherPadrao.intentDefinir(ctxP)) }
-                }
-            }
             Secao("Ao ligar a multimídia") {
                 Text("Abre o launcher sozinho quando a multimídia liga ou acorda (algumas abrem a tela do fabricante por cima, mesmo com o launcher como padrão). Precisa da permissão \"Sobrepor a outros apps\". No Fit com CarPlay, desligue.", color = Cores.TextoSuave, fontSize = 13.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

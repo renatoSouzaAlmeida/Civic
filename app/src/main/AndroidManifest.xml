@@ -53,18 +53,12 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:stateNotNeeded="true"
             android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density|uiMode">
-            <!-- Tela inicial (launcher principal), como os launchers da Play Store. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <!-- Ícone na lista de apps. -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
