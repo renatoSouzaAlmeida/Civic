@@ -284,3 +284,32 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 - Observação: o painel fica **por cima** do Waze (o Waze continua em tela cheia por trás); o Waze não encolhe para a outra metade, porque isso só a tela dividida do sistema faz.
 - [x] **Validação do OBD real (27/11/2026):** o Veepeak OBDCheck BLE+ conectou sozinho no Civic, sem parear e sem configurar; temperatura do motor e rotação chegaram na hora, com o carro parado.
 - [x] **Análise do adaptador (27/11/2026):** nova aba **Análise** em Diagnóstico. (1) **Varredura:** pergunta todos os PIDs que o carro diz suportar (0100…01E0) com o valor traduzido, mais **marcha (01A4)** e **hodômetro (01A6)** mesmo fora da lista, VIN/calibração/módulo (modo 09), versão e protocolo do ELM327, tensão e o tráfego CAN da tomada. (2) **Teste guiado:** Base (tudo desligado, em P), setas, pisca-alerta, lanterna, farol baixo/alto, freio, marchas R/N/D/P, porta e cinto; cada passo escuta o CAN por 5 s e mostra os bytes que mudaram em relação à base. (3) **Enviar relatório** grava tudo em `civic_relatorios` para análise. Próximo: com o relatório, ligar setas/farol automáticos e **estacionar sozinho quando a marcha for para P**.
+
+## Notificações do celular na launcher via Bluetooth (pedido do dono em 27/11/2026, em análise)
+Ideia: o celular conectado por Bluetooth à multimídia manda para a launcher as notificações que recebe (WhatsApp, Telegram, SMS, ligações, apps de banco…), e a launcher mostra um aviso discreto.
+
+**Viabilidade no Android: alta.**
+- O Android não envia as notificações de outros apps sozinho pelo Bluetooth. O perfil de carro MAP envia só SMS/MMS, e muitas centrais nem o usam. Por isso precisa de um **app companheiro no celular** (pequeno, nosso).
+- O companheiro usa o **acesso às notificações** (`NotificationListenerService`, o mesmo que a launcher já usa para a capa do Spotify) e manda app, título, texto e hora para a multimídia.
+- **Transporte:** Bluetooth clássico (RFCOMM/SPP) ou BLE, com a launcher como servidor. Funciona ao mesmo tempo que a ligação de áudio/viva-voz já pareada e **não depende de internet**, o que é bom para a multimídia, que tem internet limitada fora da garagem. Plano B: pela nuvem (Supabase), quando houver internet.
+- Dá também para **responder ou descartar** pela launcher (ações da notificação, como a "Resposta rápida" do WhatsApp) e para filtrar os apps que aparecem.
+- Cuidados:
+  - No Android 13+ um app instalado fora da Play Store precisa de "Permitir configurações restritas" para ganhar o acesso às notificações. É um passo único, a explicar na instalação.
+  - Otimização de bateria: o companheiro roda como serviço com a notificação fixa.
+  - Conexão automática quando o celular se aproxima do carro.
+
+**Viabilidade no iPhone (iOS): média, com limites.**
+- No iOS nenhum app consegue ler as notificações de outros apps: um companheiro como o do Android **não é possível**.
+- O caminho oficial é o **ANCS** (Apple Notification Center Service), o serviço por BLE que os relógios inteligentes usam. O iPhone envia **todas as notificações** (app, título, texto) a um acessório BLE pareado, e dá para responder com as ações positiva/negativa (atender, recusar, marcar como lida).
+- Na multimídia isso exige que a launcher funcione como acessório BLE: anunciar o pedido do serviço ANCS e parear com o iPhone. Riscos:
+  - o chip Bluetooth da multimídia (Spreadtrum/Unisoc) precisa permitir o **modo periférico BLE** (anunciar). Muitos rádios genéricos não permitem;
+  - a solicitação de serviço no anúncio só tem API pública a partir do Android 12;
+  - o pareamento BLE é separado do pareamento de áudio já existente.
+- Alternativa limitada: o perfil MAP do iPhone envia SMS/iMessage para centrais compatíveis (só mensagens, sem WhatsApp).
+- Responder por texto no iPhone não é possível por nenhum desses caminhos.
+
+**Passos sugeridos:**
+1. **Diagnóstico de Bluetooth** na launcher: versão do Android da multimídia, suporte a anúncio BLE (`isMultipleAdvertisementSupported`, `bluetoothLeAdvertiser`), Bluetooth clássico e perfis já conectados. Relatório na nuvem, como na análise do adaptador.
+2. **MVP Android:** companheiro com o acesso às notificações enviando pelo RFCOMM. A launcher mostra um aviso no topo (ícone do app, remetente, 1 linha) e uma lista na central de avisos (sino).
+3. **iPhone (se o diagnóstico permitir anúncio BLE):** cliente ANCS na launcher.
+4. **Segurança ao dirigir:** com o carro em movimento, mostrar só app e remetente (texto escondido ou lido em voz alta), sem teclado. Texto completo e respostas só parado ou em P (quando a marcha vier do OBD). Lista de apps permitidos e modo "não perturbe" no modo direção.
