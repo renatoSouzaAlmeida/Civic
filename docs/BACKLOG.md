@@ -274,3 +274,11 @@ Decisão do dono: **a Casa Tech fica por último, quando todo o resto do launche
 - [x] **Ajuste (26/11/2026):** Direção simplificada: carro menor e velocidade um pouco mais alta, para a traseira real do Civic não cobrir o "km/h".
 
 - [!] **Revertido (27/11/2026):** a mudança "launcher principal de verdade" (papel de tela inicial, `stateNotNeeded`, filtros de tela inicial e do ícone separados, abrir sempre como Início) deixou a multimídia com **tela preta e uma barra ao lado ao abrir qualquer app** (Waze e Spotify rodando por trás). Desfeita por inteiro para voltar ao comportamento anterior. Investigar com calma antes de tentar de novo (provável conflito da multimídia com o launcher como tela inicial + tela dividida).
+
+## Painel de direção evoluído (pedido do dono em 27/11/2026)
+- [x] **Mantido o painel de sempre (estilo Clássico)** e acrescentados, em Config. > Painel de direção:
+  - **Dois estilos novos:** **Completo** (velocímetro grande na cor do modo de condução, setas e farol, selo ECO, leituras do carro e da viagem e o Spotify com a capa) e **Cartões** (velocidade em destaque e tudo em cartões: rpm, motor, tensão, combustível, consumo, autonomia, viagem, média, clima e Spotify).
+  - **Fundo:** transparente (o mapa aparece por trás, como sempre) ou **escuro** (opaco, mais legível ao sol).
+  - **Largura:** 22%, 28%, **30%**, 36%, **40%** e **50%** da tela (o botão de tamanho da barra do painel percorre todas). Nos estilos novos, **quanto mais largo, mais informações**: estreito mostra o essencial; a partir de ~400 dp entram rpm, viagem, média e o selo ECO; a partir de ~520 dp, 3 colunas com tensão, tempo de viagem e clima.
+  - Em faixa (topo/baixo), velocidade, setas e farol, leituras e Spotify lado a lado.
+- Observação: o painel fica **por cima** do Waze (o Waze continua em tela cheia por trás); o Waze não encolhe para a outra metade, porque isso só a tela dividida do sistema faz.

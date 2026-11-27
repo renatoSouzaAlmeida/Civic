@@ -112,12 +112,25 @@ fun TelaConfig() {
                         Opcao(f.rotulo, posicaoPainel == f, Modifier.weight(1f)) { posicaoPainel = f; PosicaoPainel.salvar(ctx, f) }
                     }
                 }
-                Text("Tamanho (no topo/baixo, Compacto é uma barra fina)", color = Cores.TextoSuave, fontSize = 15.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Largura do painel (% da tela; no topo/baixo, 22% é uma barra fina). Quanto maior, mais informações nos estilos Completo e Cartões.", color = Cores.TextoSuave, fontSize = 15.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TamanhoPainel.entries.forEach { t ->
                         Opcao(t.rotulo, tamanhoPainel == t, Modifier.weight(1f)) { tamanhoPainel = t; TamanhoPainel.salvar(ctx, t) }
                     }
                 }
+                var estiloPainel by remember { mutableStateOf(EstiloPainel.ler(ctx)) }
+                var fundoPainel by remember { mutableStateOf(FundoPainel.ler(ctx)) }
+                Text("Estilo do painel", color = Cores.TextoSuave, fontSize = 15.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    EstiloPainel.entries.forEach { e -> Opcao(e.rotulo, estiloPainel == e, Modifier.weight(1f)) { estiloPainel = e; EstiloPainel.salvar(ctx, e) } }
+                }
+                Text(estiloPainel.descricao, color = Cores.TextoSuave, fontSize = 13.sp)
+                Text("Fundo do painel", color = Cores.TextoSuave, fontSize = 15.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FundoPainel.entries.forEach { f -> Opcao(f.rotulo, fundoPainel == f, Modifier.weight(1f)) { fundoPainel = f; FundoPainel.salvar(ctx, f) } }
+                }
+                Text(if (fundoPainel == FundoPainel.Escuro) "Escuro e opaco: mais legível ao sol; o mapa não aparece por trás do painel." else "Transparente: o mapa aparece por trás do painel (como sempre foi).", color = Cores.TextoSuave, fontSize = 13.sp)
+                Text("As mudanças valem na próxima vez que o painel abrir.", color = Cores.TextoSuave, fontSize = 12.sp)
             }
             Secao("Sistema") {
                 BotaoPilula("Configurações do Android", Icons.Filled.Settings, Modifier.fillMaxWidth()) {

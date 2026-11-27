@@ -74,7 +74,8 @@ enum class PosicaoPainel(val rotulo: String) {
  * A faixa Compacta é uma barra fina de uma linha só.
  */
 enum class TamanhoPainel(val fracaoLargura: Float, val alturaFaixaDp: Int, val rotulo: String) {
-    Compacto(0.22f, 64, "Compacto"), Medio(0.28f, 120, "Médio"), Grande(0.36f, 190, "Grande");
+    // Os três de sempre e as larguras maiores (30%, 40% e metade da tela): quanto maior, mais informações nos estilos novos.
+    Compacto(0.22f, 64, "22%"), Medio(0.28f, 120, "28%"), P30(0.30f, 140, "30%"), Grande(0.36f, 190, "36%"), P40(0.40f, 220, "40%"), P50(0.50f, 260, "50%");
 
     fun proximo() = entries[(ordinal + 1) % entries.size]
 
@@ -92,6 +93,28 @@ enum class TamanhoPainel(val fracaoLargura: Float, val alturaFaixaDp: Int, val r
     }
 }
 
+/** Estilo do painel: o Clássico de sempre e dois novos, que mostram mais informações quanto mais largo o painel. */
+enum class EstiloPainel(val rotulo: String, val descricao: String) {
+    Classico("Clássico", "Velocidade e Spotify (o de sempre)."),
+    Completo("Completo", "Velocímetro grande, setas e farol, leituras do carro, viagem, clima e o Spotify com a capa."),
+    Cartoes("Cartões", "Tudo em cartões: velocidade, rpm, motor, tensão, combustível, consumo, autonomia, viagem, clima e Spotify.");
+
+    companion object {
+        fun ler(ctx: Context): EstiloPainel = runCatching { valueOf(ctx.getSharedPreferences("preferencias", Context.MODE_PRIVATE).getString("estilo_painel", null) ?: "") }.getOrDefault(Classico)
+        fun salvar(ctx: Context, v: EstiloPainel) { ctx.getSharedPreferences("preferencias", Context.MODE_PRIVATE).edit().putString("estilo_painel", v.name).apply() }
+    }
+}
+
+/** Fundo do painel: transparente (o mapa aparece por trás, como sempre) ou escuro (opaco, mais legível ao sol). */
+enum class FundoPainel(val rotulo: String) {
+    Transparente("Transparente"), Escuro("Escuro");
+
+    companion object {
+        fun ler(ctx: Context): FundoPainel = runCatching { valueOf(ctx.getSharedPreferences("preferencias", Context.MODE_PRIVATE).getString("fundo_painel", null) ?: "") }.getOrDefault(Transparente)
+        fun salvar(ctx: Context, v: FundoPainel) { ctx.getSharedPreferences("preferencias", Context.MODE_PRIVATE).edit().putString("fundo_painel", v.name).apply() }
+    }
+}
+
 /**
  * Modo Direção: painel sobre o Waze. Em cima, uma barra opaca e pequena (Início, hora/clima, formato, tamanho, Fechar);
  * embaixo, a velocidade em uma linha e o Spotify ocupando o resto.
@@ -105,8 +128,17 @@ fun PainelDirecao(
     aoAlternarTamanho: () -> Unit,
     aoAlternarPosicao: () -> Unit,
     aoFechar: () -> Unit,
+    estilo: EstiloPainel = EstiloPainel.Classico,
+    fundoEscuro: Boolean = false,
 ) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo.copy(alpha = OPACIDADE_FUNDO))) {
+    if (estilo != EstiloPainel.Classico) {
+        // Estilos novos: a mesma barra de cima (Início, hora, posição, tamanho, fechar) e o conteúdo que cresce com a largura.
+        PainelNovo(sensores, monitor, obd, estilo, fundoEscuro) { mostrarIndicadores ->
+            BarraSuperior(sensores, obd, mostrarIndicadores, aoVoltarInicio, aoAlternarTamanho, aoAlternarPosicao, aoFechar)
+        }
+        return
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().background(Cores.Fundo.copy(alpha = if (fundoEscuro) 0.97f else OPACIDADE_FUNDO))) {
         val larga = maxWidth > maxHeight
         val alto = maxHeight // guardado aqui: dentro da coluna aninhada o Kotlin não permite ler maxHeight
         if (larga && alto < 140.dp) {
@@ -299,7 +331,7 @@ private fun iconeClima(c: CondicaoClima): Pair<ImageVector, Color> = when (c) {
  * Acesos em verde (setas piscam); apagados em cinza; bem esmaecidos se o carro ainda não informa o sinal.
  */
 @Composable
-private fun IndicadoresVeiculo(obd: ObdMonitor, tamanho: androidx.compose.ui.unit.Dp = 26.dp) {
+internal fun IndicadoresVeiculo(obd: ObdMonitor, tamanho: androidx.compose.ui.unit.Dp = 26.dp) {
     val d = obd.dados
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(tamanho * 0.4f)) {
         IndicadorBarra(R.drawable.ic_seta, d.setaEsquerda, tamanho, piscar = true)

@@ -95,7 +95,9 @@ class PainelService : Service() {
             setViewTreeViewModelStoreOwner(dono)
             setContent {
                 val hora = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-                CivicTheme(ModoTema.ler(this@PainelService).escuro(hora)) {
+                val fundoEscuro = br.com.civic.launcher.ui.FundoPainel.ler(this@PainelService) == br.com.civic.launcher.ui.FundoPainel.Escuro
+                // Fundo escuro: sempre no tema escuro e opaco, mais legível ao sol; transparente segue o tema do app.
+                CivicTheme(fundoEscuro || ModoTema.ler(this@PainelService).escuro(hora)) {
                     PainelDirecao(
                         sensores, monitor, obd,
                         aoVoltarInicio = {
@@ -112,6 +114,8 @@ class PainelService : Service() {
                             Handler(Looper.getMainLooper()).post { mostrar() }
                         },
                         aoFechar = { stopSelf() },
+                        estilo = br.com.civic.launcher.ui.EstiloPainel.ler(this@PainelService),
+                        fundoEscuro = fundoEscuro,
                     )
                 }
             }
